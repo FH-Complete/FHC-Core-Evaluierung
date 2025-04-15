@@ -10,14 +10,105 @@ export default {
 	},
 	template: `
 	<div class="lve-evaluierung d-lg-flex flex-column min-vh-100 py-5 ps-lg-2 overflow-auto">
-		<div class="lv-evaluierung-body row flex-grow-1">
-			<!-- LV Fragen -->
+	
+		<!-- LV-Evaluierung-Body -->
+		<div class="lve-evaluierung-body row flex-grow-1">
+		
+			<!-- LV-Evaluierung Fragen -->
 			<div class="col-12 col-lg-8 order-2 order-lg-1 mb-3">
-			  	<div class="card my-lg-3">
-					<div class="card-body">LV Fragen</div>
-			  	</div>	
-			</div>
 			
+				<!-- Fragebogengruppe Card -->
+				<div class="lve-fb-card card my-lg-3 border-0">
+					<div class="card-body px-0">
+						<!-- Fragenbogenfrage SingleChoice -->	
+						<div class="card mb-4 text-center border-0">
+							<div class="card-title fw-bold">
+								Mit Radio Toggle Button Group
+							</div>
+							<div class="card-body">
+								<div class="btn-group" role="group" aria-label="Basic radio toggle button group">
+									<input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+									<label class="btn mx-md-3" for="btnradio1"><i class="fa-regular fa-face-laugh fa-2x"></i></label>
+								
+									<input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+									<label class="btn mx-md-3" for="btnradio2"><i class="fa-regular fa-face-smile fa-2x"></i></label>
+								
+									<input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off">
+									<label class="btn mx-md-3" for="btnradio3"><i class="fa-regular fa-face-meh fa-2x"></i></label>
+									
+									<input type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off">
+									<label class="btn mx-md-3" for="btnradio4"><i class="fa-regular fa-face-frown fa-2x"></i></label>
+									
+									<input type="radio" class="btn-check" name="btnradio" id="btnradio5" autocomplete="off">
+									<label class="btn mx-md-3" for="btnradio5"><i class="fa-regular fa-face-tired fa-2x"></i></label>
+								</div>
+							</div>
+						</div><!-- .card Fragebogenfrage SingleChoice -->
+						
+						<!-- Fragenbogenfrage Text -->
+						<div class="card mb-4 px-0 px-md-1 d-flex text-center border-0">
+							<div class="card-title fw-bold">
+								Offene Antworten
+							</div>
+							<div class="card-body">
+								<textarea class="form-control" placeholder="Ihre Antwort hier..." style="height: 100px"></textarea>
+							</div>
+						</div><!-- .card Fragebogenfrage Text -->
+					</div>
+				</div><!-- .card Fragebogengruppe Card-->
+				
+				<!-- Fragenbogengruppe Label -->
+			  	<div class="lve-fb-label card my-lg-3 text-center border-0">
+			  		<div class="card-title pt-3 fw-bold">
+						Nur Label
+					</div>
+			  	</div><!-- .card Fragebogengruppe Label-->
+				
+				<!-- Fragenbogengruppe Group -->
+				<div class="lve-fb-group card my-lg-3 border-0">
+					<div class="card-body px-0 px-md-3">
+						<div class="lve-fb-group-accordion accordion accordion-flush border rounded" id="accordionFlushExample">
+							<div class="accordion-item">
+								<h2 class="accordion-header" id="flush-headingOne">
+								<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+									Accordion Item #1
+								</button>
+								</h2>
+								<div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+									<div class="accordion-body">
+										Fragebogengruppen oder Fragebogenfragen
+									</div>
+								</div>
+							</div>
+							<div class="accordion-item">
+								<h2 class="accordion-header" id="flush-headingTwo">
+								<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
+									Accordion Item #2
+								</button>
+								</h2>
+								<div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionFlushExample">
+									<div class="accordion-body">
+										Fragebogengruppen oder Fragebogenfragen
+									</div>
+								</div>
+							</div>
+							<div class="accordion-item">
+								<h2 class="accordion-header" id="flush-headingThree">
+								<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree" aria-expanded="false" aria-controls="flush-collapseThree">
+									Accordion Item #3
+								</button>
+								</h2>
+								<div id="flush-collapseThree" class="accordion-collapse collapse" aria-labelledby="flush-headingThree" data-bs-parent="#accordionFlushExample">
+									<div class="accordion-body">
+										Fragebogengruppen oder Fragebogenfragen
+									</div>
+								</div>
+							</div>
+						</div><!-- .accordion Fragebogengruppe Group -->	
+			  		</div>
+				</div>
+			</div><!-- . col-12 LV Fragen -->
+	
 			<!-- LV Infos + Countdown (lg only) -->
 			<div class="col-12 col-lg-4 order-1 order-lg-2 d-flex flex-column">
 			  	<!-- LV Infos -->
@@ -31,11 +122,12 @@ export default {
 						<i class="fa-regular fa-clock fa-8x mb-3"></i>Countdown lg-xl
 					</div>
 			  	</div>
-			</div>
-	  	</div>
+			</div><!-- .col LV Infos + Countdown (lg only) -->
+	  	</div><!-- .row lv-evaluierung-body -->
 	  	
-  		<!-- Footer -->
-		<div class="lv-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
+  		<!-- LV-Evaluierung-Footer -->
+		<div class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
+		
 			<!-- Countdown for sm/md only -->
 			<div class="col-8 d-lg-none d-flex align-items-center">
 				<i class="fa-regular fa-clock fa-2x me-2"></i>Countdown sm-md
@@ -45,6 +137,6 @@ export default {
 			<div class="col-4 col-lg-12 text-end">
 				<button class="btn btn-primary" type="button" @click="onClickSubmit">Submit</button>
 			</div>	
-		</div>
+		</div><!-- .row lv-evaluierung-footer-->
 	</div>`
 }
