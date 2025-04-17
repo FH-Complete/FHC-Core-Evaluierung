@@ -22,8 +22,9 @@ export default {
 		}
 	},
 	methods: {
-		getIconLabel(antwortWert) {
-			return '<i class="fa-regular fa-' + this.getIcon(antwortWert) + ' fa-2x"></i>';
+		getIconLabel(antwortWert, isActive) {
+			const style = isActive ? 'fa-solid' : 'fa-regular';
+			return '<i class="'+ style + ' fa-' + this.getIcon(antwortWert) + ' fa-2x" style="cursor: pointer"></i>';
 		},
 		getIcon(antwortWert) {
 			const icons = [
@@ -54,7 +55,7 @@ export default {
 					<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
 						<form-input
 						  	type="radio"
-						  	:label="getIconLabel(antwort.wert)"
+						  	:label="getIconLabel(antwort.wert, selected === antwort.wert)"
 						  	:value="antwort.wert"
 						  	v-model="selected"
 							container-class="btn px-md-4"
