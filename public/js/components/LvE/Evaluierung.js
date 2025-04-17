@@ -14,6 +14,7 @@ export default {
 					typ: "card",
 					bezeichnung: '',
 					sort: 1,
+					style: '',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 1,
@@ -98,6 +99,7 @@ export default {
 					typ: "label",
 					bezeichnung: "Möchten Sie konkretes Feedback zu folgenden Bereichen geben?",
 					sort: 2,
+					style: '',
 					fbFrage: []
 				},
 				{
@@ -105,6 +107,7 @@ export default {
 					typ: "group",
 					bezeichnung: 'Organisation',
 					sort: 3,
+					style: 'background-color: lightgrey',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 3,
@@ -151,6 +154,7 @@ export default {
 					typ: "group",
 					bezeichnung: 'Moodle Kurs',
 					sort: 4,
+					style: 'background-color: lightsteelblue;',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 4,
@@ -197,6 +201,7 @@ export default {
 					typ: "group",
 					bezeichnung: 'Durchführung der LV',
 					sort: 5,
+					style: 'background-color: lightblue',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 7,
@@ -243,6 +248,7 @@ export default {
 					typ: "group",
 					bezeichnung: 'Infrastruktur (Ausstattung)',
 					sort: 6,
+					style: 'background-color: lightyellow',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 8,
@@ -289,6 +295,7 @@ export default {
 					typ: "card",
 					bezeichnung: '',
 					sort: 7,
+					style: '',
 					fbFrage: [
 						{
 							lvevaluierung_frage_id: 5,
@@ -393,12 +400,13 @@ export default {
 											<div class="accordion-item">
 												<h2 class="accordion-header" :id="'flush-heading' + cGruppe.lvevaluierung_fragebogen_gruppe_id">
 												<button 
-													class="accordion-button collapsed" 
+													class="accordion-button collapsed fw-bold" 
 													type="button" 
 													data-bs-toggle="collapse" 
 													:data-bs-target="'#flush-collapse' + cGruppe.lvevaluierung_fragebogen_gruppe_id" 
 													aria-expanded="false" 
 													:aria-controls="'flush-collapse' + cGruppe.lvevaluierung_fragebogen_gruppe_id"
+													:style="cGruppe.style"
 												>
 													{{ cGruppe.bezeichnung }}
 												</button>
