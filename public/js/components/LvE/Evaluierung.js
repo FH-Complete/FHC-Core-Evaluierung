@@ -7,6 +7,7 @@ export default {
 	},
 	data(){
 		return {
+			lvInfo: {},
 			fbAntworten: {},
 			fbGruppen: []
 		}
@@ -14,6 +15,10 @@ export default {
 	created() {
 		console.log('Component created');
 		console.log(this.$route.params.lvevaluierung_id);
+
+		this.$fhcApi.factory.evaluierung.getLvInfo(38840, 'SS2025')
+			.then(result => this.lvInfo = result.data)
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 
 		this.$fhcApi.factory.fragebogen.getInitFragebogen(1)
 			.then(result => this.fbGruppen = result.data)
@@ -130,7 +135,21 @@ export default {
 				<div class="col-12 col-lg-4 order-1 order-lg-2 d-flex flex-column">
 					<!-- LV Infos -->
 					<div class="card mb-3 mt-md-3">
-						<div class="card-body">LV Infos</div>
+						<div class="card-body">
+							<p class="h5 fw-bold mb-3">{{lvInfo.bezeichnung_by_language}}</p>
+							<div class="d-flex">
+								<div class="flex-shrink-0 me-3 fw-bold">LektorInnen:</div>
+								<div class="flex-fill text-start">
+									<div v-for="(lehrende, lIndex) in lvInfo.lehrende" :key="lIndex">
+										{{ lehrende.vorname }} {{lehrende.nachname}}
+									</div>
+								</div>
+							</div>
+							<div class="d-flex">
+								<div class="flex-shrink-0 me-3 fw-bold">ECTS:</div>
+								<div class="flex-fill text-start">{{lvInfo.ects}}</div>
+							</div>
+						</div>
 					</div>
 			
 					<!-- Countdown for lg+ only -->

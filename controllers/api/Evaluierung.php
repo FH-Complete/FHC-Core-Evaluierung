@@ -10,9 +10,12 @@ class Evaluierung extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG
+				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
+				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG
 			)
 		);
+
+		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
@@ -67,5 +70,20 @@ class Evaluierung extends FHCAPI_Controller
 
 		// Return result array
 		$this->terminateWithSuccess($initFragebogen);
+	}
+
+	/**
+	 * Get Lehrveranstaltung Infos and its lecturers.
+	 *
+	 * @return void
+	 */
+	public function getLvInfo()
+	{
+		$lehrveranstaltung_id = $this->input->get('lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$result = $this->evaluierunglib->getLvInfo($lehrveranstaltung_id, $studiensemester_kurzbz);
+
+		$this->terminateWithSuccess($result);
 	}
 }
