@@ -73,7 +73,7 @@ export default {
 						<div v-if="fbGruppe.typ === 'label'">
 							<div class="lve-fb-label card my-lg-3 text-center border-0">
 								<div class="card-title pt-3 fw-bold">
-									{{ fbGruppe.bezeichnung }}
+									{{ fbGruppe.bezeichnung_by_language }}
 								</div>
 							</div><!-- .card Fragebogengruppe Label-->
 						</div><!-- .endif Fragebogengruppe Label-->
@@ -98,7 +98,7 @@ export default {
 													:aria-controls="'flush-collapse' + cGruppe.lvevaluierung_fragebogen_gruppe_id"
 													:style="cGruppe.style"
 												>
-													{{ cGruppe.bezeichnung }}
+													{{ cGruppe.bezeichnung_by_language }}
 												</button>
 												</h2>
 												<div :id="'flush-collapse' + cGruppe.lvevaluierung_fragebogen_gruppe_id" 

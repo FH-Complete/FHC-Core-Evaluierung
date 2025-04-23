@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS extension.tbl_lvevaluierung_fragebogen (
     fragebogen_id integer,
-    bezeichnung text,
+    bezeichnung text[],
     gueltig_von date,
     gueltig_bis date
 );

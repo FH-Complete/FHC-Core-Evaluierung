@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS extension.tbl_lvevaluierung_fragebogen_gruppe (
     lvevaluierung_fragebogen_gruppe_id integer,
     fragebogen_id integer,
     typ varchar (32),
-    bezeichnung text,
+    bezeichnung text[],
     sort integer,
     style text
 );
