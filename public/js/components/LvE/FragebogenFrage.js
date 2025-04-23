@@ -48,7 +48,7 @@ export default {
 		<div v-if="frage.typ === 'singleresponse'">
 			<div class="card mb-4 text-center border-0">											
 			<div class="card-title fw-bold">
-				{{ frage.bezeichnung }}
+				{{ frage.bezeichnung_by_language }}
 			</div>
 			<div class="card-body">
 				<div class="btn-group" role="group" aria-label="Evaluierung Antwort Option">
@@ -72,7 +72,7 @@ export default {
 		<div v-if="frage.typ === 'text'">
 			<div class="card mb-4 px-0 px-md-1 d-flex text-center border-0">
 				<div class="card-body">
-					<label class="fw-bold mb-3">{{ frage.bezeichnung }}</label>
+					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }}</label>
 					<form-input
 					  type="textarea"
 					  :placeholder="frage.placeholder"
