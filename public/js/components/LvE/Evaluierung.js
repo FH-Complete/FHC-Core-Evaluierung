@@ -9,7 +9,8 @@ export default {
 		return {
 			lvInfo: {},
 			fbAntworten: {},
-			fbGruppen: []
+			fbGruppen: [],
+			lvInfoDisplay: true
 		}
 	},
 	created() {
@@ -23,6 +24,13 @@ export default {
 		this.$fhcApi.factory.fragebogen.getInitFragebogen(1)
 			.then(result => this.fbGruppen = result.data)
 			.catch(error => this.$fhcAlert.handleSystemError(error));
+	},
+	mounted() {
+		this.updateLvInfoDisplay();
+		window.addEventListener('resize', this.updateLvInfoDisplay);
+	},
+	beforeUnmount() {
+		window.removeEventListener('resize', this.updateLvInfoDisplay);
 	},
 	methods: {
 		onSubmit(){
@@ -44,7 +52,10 @@ export default {
 				i++;
 			}
 			return clusteredGruppe;
-		}
+		},
+		updateLvInfoDisplay() {
+			this.lvInfoDisplay = window.innerWidth > 992;
+		},
 	},
 	template: `
 	<div class="lve-evaluierung d-lg-flex flex-column min-vh-100 py-5 ps-lg-2 overflow-auto">
@@ -133,24 +144,46 @@ export default {
 		
 				<!-- LV Infos + Countdown (lg only) -->
 				<div class="col-12 col-lg-4 order-1 order-lg-2 d-flex flex-column">
-					<!-- LV Infos -->
-					<div class="card mb-3 mt-md-3">
-						<div class="card-body">
-							<p class="h5 fw-bold mb-3">{{lvInfo.bezeichnung_by_language}}</p>
-							<div class="d-flex">
-								<div class="flex-shrink-0 me-3 fw-bold">LektorInnen:</div>
-								<div class="flex-fill text-start">
-									<div v-for="(lehrende, lIndex) in lvInfo.lehrende" :key="lIndex">
-										{{ lehrende.vorname }} {{lehrende.nachname}}
+					<!-- LV Infos -->			
+					<div class="lvinfo-accordion accordion mb-3 mt-md-3" id="accordionLvinfo">
+					  	<div class="accordion-item">
+							<h2 class="accordion-header" id="headingOne">
+								<button 
+									class="accordion-button bg-white fw-bold text-dark fs-5" 
+									:class="{collapsed: !lvInfoDisplay}"
+									type="button" 
+									data-bs-toggle="collapse" 
+									data-bs-target="#collapseLvinfo" 
+									:aria-expanded="lvInfoDisplay" 
+									aria-controls="collapseLvinfo"
+								>
+									{{lvInfo.bezeichnung_by_language}}
+								</button>
+							</h2>
+							<div 
+								id="collapseLvinfo" 
+								class="accordion-collapse collapse"
+								:class="{show: lvInfoDisplay}"
+								aria-labelledby="headingOne" 
+								data-bs-parent="#accordionLvinfo"
+							>
+								<div class="accordion-body">
+									<div class="d-flex">
+										<div class="flex-shrink-0 me-3 fw-bold">LektorInnen:</div>
+										<div class="flex-fill text-start">
+											<div v-for="(lehrende, lIndex) in lvInfo.lehrende" :key="lIndex">
+												{{ lehrende.vorname }} {{lehrende.nachname}}
+											</div>
+										</div>
+									</div>
+									<div class="d-flex">
+										<div class="flex-shrink-0 me-3 fw-bold">ECTS:</div>
+										<div class="flex-fill text-start">{{lvInfo.ects}}</div>
 									</div>
 								</div>
 							</div>
-							<div class="d-flex">
-								<div class="flex-shrink-0 me-3 fw-bold">ECTS:</div>
-								<div class="flex-fill text-start">{{lvInfo.ects}}</div>
-							</div>
-						</div>
-					</div>
+					  </div>
+				  </div><!-- .accordion LV Infos -->
 			
 					<!-- Countdown for lg+ only -->
 					<div class="card w-100 text-center d-none d-lg-flex flex-grow-1">
