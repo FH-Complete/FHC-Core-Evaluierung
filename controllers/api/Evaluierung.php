@@ -10,6 +10,7 @@ class Evaluierung extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
+				'getLvEvaluierung' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG
 			)
@@ -17,9 +18,40 @@ class Evaluierung extends FHCAPI_Controller
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
 
+		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrageAntwort_model', 'LvevaluierungFragebogenFrageAntwortModel');
+	}
+
+	/**
+	 * Get LvEvaluierung by Code.
+	 *
+	 * @return void
+	 */
+	public function getLvEvaluierung()
+	{
+		$code = $this->input->get('code');
+
+		$this->LvevaluierungCodeModel->addSelect('lvevaluierung_id');
+		$result = $this->LvevaluierungCodeModel->loadWhere([
+			'code' => $code
+		]);
+
+		if (hasData($result))
+		{
+			$lvevaluierung_id = getData($result)[0]->lvevaluierung_id;
+			$result = $this->LvevaluierungModel->load($lvevaluierung_id);
+
+			$data = $this->getDataOrTerminateWithError($result);
+
+			$this->terminateWithSuccess(current($data));
+		}
+		else
+		{
+			$this->terminateWithError('No LV-Evaluierung found');
+		}
 	}
 
 	/**

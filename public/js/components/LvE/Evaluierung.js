@@ -8,6 +8,7 @@ export default {
 	data(){
 		return {
 			lvInfo: {},
+			lvEvaluierung: {},
 			fbAntworten: {},
 			fbGruppen: [],
 			lvInfoDisplay: true
@@ -16,6 +17,10 @@ export default {
 	created() {
 		console.log('Component created');
 		console.log(this.$route.params.code);
+
+		this.$fhcApi.factory.evaluierung.getLvEvaluierung('123abc')	// todo put hier lvevaluierung_code_id
+			.then(result => this.lvEvaluierung = result.data)
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 
 		this.$fhcApi.factory.evaluierung.getLvInfo(38840, 'SS2025')
 			.then(result => this.lvInfo = result.data)
