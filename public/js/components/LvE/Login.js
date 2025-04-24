@@ -1,14 +1,22 @@
 export default {
+	data() {
+		return {
+			code: null
+		}
+	},
+	created() {
+		// Set CodeID if it is given by get parameter
+		if (this.$route.query.code)
+			this.code = this.$route.query.code;
+	},
 	computed: {
 		logo() {
 			return FHC_JS_DATA_STORAGE_OBJECT.app_root + 'skin/images/fh_logo.png';
 		}
 	},
 	methods: {
-		onClickStart(e){
-			let lvevaluierung_code_id = e.target.previousElementSibling.value;
-			// todo Get lvevaluierung_id from lvevaluierung_code_id. for test use now lvecodeid
-			this.$router.push({name: 'Evaluierung', params: {lvevaluierung_id: lvevaluierung_code_id}});
+		onClickStart(){
+			this.$router.push({name: 'Evaluierung', params: {code: this.code}});
 		}
 	},
 	template: `
@@ -21,7 +29,7 @@ export default {
 					<p>Bitte geben Sie Ihren Code ein, um die Evaluierung zu starten:</p>
 			  	</div>
 				<div class="input-group mb-3 mb-lg-5">
-				  <input type="text" class="form-control" placeholder="Evaluierung-Code eingeben" aria-label="Evaluierung Code eingeben">
+				  <input type="text" v-model="code" class="form-control" placeholder="Evaluierung-Code eingeben" aria-label="Evaluierung Code eingeben">
 				  <button class="btn btn-primary" type="button" @click="onClickStart">Start</button>
 				</div>
 				

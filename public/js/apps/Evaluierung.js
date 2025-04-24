@@ -12,7 +12,7 @@ const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(),
 	routes: [
 		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung`, name: 'Login', component: LveLogin },
-		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung/:lvevaluierung_id`, name: 'Evaluierung', component: LveEvaluierung },
+		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung/:code`, name: 'Evaluierung', component: LveEvaluierung },
 		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung`, name: 'Logout', component: LveLogout }
 	]
 });
