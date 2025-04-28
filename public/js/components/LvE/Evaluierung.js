@@ -17,11 +17,13 @@ export default {
 	},
 	created() {
 		const code = this.$route.params.code;
-		// Get Evaluierung
+
+		// Get EvaluierungCode
 		this.$fhcApi.factory.evaluierung.getLvEvaluierungCode(code)
 			.then(result => {
 				this.lvEvaluierungCode = result.data;
 
+				// Get Evaluierung
 				return this.$fhcApi.factory.evaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id)
 			})
 			.then(result => {
