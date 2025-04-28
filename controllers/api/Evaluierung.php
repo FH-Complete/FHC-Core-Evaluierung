@@ -10,9 +10,11 @@ class Evaluierung extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
+				'getLvEvaluierungCode' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getLvEvaluierung' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
-				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG
+				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG,
+				'setStartzeit' => self::BERECHTIGUNG_EVLUIERUNG
 			)
 		);
 
@@ -26,32 +28,37 @@ class Evaluierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Get LvEvaluierung by Code.
+	 * Get LvEvaluierungCode by Code.
+	 *
+	 * @return void
+	 */
+	public function getLvEvaluierungCode()
+	{
+		$code = $this->input->get('code');
+
+		$result = $this->LvevaluierungCodeModel->loadWhere([
+			'code' => $code
+		]);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess(current($data));
+	}
+
+	/**
+	 * Get LvEvaluierung by LvevaluierungID.
 	 *
 	 * @return void
 	 */
 	public function getLvEvaluierung()
 	{
-		$code = $this->input->get('code');
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
 
-		$this->LvevaluierungCodeModel->addSelect('lvevaluierung_id');
-		$result = $this->LvevaluierungCodeModel->loadWhere([
-			'code' => $code
-		]);
+		$result = $this->LvevaluierungModel->load($lvevaluierung_id);
 
-		if (hasData($result))
-		{
-			$lvevaluierung_id = getData($result)[0]->lvevaluierung_id;
-			$result = $this->LvevaluierungModel->load($lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
 
-			$data = $this->getDataOrTerminateWithError($result);
-
-			$this->terminateWithSuccess(current($data));
-		}
-		else
-		{
-			$this->terminateWithError('No LV-Evaluierung found');
-		}
+		$this->terminateWithSuccess(current($data));
 	}
 
 	/**
@@ -105,17 +112,52 @@ class Evaluierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Get Lehrveranstaltung Infos and its lecturers.
+	 * Get Lehrveranstaltung Infos and its lecturers by given LvevaluierungLehrveranstaltungID.
 	 *
 	 * @return void
 	 */
 	public function getLvInfo()
 	{
-		$lehrveranstaltung_id = $this->input->get('lehrveranstaltung_id');
-		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
-		$result = $this->evaluierunglib->getLvInfo($lehrveranstaltung_id, $studiensemester_kurzbz);
+		// Get Lvevaluierung-Lehrveranstaltung
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+		$result = $this->LvevaluierungLehrveranstaltungModel->load($lvevaluierung_lehrveranstaltung_id);
 
-		$this->terminateWithSuccess($result);
+		if (hasData($result))
+		{
+			$data = getData($result)[0];
+
+			// Get LvInfos and lecturers by LehrveranstaltungID and Studiensemester
+			$result = $this->evaluierunglib->getLvInfo($data->lehrveranstaltung_id, $data->studiensemester_kurzbz);
+
+			$this->terminateWithSuccess($result);
+		}
+		else
+		{
+			$this->terminateWithError('No Lv-Evaluierung-Lehrveranstaltung found');
+		}
+	}
+
+	/**
+	 * Start Evaluierung by setting Startzeit.
+	 *
+	 * @return void
+	 */
+	public function setStartzeit(){
+		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
+
+		$result = $this->LvevaluierungCodeModel->update(
+			[
+				'lvevaluierung_code_id' => $lvevaluierung_code_id
+			],
+			[
+				'startzeit' => 'NOW()'
+			]
+		);
+
+		if (isError($result)) $this->terminateWithError(getError($result));
+
+		$this->terminateWithSuccess(true);
 	}
 }

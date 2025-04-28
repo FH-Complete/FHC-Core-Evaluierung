@@ -8,6 +8,7 @@ export default {
 	data(){
 		return {
 			lvInfo: {},
+			lvEvaluierungCode: {},
 			lvEvaluierung: {},
 			fbAntworten: {},
 			fbGruppen: [],
@@ -15,19 +16,32 @@ export default {
 		}
 	},
 	created() {
-		console.log('Component created');
-		console.log(this.$route.params.code);
+		const code = this.$route.params.code;
+		// Get Evaluierung
+		this.$fhcApi.factory.evaluierung.getLvEvaluierungCode(code)
+			.then(result => {
+				this.lvEvaluierungCode = result.data;
 
-		this.$fhcApi.factory.evaluierung.getLvEvaluierung('123abc')	// todo put hier lvevaluierung_code_id
-			.then(result => this.lvEvaluierung = result.data)
-			.catch(error => this.$fhcAlert.handleSystemError(error));
+				return this.$fhcApi.factory.evaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id)
+			})
+			.then(result => {
+				this.lvEvaluierung = result.data;
 
-		this.$fhcApi.factory.evaluierung.getLvInfo(38840, 'SS2025')
-			.then(result => this.lvInfo = result.data)
-			.catch(error => this.$fhcAlert.handleSystemError(error));
+				return Promise.all([
+					// Get LV Infos
+					this.$fhcApi.factory.evaluierung.getLvInfo(this.lvEvaluierung.lvevaluierung_lehrveranstaltung_id),
 
-		this.$fhcApi.factory.fragebogen.getInitFragebogen(1)
-			.then(result => this.fbGruppen = result.data)
+					// Get full initial Fragebogen
+					this.$fhcApi.factory.fragebogen.getInitFragebogen(this.lvEvaluierung.fragebogen_id),
+				])
+			})
+			.then(([resultLvInfo, resultInitFragebogen]) => {
+				this.lvInfo = resultLvInfo.data;
+				this.fbGruppen = resultInitFragebogen.data
+
+				// Start Evaluierung
+				return this.$fhcApi.factory.evaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id)
+			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
 	mounted() {
