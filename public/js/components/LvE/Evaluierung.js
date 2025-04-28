@@ -12,7 +12,7 @@ export default {
 			lvEvaluierung: {},
 			fbAntworten: {},
 			fbGruppen: [],
-			lvInfoDisplay: true
+			lvInfoExpanded: true
 		}
 	},
 	created() {
@@ -45,11 +45,11 @@ export default {
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
 	mounted() {
-		this.updateLvInfoDisplay();
-		window.addEventListener('resize', this.updateLvInfoDisplay);
+		this.updateLvInfoExpanded();
+		window.addEventListener('resize', this.updateLvInfoExpanded);
 	},
 	beforeUnmount() {
-		window.removeEventListener('resize', this.updateLvInfoDisplay);
+		window.removeEventListener('resize', this.updateLvInfoExpanded);
 	},
 	methods: {
 		onSubmit(){
@@ -72,8 +72,8 @@ export default {
 			}
 			return clusteredGruppe;
 		},
-		updateLvInfoDisplay() {
-			this.lvInfoDisplay = window.innerWidth > 992;
+		updateLvInfoExpanded() {
+			this.lvInfoExpanded = window.innerWidth > 992;
 		},
 	},
 	template: `
@@ -169,11 +169,11 @@ export default {
 							<h2 class="accordion-header" id="headingOne">
 								<button 
 									class="accordion-button bg-white fw-bold text-dark fs-5" 
-									:class="{collapsed: !lvInfoDisplay}"
+									:class="{collapsed: !lvInfoExpanded}"
 									type="button" 
 									data-bs-toggle="collapse" 
 									data-bs-target="#collapseLvinfo" 
-									:aria-expanded="lvInfoDisplay" 
+									:aria-expanded="lvInfoExpanded" 
 									aria-controls="collapseLvinfo"
 								>
 									{{lvInfo.bezeichnung_by_language}}
@@ -182,7 +182,7 @@ export default {
 							<div 
 								id="collapseLvinfo" 
 								class="accordion-collapse collapse"
-								:class="{show: lvInfoDisplay}"
+								:class="{show: lvInfoExpanded}"
 								aria-labelledby="headingOne" 
 								data-bs-parent="#accordionLvinfo"
 							>
