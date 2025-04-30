@@ -29,7 +29,6 @@ class EvaluierungLib
 	public function getLvInfo($lehrveranstaltung_id, $studiensemester_kurzbz)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
 
 		// Get LV
 		$this->_ci->LehrveranstaltungModel->addSelect('ects, bezeichnung, bezeichnung_english');
