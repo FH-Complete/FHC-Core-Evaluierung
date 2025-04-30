@@ -2,11 +2,11 @@ CREATE TABLE IF NOT EXISTS extension.tbl_lvevaluierung_antwort (
     lvevaluierung_antwort_id integer,
     lvevaluierung_frage_antwort_id integer,
     lvevaluierung_frage_id integer,
-    lvevaluierung_code_id integer UNIQUE,
+    lvevaluierung_code_id integer,
     antwort text
 );
 
-COMMENT ON TABLE extension.tbl_lvevaluierung_antwort IS 'Liste LV Evaluierung Antworten';
+COMMENT ON TABLE extension.tbl_lvevaluierung_antwort IS 'Liste LV Evaluierung Antworten der Studierenden';
 
 DO $$
 BEGIN
@@ -39,6 +39,13 @@ ALTER TABLE extension.tbl_lvevaluierung_antwort
     ADD CONSTRAINT fk_tbl_lvevaluierung_antwort_lvevaluierung_code_id FOREIGN KEY (lvevaluierung_code_id)
         REFERENCES extension.tbl_lvevaluierung_code (lvevaluierung_code_id)
         ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_antwort
+    ADD CONSTRAINT uq_frageid_codeid UNIQUE (lvevaluierung_frage_id, lvevaluierung_code_id);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
