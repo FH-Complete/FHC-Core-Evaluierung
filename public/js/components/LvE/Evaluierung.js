@@ -7,11 +7,11 @@ export default {
 	},
 	data(){
 		return {
-			lvInfo: {},
 			lvEvaluierungCode: {},
 			lvEvaluierung: {},
-			fbAntworten: {},
 			fbGruppen: [],
+			fbAntworten: [],
+			lvInfo: {},
 			lvInfoExpanded: true
 		}
 	},
@@ -39,7 +39,19 @@ export default {
 			})
 			.then(([resultLvInfo, resultInitFragebogen]) => {
 				this.lvInfo = resultLvInfo.data;
-				this.fbGruppen = resultInitFragebogen.data
+				this.fbGruppen = resultInitFragebogen.data;
+
+				// Build initital fbAntworten antwort objects
+				resultInitFragebogen.data.forEach(gruppe => {
+					gruppe.fbFrage.forEach(frage => {
+						this.fbAntworten.push({
+							lvevaluierung_code_id: this.lvEvaluierungCode.lvevaluierung_code_id,
+							lvevaluierung_frage_id: frage.lvevaluierung_frage_id,
+							lvevaluierung_frage_antwort_id: null,
+							antwort: null
+						});
+					});
+				});
 
 				// Start Evaluierung
 				return this.$fhcApi.factory.evaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id)
@@ -54,10 +66,25 @@ export default {
 		window.removeEventListener('resize', this.updateLvInfoExpanded);
 	},
 	methods: {
+		findAntwortObj(lvevaluierung_frage_id) {
+			return this.fbAntworten.find(a => a.lvevaluierung_frage_id === lvevaluierung_frage_id);
+		},
 		onSubmit(){
-			console.table(this.fbAntworten);
-			//console.log(this.$refs.form);
-			//this.$router.push({name: 'Logout'}); // todo umcomment after testing
+
+			this.$fhcApi.factory.evaluierung.saveAntworten(this.fbAntworten)
+				.then(result => {
+					// TODO....hier weitermache. ein timeout nach saved, dann beim starten check, ob es zu dem code bereits schon ausgefüllt.
+					// todo ggf. noch clientseitig check required.
+					// TODO jedenfalls noch setEndeZeit!! und Dauer bzw Timer
+					if (result.data.length > 0) {
+						this.$fhcAlert.alertSuccess('Saved!')
+						//this.$router.push({name: 'Logout'}); // todo umcomment after testing
+					}
+					else {
+						this.$fhcAlert.alertInfo('No data was saved. Did you answered the questions?')
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		getClusteredGruppen(startIndex) {
 			const arr = this.fbGruppen;
@@ -98,7 +125,9 @@ export default {
 									<template v-for="(frage, fIndex) in fbGruppe.fbFrage" :key="fIndex">
 										<fragebogen-frage 
 											:frage="frage"
-											v-model="fbAntworten[frage.lvevaluierung_frage_id]"
+											v-model:lvevaluierung_frage_id="findAntwortObj(frage.lvevaluierung_frage_id).lvevaluierung_frage_id"
+											v-model:lvevaluierung_frage_antwort_id="findAntwortObj(frage.lvevaluierung_frage_id).lvevaluierung_frage_antwort_id"
+											v-model:antwort="findAntwortObj(frage.lvevaluierung_frage_id).antwort"
 										>
 										</fragebogen-frage>
 									</template>
@@ -145,10 +174,12 @@ export default {
 													<div class="accordion-body">
 													
 														<!-- Loop Fragebogen Fragen -->
-														<template v-for="(frage, fbIndex) in cGruppe.fbFrage" :key="fbIndex">
+														<template v-for="(frage, fIndex) in cGruppe.fbFrage" :key="fIndex">
 															<fragebogen-frage 
 																:frage="frage" 
-																v-model="fbAntworten[frage.lvevaluierung_frage_id]"
+																v-model:lvevaluierung_frage_id="findAntwortObj(frage.lvevaluierung_frage_id).lvevaluierung_frage_id"
+																v-model:lvevaluierung_frage_antwort_id="findAntwortObj(frage.lvevaluierung_frage_id).lvevaluierung_frage_antwort_id"
+																v-model:antwort="findAntwortObj(frage.lvevaluierung_frage_id).antwort"
 															>
 															</fragebogen-frage>
 														</template>

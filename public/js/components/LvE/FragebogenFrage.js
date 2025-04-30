@@ -8,18 +8,17 @@ export default {
 	},
 	props: {
 		frage: Object,
-		modelValue: Object
+		lvevaluierung_frage_id: Number,
+		lvevaluierung_frage_antwort_id: null,
+		antwort: null,
 	},
-	emits: ['update:modelValue'],
-	computed: {
-		selected: {
-			get() {
-				return this.modelValue;
-			},
-			set(value) {
-				this.$emit('update:modelValue', value);
-			}
-		}
+	emits: [
+		'update:lvevaluierung_frage_id',
+		'update:lvevaluierung_frage_antwort_id',
+		'update:antwort'
+	],
+	created() {
+		this.$emit('update:lvevaluierung_frage_id', this.frage.lvevaluierung_frage_id)
 	},
 	methods: {
 		getIconLabel(antwortWert, isActive) {
@@ -55,9 +54,9 @@ export default {
 					<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
 						<form-input
 						  	type="radio"
-						  	:label="getIconLabel(antwort.wert, selected === antwort.wert)"
+						  	:label="getIconLabel(antwort.wert, lvevaluierung_frage_antwort_id == antwort.wert)"
 						  	:value="antwort.wert"
-						  	v-model="selected"
+						  	 @input="$emit('update:lvevaluierung_frage_antwort_id', $event.target.value)"
 							container-class="btn px-md-4"
 						  	class="btn-check"
 						>
@@ -74,10 +73,10 @@ export default {
 				<div class="card-body">
 					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }}</label>
 					<form-input
-					  type="textarea"
-					  :placeholder="frage.placeholder"
-					  v-model="selected"
-					  style="height: 100px"
+				  		type="textarea"
+					  	:placeholder="frage.placeholder"
+						@input="$emit('update:antwort', $event.target.value)"
+					  	style="height: 100px"
 					/>
 					</form-input>
 				</div>

@@ -14,7 +14,8 @@ class Evaluierung extends FHCAPI_Controller
 				'getLvEvaluierung' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG,
-				'setStartzeit' => self::BERECHTIGUNG_EVLUIERUNG
+				'setStartzeit' => self::BERECHTIGUNG_EVLUIERUNG,
+				'saveAntworten' => self::BERECHTIGUNG_EVLUIERUNG
 			)
 		);
 
@@ -159,5 +160,33 @@ class Evaluierung extends FHCAPI_Controller
 		if (isError($result)) $this->terminateWithError(getError($result));
 
 		$this->terminateWithSuccess(true);
+	}
+
+	/**
+	 * Save Students' Antworten.
+	 * @return void
+	 */
+	public function saveAntworten()
+	{
+		$data = $this->input->post('data');
+		$insertedIds = [];
+
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
+		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
+
+		// Validate Antworten
+		$result = $this->evaluierunglib->validateAntworten($data);
+
+		$validatedAntworten = $this->getDataOrTerminateWithError($result);
+
+		if (!empty($validatedAntworten))
+		{
+			// Save Antworten
+			$result = $this->LvevaluierungAntwortModel->saveAntworten($validatedAntworten);
+
+			$insertedIds = $this->getDataOrTerminateWithError($result);
+		}
+
+		$this->terminateWithSuccess($insertedIds);
 	}
 }

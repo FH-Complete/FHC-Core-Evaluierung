@@ -52,6 +52,52 @@ class EvaluierungLib
 	}
 
 	/**
+	 * Validate Antworten (check if Pflicht, Skip not answered).
+	 * @param $antworten
+	 * @return void Return Antworten that must be inserted. Return error if validation failed.
+	 */
+	public function validateAntworten($antworten)
+	{
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
+
+		$insertItems = [];
+
+		if ($antworten) {
+			foreach ($antworten as $antwort)
+			{
+				// Get Frage
+				$result = $this->_ci->LvevaluierungFragebogenFrageModel->load($antwort['lvevaluierung_frage_id']);
+				$frage = hasData($result) ? getData($result)[0] : null;
+
+				// Check if Frage MUST be answered
+				if ($frage->verpflichtend)
+				{
+					//Return if it was not answered
+					if ($frage->typ === 'singleresponse')
+					{
+						if (is_null($antwort['lvevaluierung_frage_antwort_id'])) return error('Pflichtantwort fehlt');
+					}
+
+					if ($frage->typ === 'text')
+					{
+						if (is_null($antwort['antwort'])) return error('Pflichtantwort fehlt');
+					}
+				}
+
+				// Skip if no Antwort at all
+				if (is_null($antwort['lvevaluierung_frage_antwort_id']) && is_null($antwort['antwort'])) {
+					continue;
+				}
+
+				// Store validated Antworten to be saved
+				$insertItems[] = $antwort;
+			}
+
+			return success($insertItems);
+		}
+	}
+
+	/**
 	 * Get the Users Language Index.
 	 *
 	 * @return int
