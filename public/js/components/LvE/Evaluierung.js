@@ -70,18 +70,28 @@ export default {
 			return this.fbAntworten.find(a => a.lvevaluierung_frage_id === lvevaluierung_frage_id);
 		},
 		onSubmit(){
-
-			this.$fhcApi.factory.evaluierung.saveAntworten(this.fbAntworten)
+			// End Evaluierung
+			this.$fhcApi.factory.evaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id)
 				.then(result => {
-					// TODO....hier weitermache. ein timeout nach saved, dann beim starten check, ob es zu dem code bereits schon ausgefüllt.
-					// todo ggf. noch clientseitig check required.
-					// TODO jedenfalls noch setEndeZeit!! und Dauer bzw Timer
+					if (result.data === true) {
+						// Save Antworten
+						return this.$fhcApi.factory.evaluierung.saveAntworten(this.fbAntworten)
+					}
+				})
+				.then(result => {
+					// On Success
 					if (result.data.length > 0) {
+
+						// Success message
 						this.$fhcAlert.alertSuccess('Saved!')
-						//this.$router.push({name: 'Logout'}); // todo umcomment after testing
+
+						// Change to log out Site after 2 seconds
+						setTimeout(() => {
+							this.$router.push({name: 'Logout'});
+						}, 2000)
 					}
 					else {
-						this.$fhcAlert.alertInfo('No data was saved. Did you answered the questions?')
+						this.$fhcAlert.alertInfo('No data was saved.')
 					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));

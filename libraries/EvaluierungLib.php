@@ -51,6 +51,43 @@ class EvaluierungLib
 	}
 
 	/**
+	 * Calculates the maximal Endezeit.
+	 * Maximal Endezeit = Startzeit + Dauer + Buffer for request retry handling
+	 *
+	 * @param $lvevaluierung_code_id
+	 * @return string
+	 * @throws DateMalformedStringException
+	 */
+	public function getMaxEndezeit($lvevaluierung_code_id)
+	{
+		$this->_ci->load->model('education/LehrveranstaltungCode_model', 'LvevaluierungCodeModel');
+
+		// Get Evaluierung Startzeit and Dauer
+		$this->_ci->LvevaluierungCodeModel->addSelect('tbl_lvevaluierung_code.startzeit');
+		$this->_ci->LvevaluierungCodeModel->addSelect('dauer');
+		$this->_ci->LvevaluierungCodeModel->addJoin('extension.tbl_lvevaluierung', 'lvevaluierung_id');
+		$result = $this->_ci->LvevaluierungCodeModel->load($lvevaluierung_code_id);
+		$startzeit = hasData($result) ? getData($result)[0]->startzeit : null;
+		$dauer = hasData($result) ? getData($result)[0]->dauer : null;
+
+		// Extra time to be added for request retry handling
+		$bufferMinutes = 10;
+
+		$dtStartzeit = new DateTime($startzeit);
+
+		// Convert Dauer (HH:MM:SS) to DateInterval
+		list($h, $m, $s) = explode(':', $dauer);
+
+		// Add buffer minutes
+		$m += $bufferMinutes;
+
+		$interval = new DateInterval("PT{$h}H{$m}M{$s}S");
+
+		// Return maximale Endezeit
+		return ($dtStartzeit->add($interval))->format("Y-m-d H:i:s");
+	}
+
+	/**
 	 * Validate Antworten (check if Pflicht, Skip not answered).
 	 * @param $antworten
 	 * @return void Return Antworten that must be inserted. Return error if validation failed.

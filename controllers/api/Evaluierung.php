@@ -15,6 +15,7 @@ class Evaluierung extends FHCAPI_Controller
 				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
 				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG,
 				'setStartzeit' => self::BERECHTIGUNG_EVLUIERUNG,
+				'setEndezeit' => self::BERECHTIGUNG_EVLUIERUNG,
 				'saveAntworten' => self::BERECHTIGUNG_EVLUIERUNG
 			)
 		);
@@ -160,6 +161,44 @@ class Evaluierung extends FHCAPI_Controller
 		if (isError($result)) $this->terminateWithError(getError($result));
 
 		$this->terminateWithSuccess(true);
+	}
+
+	/**
+	 * End Evaluierung by setting Endezeit.
+	 * Before it is checked if Evaluierung was sent within the maximal Endezeit.
+	 * Maximal Endezeit = Startzeit + Dauer + Buffer for request retry handling
+	 *
+	 * @return void
+	 */
+	public function setEndezeit(){
+		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
+
+		// Calculate maximale Endezeit (Startzeit + Dauer + Buffer for request retry handling)
+		$maxEndezeit = $this->evaluierunglib->getMaxEndezeit($lvevaluierung_code_id);
+
+		$now = (new DateTime())->format("Y-m-d H:i:s");
+
+		// If Endezeit is valid
+		if ($now <= $maxEndezeit)
+		{
+			// Set Endezeit
+			$result = $this->LvevaluierungCodeModel->update(
+				[
+					'lvevaluierung_code_id' => $lvevaluierung_code_id
+				],
+				[
+					'endezeit' => 'NOW()'
+				]
+			);
+
+			if (isError($result)) $this->terminateWithError(getError($result));
+
+			$this->terminateWithSuccess(true);
+		}
+		else
+		{
+			$this->terminateWithError('The evaluation submission time has passed.');
+		}
 	}
 
 	/**

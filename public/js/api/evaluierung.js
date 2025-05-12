@@ -16,6 +16,10 @@ export default {
 		const url = '/extensions/FHC-Core-Evaluierung/api/Evaluierung/setStartzeit';
 		return this.$fhcApi.post(url, {lvevaluierung_code_id: lvevaluierung_code_id})
 	},
+	setEndezeit(lvevaluierung_code_id) {
+		const url = '/extensions/FHC-Core-Evaluierung/api/Evaluierung/setEndezeit';
+		return this.$fhcApi.post(url, {lvevaluierung_code_id: lvevaluierung_code_id})
+	},
 	saveAntworten(data) {
 		const url = '/extensions/FHC-Core-Evaluierung/api/Evaluierung/saveAntworten';
 		return this.$fhcApi.post(url, {data: data})
