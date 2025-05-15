@@ -12,6 +12,7 @@ $includesArray = array(
     ),
 	'customCSSs' => array(
 		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css',
+		'public/extensions/FHC-Core-Evaluierung/css/Countdown.css',
         'public/css/components/primevue.css'
 	)
 );

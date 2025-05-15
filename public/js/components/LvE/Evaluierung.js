@@ -1,9 +1,11 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FragebogenFrage from "./FragebogenFrage";
+import Countdown from "./Countdown";
 export default {
 	components: {
 		FormForm,
-		FragebogenFrage
+		FragebogenFrage,
+		Countdown
 	},
 	data(){
 		return {
@@ -13,22 +15,7 @@ export default {
 			fbAntworten: [],
 			lvInfo: {},
 			lvInfoExpanded: true,
-			countdownSeconds: 0,
-			countdownTimer: null
-		}
-	},
-	computed: {
-		countdownDisplay() {
-			const m = String(Math.floor(this.countdownSeconds / 60)).padStart(2, '0');
-			const s = String(this.countdownSeconds % 60).padStart(2, '0');
-			return `${m}:${s}`;
-		}
-	},
-	watch: {
-		countdownSeconds(newVal) {
-			if (newVal === 0) {
-				this.onCountdownEnd();
-			}
+			showCountdown: false
 		}
 	},
 	created() {
@@ -73,8 +60,8 @@ export default {
 				return this.$fhcApi.factory.evaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id)
 			})
 			.then(() => {
-				this.countdownSeconds = this.parseDauerToSeconds(this.lvEvaluierung.dauer);
-				this.startCountdown();
+				// Show Countdown
+				this.showCountdown = true;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
@@ -114,32 +101,17 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		updateLvInfoExpanded() {
-			this.lvInfoExpanded = window.innerWidth > 992;
-		},
-		startCountdown() {
-			// Stop timer if already running
-			if (this.countdownTimer) clearInterval(this.countdownTimer);
-
-			// Start a new interval that ticks every second
-			this.countdownTimer = setInterval(() => {
-				if (this.countdownSeconds > 0) {
-					// Decrease countdown
-					this.countdownSeconds--;
-				}
-			}, 1000); // Interval every second
+			this.lvInfoExpanded = window.innerWidth > 1800;
 		},
 		onCountdownEnd(){
-			// Stop timer
-			clearInterval(this.countdownTimer);
-
-			// Reset timer
-			this.countdownTimer = null;
+			this.showCountdown = false;
 
 			// Notify user
 			this.$fhcAlert.alertInfo("Time is up!");
 
-			// Submit data and setEndezeit after 2 seconds
+			// After 2 seconds
 			setTimeout(() => {
+				// Submit data (will set Endezeit also)
 				this.onSubmit();
 			}, 2000)
 		},
@@ -299,9 +271,13 @@ export default {
 				  </div><!-- .accordion LV Infos -->
 			
 					<!-- Countdown for lg+ only -->
-					<div class="card w-100 text-center d-none d-lg-flex flex-grow-1">
+					<div class="card w-100 d-none d-lg-flex flex-grow-1">
 						<div class="card-body d-flex flex-column align-items-center justify-content-center">
-							<i class="fa-regular fa-clock fa-8x mb-3"></i>{{ countdownDisplay }} Countdown lg-xl
+							<Countdown v-if="showCountdown" 
+								:duration="parseDauerToSeconds(lvEvaluierung.dauer)"
+								type="circle" 
+								@countdown-ended="onCountdownEnd"
+							/>
 						</div>
 					</div>
 				</div><!-- .col LV Infos + Countdown (lg only) -->
@@ -312,7 +288,11 @@ export default {
 		
 			<!-- Countdown for sm/md only -->
 			<div class="col-8 d-lg-none d-flex align-items-center">
-				<i class="fa-regular fa-clock fa-2x me-2"></i>{{ countdownDisplay }}Countdown sm-md
+				<Countdown v-if="showCountdown" 
+					:duration="parseDauerToSeconds(lvEvaluierung.dauer)" 
+					type="icon"
+					@countdown-ended="onCountdownEnd"
+				/>
 			</div>
 			
 			<!-- Submit button -->

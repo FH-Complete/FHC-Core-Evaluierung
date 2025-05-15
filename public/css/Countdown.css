@@ -1,0 +1,32 @@
+.countdown__label {
+    text-anchor: middle;
+    dominant-baseline: central;
+    font-family: monospace;
+}
+
+.countdown__svg {
+    display: block;
+}
+.countdown__circle {
+    fill: none;
+    stroke-width: 7px;
+}
+.countdown__path-elapsed {
+    stroke: #e6e6e6;
+}
+.countdown__path-remaining {
+    stroke-linecap: round;
+    transition: 1s linear all;
+}
+
+.green {
+    stroke: #00c853;
+}
+
+.orange {
+    stroke: #ff9800;
+}
+
+.red {
+    stroke: #f44336;
+}
