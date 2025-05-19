@@ -21,10 +21,6 @@ export default {
 		this.$emit('update:lvevaluierung_frage_id', this.frage.lvevaluierung_frage_id)
 	},
 	methods: {
-		getIconLabel(antwortWert, isActive) {
-			const style = isActive ? 'fa-solid' : 'fa-regular';
-			return '<i class="'+ style + ' fa-' + this.getIcon(antwortWert) + ' fa-2x" style="cursor: pointer"></i>';
-		},
 		getIcon(antwortWert) {
 			const icons = [
 				'circle-question',	// 0
@@ -46,25 +42,52 @@ export default {
 		<!-- Fragenbogenfrage SingleResponse -->	
 		<div v-if="frage.typ === 'singleresponse'">
 			<div class="card mb-4 text-center border-0">											
-			<div class="card-title fw-bold">
-				{{ frage.bezeichnung_by_language }}
-			</div>
-			<div class="card-body">
-				<div class="btn-group" role="group" aria-label="Evaluierung Antwort Option">
+				<div class="card-title fw-bold">
+					{{ frage.bezeichnung_by_language }}
+				</div>
+				<div class="card-body">
+					<div 
+					class="d-flex justify-content-evenly justify-content-sm-center" 
+					role="group" 
+					aria-label="Evaluierung Antwort Option"
+					>
 					<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
-						<form-input
-						  	type="radio"
-						  	:label="getIconLabel(antwort.wert, lvevaluierung_frage_antwort_id == antwort.wert)"
-						  	:value="antwort.wert"
-						  	 @input="$emit('update:lvevaluierung_frage_antwort_id', $event.target.value)"
-							container-class="btn px-md-4"
-						  	class="btn-check"
-						>
-						</form-input>
+						<div class="px-md-2">
+						  	<div class="mb-auto">
+								<input
+								type="radio"				
+								:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
+								:value="antwort.wert"
+								:checked="lvevaluierung_frage_antwort_id == antwort.wert"
+								 @input="$emit('update:lvevaluierung_frage_antwort_id', $event.target.value)"
+								container-class="btn px-md-4"
+								class="btn-check antwort-radio-btn"
+							></div>
+						  	<div class="px-1">
+								<label
+									class="antwort-label d-flex flex-column mx-2 mx-sm-3 mx-md-4"
+									:for="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
+									>
+									<i
+										:class="[
+											(lvevaluierung_frage_antwort_id == antwort.wert ? 'fa-solid' : 'fa-regular'),
+											'fa-' + getIcon(antwort.wert),
+											'fa-2x',
+											'antwort-icon',
+											'wert-' + antwort.wert,
+											lvevaluierung_frage_antwort_id == antwort.wert ? 'antwort-checked' : ''
+										  ]"
+									></i>
+								</label>
+							</div>
+						  	<div class="antwort-text-wrapper mt-1">
+						  		<span class="small text-muted text-wrap">{{antwort.bezeichnung_by_language}}</span>
+							</div>
+						</div>
 				  	</template>
 				</div>
 			</div>
-		</div><!-- .card Fragebogenfrage SingleResponse -->
+			</div><!-- .card Fragebogenfrage SingleResponse -->
 		</div><!-- .endif Fragebogenfrage SingleResponse-->
 	
 		<!--  Fragenbogenfrage Text -->

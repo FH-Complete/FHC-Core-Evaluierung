@@ -9,3 +9,50 @@
 .fhc-bgc-grey {
     background-color: #72777A;
 }
+
+
+/* Styles and animations on checked Antwort Smiley icons */
+/* -------------------------------------------------------------------------------------------------------------------*/
+.antwort-icon {
+    cursor: pointer;
+   /* width: 42px;*/
+}
+
+.antwort-text-wrapper {
+    max-width: 90px;
+}
+
+/* Style color, when Antwort is checked */
+.antwort-checked.wert-0 { color: gray; }
+.antwort-checked.wert-1 { color: #32CD32; }     /* light green */
+.antwort-checked.wert-2 { color: #219521; }     /* dark green */
+.antwort-checked.wert-3 { color: #ffd700; }     /* yellow */
+.antwort-checked.wert-4 { color: #FF5500; }     /* orange */
+.antwort-checked.wert-5 { color: #be2525; }     /* red */
+
+/* Responsive scaling effect when Antwort icon is checked */
+.antwort-checked {
+    transform: scale(1.2); /* Default scale for XS/SM devices */
+    transition: transform 0.2s cubic-bezier(.68,-0.55,.27,1.55);
+    z-index: 1;
+}
+
+/* Scale for MD+ devices */
+@media (min-width: 768px) {
+    .antwort-checked {
+        transform: scale(1.35);
+    }
+}
+
+/* Bounce animation when Antwort icon was checked */
+.antwort-checked {
+    animation: bounce 0.4s cubic-bezier(.68,-0.55,.27,1.55);
+}
+
+/* Bounce keyframe definition */
+@keyframes bounce {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.7); }
+    60%  { transform: scale(0.95); }
+    100% { transform: scale(1); }
+}

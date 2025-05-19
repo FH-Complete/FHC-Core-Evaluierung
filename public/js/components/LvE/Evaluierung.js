@@ -204,7 +204,7 @@ export default {
 													class="accordion-collapse collapse" 
 													:aria-labelledby="'flush-heading' + cGruppe.lvevaluierung_fragebogen_gruppe_id" 
 													:data-bs-parent="'#accordionFlush' + fbGruppe.lvevaluierung_fragebogen_gruppe_id">
-													<div class="accordion-body">
+													<div class="accordion-body px-0 px-sm-3">
 													
 														<!-- Loop Fragebogen Fragen -->
 														<template v-for="(frage, fIndex) in cGruppe.fbFrage" :key="fIndex">
