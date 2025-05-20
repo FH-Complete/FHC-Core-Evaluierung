@@ -24,6 +24,8 @@ class LvevaluierungFragebogenFrageAntwort_model extends DB_Model
 			bezeichnung[('. $this->evaluierunglib->getLanguageIndex(). ')] AS bezeichnung_by_language
 		');
 
+		$this->addOrder('lvevaluierung_frage_id, sort');
+
 		return $this->LvevaluierungFragebogenFrageAntwortModel->loadWhere([
 			'lvevaluierung_frage_id' => $lvevaluierung_frage_id
 		]);
