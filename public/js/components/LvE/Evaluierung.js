@@ -1,6 +1,8 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FragebogenFrage from "./FragebogenFrage";
 import Countdown from "./Countdown";
+import DateHelper from "../../helpers/DateHelper";
+
 export default {
 	components: {
 		FormForm,
@@ -31,6 +33,12 @@ export default {
 			})
 			.then(result => {
 				this.lvEvaluierung = result.data;
+
+				// Redirect and exit if general Evaluierung period has passed
+				this.logoutIfEvaluierungPeriodClosed();
+
+				// Redirect and exit if Evaluierung was already submitted
+				this.logoutIfEvaluierungSubmitted();
 
 				return Promise.all([
 					// Get LV Infos
@@ -102,6 +110,33 @@ export default {
 		},
 		updateLvInfoExpanded() {
 			this.lvInfoExpanded = window.innerWidth > 1800;
+		},
+		logoutIfEvaluierungPeriodClosed(){
+			const endezeit = new Date(this.lvEvaluierung.endezeit);
+			const now = new Date();
+
+			// Redirect if Evaluation period is over
+			if (now > endezeit) {
+				this.$router.push({
+					name: 'Logout',
+					query: {
+						title: 'Evaluation period was closed on ' + DateHelper.formatDate(this.lvEvaluierung.endezeit),
+						content: 'This evaluation is no longer available.'
+					}
+				});
+			}
+		},
+		logoutIfEvaluierungSubmitted(){
+			// Redirect if Evaluation was already submitted
+			if (this.lvEvaluierungCode.endezeit !== null) {
+				this.$router.push({
+					name: 'Logout',
+					query: {
+						title: 'Evaluation was submitted on ' + DateHelper.formatDateTime(this.lvEvaluierungCode.endezeit),
+						content: 'This evaluation is no longer available.'
+					}
+				});
+			}
 		},
 		onCountdownEnd(){
 			this.showCountdown = false;

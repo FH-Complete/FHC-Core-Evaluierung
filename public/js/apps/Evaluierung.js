@@ -14,7 +14,15 @@ const router = VueRouter.createRouter({
 	routes: [
 		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung`, name: 'Login', component: LveLogin },
 		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung/:code`, name: 'Evaluierung', component: LveEvaluierung },
-		{ path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung`, name: 'Logout', component: LveLogout }
+		{
+			path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluierung`,
+			name: 'Logout',
+			component: LveLogout,
+			props: route => ({
+				title: route.query.title,
+				content: route.query.content
+			})
+		},
 	]
 });
 
