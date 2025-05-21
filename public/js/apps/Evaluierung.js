@@ -1,6 +1,7 @@
 import LveLogin from '../components/LvE/Login.js';
 import LveEvaluierung from '../components/LvE/Evaluierung.js';
 import LveLogout from '../components/LvE/Logout.js';
+import DateHelper from '../helpers/DateHelper';
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 import FhcApi from "../../../../js/plugin/FhcApi.js";
 import Phrasen from "../../../../js/plugin/Phrasen.js";
@@ -24,4 +25,5 @@ app
 	.use(FhcAlert)
 	.use(FhcApi, {factory: fhcapifactory})
 	.use(Phrasen)
+	.use(DateHelper)
 	.mount('#main')
