@@ -1,6 +1,7 @@
 import LveLogin from '../components/LvE/Login.js';
 import LveEvaluierung from '../components/LvE/Evaluierung.js';
 import LveLogout from '../components/LvE/Logout.js';
+import SpracheDropdown from "../widgets/SpracheDropdown.js";
 import DateHelper from '../helpers/DateHelper';
 import FhcAlert from '../../../../js/plugins/FhcAlert.js';
 import FhcApi from "../../../../js/plugins/Api.js";
@@ -25,7 +26,12 @@ const router = VueRouter.createRouter({
 	]
 });
 
-const app = Vue.createApp();
+const app = Vue.createApp({
+	components: {
+		SpracheDropdown
+	}
+});
+
 app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
@@ -33,4 +39,4 @@ app
 	.use(FhcApi)
 	.use(Phrasen)
 	.use(DateHelper)
-	.mount('#main')
+	.mount('#lve-evaluierung-main')
