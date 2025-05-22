@@ -2,10 +2,9 @@ import LveLogin from '../components/LvE/Login.js';
 import LveEvaluierung from '../components/LvE/Evaluierung.js';
 import LveLogout from '../components/LvE/Logout.js';
 import DateHelper from '../helpers/DateHelper';
-import FhcAlert from '../../../../js/plugin/FhcAlert.js';
-import FhcApi from "../../../../js/plugin/FhcApi.js";
-import Phrasen from "../../../../js/plugin/Phrasen.js";
-import fhcapifactory from "../api/fhcapifactory.js";
+import FhcAlert from '../../../../js/plugins/FhcAlert.js';
+import FhcApi from "../../../../js/plugins/Api.js";
+import Phrasen from "../../../../js/plugins/Phrasen.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
@@ -31,7 +30,7 @@ app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(FhcAlert)
-	.use(FhcApi, {factory: fhcapifactory})
+	.use(FhcApi)
 	.use(Phrasen)
 	.use(DateHelper)
 	.mount('#main')

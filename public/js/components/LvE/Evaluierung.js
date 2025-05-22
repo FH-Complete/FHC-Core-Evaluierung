@@ -2,6 +2,8 @@ import FormForm from "../../../../../js/components/Form/Form.js";
 import FragebogenFrage from "./FragebogenFrage";
 import Countdown from "./Countdown";
 import DateHelper from "../../helpers/DateHelper";
+import ApiEvaluierung from "../../api/evaluierung.js";
+import ApiFragebogen from "../../api/fragebogen.js";
 
 export default {
 	components: {
@@ -24,12 +26,12 @@ export default {
 		const code = this.$route.params.code;
 
 		// Get EvaluierungCode
-		this.$fhcApi.factory.evaluierung.getLvEvaluierungCode(code)
+		this.$api.call(ApiEvaluierung.getLvEvaluierungCode(code))
 			.then(result => {
 				this.lvEvaluierungCode = result.data;
 
 				// Get Evaluierung
-				return this.$fhcApi.factory.evaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id)
+				return this.$api.call(ApiEvaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id))
 			})
 			.then(result => {
 				this.lvEvaluierung = result.data;
@@ -42,10 +44,10 @@ export default {
 
 				return Promise.all([
 					// Get LV Infos
-					this.$fhcApi.factory.evaluierung.getLvInfo(this.lvEvaluierung.lvevaluierung_lehrveranstaltung_id),
+					this.$api.call(ApiEvaluierung.getLvInfo(this.lvEvaluierung.lvevaluierung_lehrveranstaltung_id)),
 
 					// Get full initial Fragebogen
-					this.$fhcApi.factory.fragebogen.getInitFragebogen(this.lvEvaluierung.fragebogen_id),
+					this.$api.call(ApiFragebogen.getInitFragebogen(this.lvEvaluierung.fragebogen_id)),
 				])
 			})
 			.then(([resultLvInfo, resultInitFragebogen]) => {
@@ -65,7 +67,7 @@ export default {
 				});
 
 				// Start Evaluierung
-				return this.$fhcApi.factory.evaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id)
+				return this.$api.call(ApiEvaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id))
 			})
 			.then(() => {
 				// Show Countdown
@@ -83,11 +85,11 @@ export default {
 	methods: {
 		onSubmit(){
 			// End Evaluierung
-			this.$fhcApi.factory.evaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id)
+			this.$api.call(ApiEvaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id))
 				.then(result => {
 					if (result.data === true) {
 						// Save Antworten
-						return this.$fhcApi.factory.evaluierung.saveAntworten(this.fbAntworten)
+						return this.$api.call(ApiEvaluierung.saveAntworten(this.fbAntworten))
 					}
 				})
 				.then(result => {
