@@ -11,6 +11,7 @@ export default {
 		FragebogenFrage,
 		Countdown
 	},
+	inject: ['selectedLanguage'],
 	data(){
 		return {
 			lvEvaluierungCode: {},
@@ -20,6 +21,36 @@ export default {
 			lvInfo: {},
 			lvInfoExpanded: true,
 			showCountdown: false
+		}
+	},
+	watch: {
+		selectedLanguage(newVal) {
+			// If selected Language changed, re-fetch  LV-Info, Fragebogen and Antworten to get in new User Language
+			if (newVal) {
+				// Get full initial Fragebogen
+				this.$api
+					.call(ApiEvaluierung.getLvInfo(this.lvEvaluierung.lvevaluierung_lehrveranstaltung_id))
+					.then(resultLvInfo => {
+						this.lvInfo = resultLvInfo.data;
+
+						return this.$api.call(ApiFragebogen.getInitFragebogen(this.lvEvaluierung.fragebogen_id))
+					})
+					.then(resultInitFragebogen => {
+						this.fbGruppen = resultInitFragebogen.data;
+
+						// Build initital fbAntworten antwort objects
+						resultInitFragebogen.data.forEach(gruppe => {
+							gruppe.fbFrage.forEach(frage => {
+								this.fbAntworten.push({
+									lvevaluierung_code_id: this.lvEvaluierungCode.lvevaluierung_code_id,
+									lvevaluierung_frage_id: frage.lvevaluierung_frage_id,
+									lvevaluierung_frage_antwort_id: null,
+									antwort: null
+								});
+							});
+						});
+					});
+			}
 		}
 	},
 	created() {

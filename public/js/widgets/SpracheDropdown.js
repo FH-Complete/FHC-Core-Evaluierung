@@ -1,4 +1,5 @@
 export default {
+	emits: ['languageChanged'],
 	data(){
 		return {
 			serverLanguages: FHC_JS_DATA_STORAGE_OBJECT.server_languages,
@@ -11,7 +12,12 @@ export default {
 
 			if (this.serverLanguages.some(l => l.sprache === language))
 			{
-				this.$p.setLanguage(language, this.$fhcApi);
+				this.$p
+					.setLanguage(language, this.$fhcApi)
+					.then(() =>
+					{
+						this.$emit('languageChanged', language)
+					});
 			}
 		},
 	},

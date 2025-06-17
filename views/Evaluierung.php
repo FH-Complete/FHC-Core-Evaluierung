@@ -24,7 +24,7 @@ $this->load->view('templates/FHC-Header', $includesArray);
 		<div class="row fhc-bgc-blue py-2 px-3 align-items-center">
 			<div class="col text-start text-light">{{ $p.t('global/lvevaluierung') }}</div>
 			<div class="col text-end">
-				<sprache-dropdown></sprache-dropdown>
+				<sprache-dropdown @language-changed="onLanguageChanged"></sprache-dropdown>
 			</div>
 		</div>
 	</div>

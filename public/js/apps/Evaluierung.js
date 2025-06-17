@@ -7,6 +7,7 @@ import FhcAlert from '../../../../js/plugins/FhcAlert.js';
 import FhcApi from "../../../../js/plugins/Api.js";
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 
+const selectedLanguage = Vue.ref(FHC_JS_DATA_STORAGE_OBJECT.user_language);
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
 const router = VueRouter.createRouter({
@@ -29,6 +30,21 @@ const router = VueRouter.createRouter({
 const app = Vue.createApp({
 	components: {
 		SpracheDropdown
+	},
+	data() {
+		return {
+			selectedLanguage
+		};
+	},
+	provide() {
+		return {
+			selectedLanguage
+		};
+	},
+	methods: {
+		onLanguageChanged(language) {
+			this.selectedLanguage = language;
+		}
 	}
 });
 
