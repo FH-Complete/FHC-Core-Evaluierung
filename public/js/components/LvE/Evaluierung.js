@@ -114,6 +114,7 @@ export default {
 			this.lvInfoExpanded = window.innerWidth > 1800;
 		},
 		logoutIfEvaluierungPeriodClosed(){
+			const startzeit = new Date(this.lvEvaluierung.startzeit);
 			const endezeit = new Date(this.lvEvaluierung.endezeit);
 			const now = new Date();
 
@@ -122,8 +123,23 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: 'Evaluation period was closed on ' + DateHelper.formatDate(this.lvEvaluierung.endezeit),
-						content: 'This evaluation is no longer available.'
+						title: this.$p.t('fragebogen/evaluierungPeriodeBeendet', {
+							date: DateHelper.formatDate(this.lvEvaluierung.endezeit)
+						}),
+						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
+					}
+				});
+			}
+
+			// Redirect if Evaluation period is over
+			if (now < startzeit) {
+				this.$router.push({
+					name: 'Logout',
+					query: {
+						title: this.$p.t('fragebogen/evaluierungPeriodeStartetErst', {
+							date: DateHelper.formatDate(this.lvEvaluierung.startzeit)
+						}),
+						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
 					}
 				});
 			}
@@ -134,8 +150,10 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: 'Evaluation was submitted on ' + DateHelper.formatDateTime(this.lvEvaluierungCode.endezeit),
-						content: 'This evaluation is no longer available.'
+						title: this.$p.t('fragebogen/evaluierungEingereicht', {
+							date: DateHelper.formatDateTime(this.lvEvaluierungCode.endezeit)
+						}),
+						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
 					}
 				});
 			}
@@ -291,7 +309,7 @@ export default {
 							>
 								<div class="accordion-body">
 									<div class="d-flex">
-										<div class="flex-shrink-0 me-3 fw-bold">LektorInnen:</div>
+										<div class="flex-shrink-0 me-3 fw-bold">{{ $p.t('lehre/lektorInnen') }}:</div>
 										<div class="flex-fill text-start">
 											<div v-for="(lehrende, lIndex) in lvInfo.lehrende" :key="lIndex">
 												{{ lehrende.vorname }} {{lehrende.nachname}}
@@ -324,7 +342,7 @@ export default {
 			<div class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
 		
 			<!-- Countdown for sm/md only -->
-			<div class="col-8 d-lg-none d-flex align-items-center">
+			<div class="col-4 d-lg-none d-flex align-items-center">
 				<Countdown v-if="showCountdown" 
 					:duration="parseDauerToSeconds(lvEvaluierung.dauer)" 
 					type="icon"
@@ -333,8 +351,8 @@ export default {
 			</div>
 			
 			<!-- Submit button -->
-			<div class="col-4 col-lg-12 text-end">
-				<button class="btn btn-primary" type="submit">Submit</button>
+			<div class="col-8 col-lg-12 text-end">
+				<button class="btn btn-primary" type="submit"> {{ $p.t('global/abschicken') }}</button>
 			</div>	
 		</div><!-- .row lv-evaluierung-footer-->
 	</form-form>

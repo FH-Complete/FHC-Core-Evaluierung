@@ -21,12 +21,12 @@ export default {
 	},
 	template: `
 	<div class="lve-login overflow-hidden">
-		<div class="row justify-content-center vh-100">
+		<div class="row justify-content-center vh-100 mt-5">
 			<div class="col-10 col-md-8 col-lg-4 text-center align-content-center">
 				<img :src="logo" alt="Logo" class="img-fluid mb-4 mb-lg-5" style="max-height: 80px;">
 				
 				<div class="text-start mb-3">
-					<p>Bitte geben Sie Ihren Code ein, um die Evaluierung zu starten:</p>
+					<p>{{ $p.t('fragebogen/loginTextCodeEingeben') }}</p>
 			  	</div>
 				<div class="input-group mb-3 mb-lg-5">
 				  <input 
@@ -40,25 +40,10 @@ export default {
 				  <button class="btn btn-primary" type="button" @click="onClickStart">Start</button>
 				</div>
 				
-				<div class="text-start mb-3">
-					<p>Die folgende LV-Evaluierung umfasst</p>
-				</div>
-				<ul class="text-start small">
-					<li>zwei (geschlossene) Pflichtfragen</li>
-					<li>die Möglichkeit, optional zu einzelnen Bereichen konkreteres Feedback zu geben</li>
-					<li>zwei optionale Freitextfragen</li>
-				</ul>
+				<div v-html="$p.t('fragebogen/loginTextLvevaluierung')"></div>
 				
-				<div class="text-start mb-3">
-					<p>Die Antwortoptionen umfassen 5 Stufen:</p>
-				</div>
-				<ul class="text-start small">
-					<li>Sehr gut</li>
-					<li>Gut</li>
-					<li>Mittel</li>
-					<li>Schlecht</li>
-					<li>Sehr schlecht</li>
-				</ul>
+				<div v-html="$p.t('fragebogen/loginTextAntwortoptionen')"></div>
+			
 				
 			</div>
 		</div>
