@@ -29,7 +29,14 @@ export default {
 					<p>Bitte geben Sie Ihren Code ein, um die Evaluierung zu starten:</p>
 			  	</div>
 				<div class="input-group mb-3 mb-lg-5">
-				  <input type="text" v-model="code" class="form-control" placeholder="Evaluierung-Code eingeben" aria-label="Evaluierung Code eingeben">
+				  <input 
+				  	type="text" 
+				  	v-model="code"
+				  	class="form-control" 
+				  	:placeholder="$p.t('fragebogen/loginCodeEingeben')" 
+				  	aria-label="Evaluierung Code eingeben" 
+				  	@keyup.enter="onClickStart"
+				  	>
 				  <button class="btn btn-primary" type="button" @click="onClickStart">Start</button>
 				</div>
 				
