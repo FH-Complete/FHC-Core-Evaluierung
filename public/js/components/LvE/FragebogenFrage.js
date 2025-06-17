@@ -43,7 +43,7 @@ export default {
 		<div v-if="frage.typ === 'singleresponse'">
 			<div class="card mb-4 text-center border-0">											
 				<div class="card-title fw-bold">
-					{{ frage.bezeichnung_by_language }}
+					{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}
 				</div>
 				<div class="card-body">
 					<div 
@@ -94,7 +94,7 @@ export default {
 		<div v-if="frage.typ === 'text'">
 			<div class="card mb-4 px-0 px-md-1 d-flex text-center border-0">
 				<div class="card-body">
-					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }}</label>
+					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}</label>
 					<form-input
 				  		type="textarea"
 					  	:placeholder="frage.placeholder"
