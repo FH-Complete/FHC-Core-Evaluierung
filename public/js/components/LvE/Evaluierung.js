@@ -101,8 +101,11 @@ export default {
 				return this.$api.call(ApiEvaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id))
 			})
 			.then(() => {
-				// Show Countdown
-				this.showCountdown = true;
+				// Show Countdown, if Evaluierung Dauer is set
+				if (this.lvEvaluierung.dauer && this.lvEvaluierung.dauer > "00:00:00")
+				{
+					this.showCountdown = true;
+				}
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
