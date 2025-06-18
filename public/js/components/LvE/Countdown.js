@@ -1,5 +1,6 @@
 export default {
 	name: 'Countdown',
+	emits: ['countdownEnded'],
 	props: {
 		duration: Number,
 		type: {
