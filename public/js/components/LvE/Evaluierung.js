@@ -193,16 +193,23 @@ export default {
 			}
 		},
 		onCountdownEnd(){
-			this.showCountdown = false;
-
-			// Notify user
-			this.$fhcAlert.alertInfo("Time is up!");
-
-			// After 2 seconds
-			setTimeout(() => {
-				// Submit data (will set Endezeit also)
-				this.onSubmit();
-			}, 2000)
+			// Set Endezeit
+			this.$api
+				.call(ApiEvaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id))
+				.then(result => {
+					if (result.data === true) {
+						// Change to log out Site after 2 seconds
+						setTimeout(() => {
+							this.$router.push({
+								name: 'Logout',
+								query: {
+									title: this.$p.t('fragebogen/evaluierungZeitAbgelaufen'),
+									content: this.$p.t('fragebogen/evaluierungAntwortenNichtUebermittelt')
+								}
+							});
+						}, 2000)
+					}
+				})
 		},
 		parseDauerToSeconds(dauer) {
 			const [h, m, s] = dauer.split(':').map(Number);
