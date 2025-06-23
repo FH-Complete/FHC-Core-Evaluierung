@@ -60,3 +60,10 @@ ALTER TABLE extension.tbl_lvevaluierung_antwort
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_antwort TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_antwort TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_antwort_lvevaluierung_antwort_id TO vilesci;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_antwort ADD COLUMN IF NOT EXISTS unangemessen boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN extension.tbl_lvevaluierung_antwort.unangemessen IS 'True if response violates code of conduct (offensive or inappropriate)';
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
