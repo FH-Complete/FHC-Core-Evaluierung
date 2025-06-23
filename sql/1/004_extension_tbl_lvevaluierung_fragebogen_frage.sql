@@ -38,3 +38,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_frageb
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_fragebogen_frage TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_fragebogen_frage_lvevaluierung_frage_id TO vilesci;
 
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen_frage ADD COLUMN IF NOT EXISTS placeholder text[];
+COMMENT ON COLUMN extension.tbl_lvevaluierung_fragebogen_frage.placeholder IS 'Optional input field placeholder text';
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+

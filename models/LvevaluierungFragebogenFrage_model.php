@@ -21,7 +21,8 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 
 		$this->addSelect('
 			*, 
-			bezeichnung[('. $this->evaluierunglib->getLanguageIndex(). ')] AS bezeichnung_by_language
+			bezeichnung[('. $this->evaluierunglib->getLanguageIndex(). ')] AS bezeichnung_by_language,
+			placeholder[('. $this->evaluierunglib->getLanguageIndex(). ')] AS placeholder_by_language
 		');
 
 		$this->addOrder('lvevaluierung_fragebogen_gruppe_id, sort');

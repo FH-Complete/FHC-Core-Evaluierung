@@ -97,7 +97,7 @@ export default {
 					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}</label>
 					<form-input
 				  		type="textarea"
-					  	:placeholder="frage.placeholder"
+					  	:placeholder="frage.placeholder_by_language"
 						@input="$emit('update:antwort', $event.target.value)"
 					  	style="height: 100px"
 					/>
