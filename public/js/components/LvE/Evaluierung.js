@@ -37,18 +37,7 @@ export default {
 					})
 					.then(resultInitFragebogen => {
 						this.fbGruppen = resultInitFragebogen.data;
-
-						// Build initital fbAntworten antwort objects
-						resultInitFragebogen.data.forEach(gruppe => {
-							gruppe.fbFrage.forEach(frage => {
-								this.fbAntworten.push({
-									lvevaluierung_code_id: this.lvEvaluierungCode.lvevaluierung_code_id,
-									lvevaluierung_frage_id: frage.lvevaluierung_frage_id,
-									lvevaluierung_frage_antwort_id: null,
-									antwort: null
-								});
-							});
-						});
+						this.initializeAntworten(this.fbGruppen);
 					});
 			}
 		}
@@ -81,18 +70,7 @@ export default {
 			.then(([resultLvInfo, resultInitFragebogen]) => {
 				this.lvInfo = resultLvInfo.data;
 				this.fbGruppen = resultInitFragebogen.data;
-
-				// Build initital fbAntworten antwort objects
-				resultInitFragebogen.data.forEach(gruppe => {
-					gruppe.fbFrage.forEach(frage => {
-						this.fbAntworten.push({
-							lvevaluierung_code_id: this.lvEvaluierungCode.lvevaluierung_code_id,
-							lvevaluierung_frage_id: frage.lvevaluierung_frage_id,
-							lvevaluierung_frage_antwort_id: null,
-							antwort: null
-						});
-					});
-				});
+				this.initializeAntworten(this.fbGruppen);
 
 				// Start Evaluierung
 				return this.$api.call(ApiEvaluierung.setStartzeit(this.lvEvaluierungCode.lvevaluierung_code_id))
@@ -140,6 +118,19 @@ export default {
 					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		initializeAntworten(fbGruppen) {
+			// Build initital fbAntworten antwort objects
+			fbGruppen.forEach(gruppe => {
+				gruppe.fbFrage.forEach(frage => {
+					this.fbAntworten.push({
+						lvevaluierung_code_id: this.lvEvaluierungCode.lvevaluierung_code_id,
+						lvevaluierung_frage_id: frage.lvevaluierung_frage_id,
+						lvevaluierung_frage_antwort_id: null,
+						antwort: null
+					});
+				});
+			});
 		},
 		updateLvInfoExpanded() {
 			this.lvInfoExpanded = window.innerWidth > 1800;
