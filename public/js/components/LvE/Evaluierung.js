@@ -57,7 +57,9 @@ export default {
 		const code = this.$route.params.code;
 
 		// Get EvaluierungCode
-		this.$api.call(ApiEvaluierung.getLvEvaluierungCode(code))
+		this.$api
+			.call(ApiEvaluierung.getLvEvaluierungCode(code))
+			.then(result => this.logoutIfInvalidCode(result))
 			.then(result => {
 				this.lvEvaluierungCode = result.data;
 
@@ -146,6 +148,19 @@ export default {
 		},
 		updateLvInfoExpanded() {
 			this.lvInfoExpanded = window.innerWidth > 1800;
+		},
+		logoutIfInvalidCode(result) {
+			if (result.data === false) {
+				this.$router.push({
+					name: 'Logout',
+					query: {
+						title: this.$p.t('fragebogen/evaluierungCodeExistiertNicht'),
+						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
+					}
+				});
+				return Promise.reject('EvaluierungCode does not exist');
+			}
+			return result;
 		},
 		logoutIfEvaluierungPeriodClosed(){
 			const startzeit = new Date(this.lvEvaluierung.startzeit);
