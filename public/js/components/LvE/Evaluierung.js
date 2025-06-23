@@ -56,9 +56,13 @@ export default {
 				return this.$api.call(ApiEvaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id))
 			})
 			.then(result => this.lvEvaluierung = result.data)
-			.then(() => this.logoutIfEvaluierungNotActive())
-			.then(() => this.logoutIfEvaluierungPeriodClosed())
-			.then(() => this.logoutIfEvaluierungSubmitted())
+			.then(() =>
+				Promise.all([
+					this.logoutIfEvaluierungNotActive(),
+					this.logoutIfEvaluierungPeriodClosed(),
+					this.logoutIfEvaluierungSubmitted()
+				])
+			)
 			.then(() =>
 				Promise.all([
 					// Get LV Infos
