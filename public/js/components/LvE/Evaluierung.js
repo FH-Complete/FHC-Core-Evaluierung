@@ -145,8 +145,7 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: this.$p.t('fragebogen/evaluierungCodeExistiertNicht'),
-						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
+						reason: 'evaulierungCodeExistiertNicht'
 					}
 				});
 				return Promise.reject('EvaluierungCode does not exist');
@@ -159,8 +158,7 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: this.$p.t('fragebogen/evaluierungNichtAktiv'),
-						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
+						reason: 'evaluierungNichtAktiv'
 					}
 				});
 
@@ -179,10 +177,8 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: this.$p.t('fragebogen/evaluierungPeriodeBeendet', {
-							date: DateHelper.formatDate(this.lvEvaluierung.endezeit)
-						}),
-						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
+						reason: 'evaluierungPeriodeBeendet',
+						date: DateHelper.formatDate(this.lvEvaluierung.endezeit)
 					}
 				});
 
@@ -194,10 +190,8 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: this.$p.t('fragebogen/evaluierungPeriodeStartetErst', {
-							date: DateHelper.formatDate(this.lvEvaluierung.startzeit)
-						}),
-						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
+						reason: 'evaluierungPeriodeStartetErst',
+						date: DateHelper.formatDate(this.lvEvaluierung.startzeit)
 					}
 				});
 
@@ -212,10 +206,8 @@ export default {
 				this.$router.push({
 					name: 'Logout',
 					query: {
-						title: this.$p.t('fragebogen/evaluierungEingereicht', {
-							date: DateHelper.formatDateTime(this.lvEvaluierungCode.endezeit)
-						}),
-						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
+						reason: 'evaluierungEingereicht',
+						date: DateHelper.formatDateTime(this.lvEvaluierungCode.endezeit)
 					}
 				});
 
@@ -235,8 +227,7 @@ export default {
 							this.$router.push({
 								name: 'Logout',
 								query: {
-									title: this.$p.t('fragebogen/evaluierungZeitAbgelaufen'),
-									content: this.$p.t('fragebogen/evaluierungAntwortenNichtUebermittelt')
+									reason: 'evaluierungZeitAbgelaufen'
 								}
 							});
 						}, 2000)

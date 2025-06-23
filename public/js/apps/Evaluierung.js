@@ -20,8 +20,8 @@ const router = VueRouter.createRouter({
 			name: 'Logout',
 			component: LveLogout,
 			props: route => ({
-				title: route.query.title,
-				content: route.query.content
+				reason: route.query.reason,
+				date: route.query.date
 			})
 		},
 	]

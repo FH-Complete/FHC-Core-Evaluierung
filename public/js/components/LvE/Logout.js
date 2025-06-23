@@ -1,25 +1,63 @@
 export default {
 	name: 'Logout',
 	props: {
-		title: String,
-		content: String
+		reason: String,
+		date: String
 	},
 	computed: {
 		computedTitle() {
-			// If prop is given, return title. Else return default logout title.
-			return this.title || this.$p.t('fragebogen/logoutTitle');
+			return this.reason
+				? this.getTitleByReason(this.reason)
+				: this.$p.t('fragebogen/logoutTitle');	// default
 		},
 		computedContent() {
-			// If prop is given, return content
-			if (this.content) return this.content;
-
-			// Else return default
-			const text = this.$p.t('fragebogen/logoutText');
-			const link = `<a href="" target="_blank">Whitepaper</a>`;
-			return `${text} ${link}`;
+			if (this.reason) {
+				return this.getContentByReason(this.reason)
+			}
+			else {
+				const text = this.$p.t('fragebogen/logoutText');
+				const link = `<a href="" target="_blank">Whitepaper</a>`;
+				return `${text} ${link}`;	// default
+			}
 		}
 	},
 	methods: {
+		getTitleByReason(reason) {
+			switch (reason) {
+				case 'evaulierungCodeExistiertNicht':
+					return this.$p.t('fragebogen/evaluierungCodeExistiertNicht');
+				case 'evaluierungNichtAktiv':
+					return this.$p.t('fragebogen/evaluierungNichtAktiv');
+				case 'evaluierungPeriodeBeendet':
+					return this.$p.t('fragebogen/evaluierungPeriodeBeendet', {date: this.date});
+				case 'evaluierungPeriodeStartetErst':
+					return this.$p.t('fragebogen/evaluierungPeriodeStartetErst', {date: this.date});
+				case 'evaluierungEingereicht':
+					return this.$p.t('fragebogen/evaluierungEingereicht', {date: this.date});
+				case 'evaluierungZeitAbgelaufen':
+					return this.$p.t('fragebogen/evaluierungZeitAbgelaufen');
+				default:
+					break;
+			}
+		},
+		getContentByReason(reason) {
+			switch (reason) {
+				case 'evaulierungCodeExistiertNicht':
+					return this.$p.t('fragebogen/evaluierungNichtVerfuegbar');
+				case 'evaluierungNichtAktiv':
+					return this.$p.t('fragebogen/evaluierungNichtVerfuegbar');
+				case 'evaluierungPeriodeBeendet':
+					return this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar');
+				case 'evaluierungPeriodeStartetErst':
+					return this.$p.t('fragebogen/evaluierungNichtVerfuegbar');
+				case 'evaluierungEingereicht':
+					return this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar');
+				case 'evaluierungZeitAbgelaufen':
+					return this.$p.t('fragebogen/evaluierungAntwortenNichtUebermittelt');
+				default:
+					break;
+			}
+		},
 		onClickBackToStart(){
 			this.$router.push({name: 'Login'});
 		}
