@@ -66,23 +66,18 @@ export default {
 				// Get Evaluierung
 				return this.$api.call(ApiEvaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id))
 			})
-			.then(result => {
-				this.lvEvaluierung = result.data;
-
-				// Redirect and exit if general Evaluierung period has passed
-				this.logoutIfEvaluierungPeriodClosed();
-
-				// Redirect and exit if Evaluierung was already submitted
-				this.logoutIfEvaluierungSubmitted();
-
-				return Promise.all([
+			.then(result => this.lvEvaluierung = result.data)
+			.then(() => this.logoutIfEvaluierungPeriodClosed())
+			.then(() => this.logoutIfEvaluierungSubmitted())
+			.then(() =>
+				Promise.all([
 					// Get LV Infos
 					this.$api.call(ApiEvaluierung.getLvInfo(this.lvEvaluierung.lvevaluierung_lehrveranstaltung_id)),
 
 					// Get full initial Fragebogen
 					this.$api.call(ApiFragebogen.getInitFragebogen(this.lvEvaluierung.fragebogen_id)),
 				])
-			})
+			)
 			.then(([resultLvInfo, resultInitFragebogen]) => {
 				this.lvInfo = resultLvInfo.data;
 				this.fbGruppen = resultInitFragebogen.data;
@@ -109,7 +104,7 @@ export default {
 					this.showCountdown = true;
 				}
 			})
-			.catch(error => this.$fhcAlert.handleSystemError(error));
+			.catch(error => console.warn(error));
 	},
 	mounted() {
 		this.updateLvInfoExpanded();
@@ -178,6 +173,8 @@ export default {
 						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
 					}
 				});
+
+				return Promise.reject('Evaluierung period is over');
 			}
 
 			// Redirect if Evaluation period is over
@@ -191,7 +188,11 @@ export default {
 						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
 					}
 				});
+
+				return Promise.reject('Evaluierung period not started yet');
 			}
+
+			return Promise.resolve();
 		},
 		logoutIfEvaluierungSubmitted(){
 			// Redirect if Evaluation was already submitted
@@ -205,7 +206,11 @@ export default {
 						content: this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar')
 					}
 				});
+
+				return Promise.reject('Evaluierung already submitted');
 			}
+
+			return Promise.resolve();
 		},
 		onCountdownEnd(){
 			// Set Endezeit
