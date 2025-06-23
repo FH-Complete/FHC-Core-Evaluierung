@@ -59,7 +59,11 @@ export default {
 								:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
 								:value="antwort.wert"
 								:checked="lvevaluierung_frage_antwort_id == antwort.wert"
-								 @input="$emit('update:lvevaluierung_frage_antwort_id', $event.target.value)"
+								 @click="$emit('update:lvevaluierung_frage_antwort_id',
+								  	lvevaluierung_frage_antwort_id == antwort.wert 
+										? null 
+										: antwort.wert
+									)"
 								container-class="btn px-md-4"
 								class="btn-check antwort-radio-btn"
 							></div>
