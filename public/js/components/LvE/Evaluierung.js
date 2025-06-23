@@ -56,6 +56,7 @@ export default {
 				return this.$api.call(ApiEvaluierung.getLvEvaluierung(this.lvEvaluierungCode.lvevaluierung_id))
 			})
 			.then(result => this.lvEvaluierung = result.data)
+			.then(() => this.logoutIfEvaluierungNotActive())
 			.then(() => this.logoutIfEvaluierungPeriodClosed())
 			.then(() => this.logoutIfEvaluierungSubmitted())
 			.then(() =>
@@ -147,6 +148,22 @@ export default {
 				return Promise.reject('EvaluierungCode does not exist');
 			}
 			return result;
+		},
+		logoutIfEvaluierungNotActive(){
+			// Redirect if Evaluation period is over
+			if (!this.lvEvaluierung.aktiv) {
+				this.$router.push({
+					name: 'Logout',
+					query: {
+						title: this.$p.t('fragebogen/evaluierungNichtAktiv'),
+						content: this.$p.t('fragebogen/evaluierungNichtVerfuegbar')
+					}
+				});
+
+				return Promise.reject('Evaluierung is inactive');
+			}
+
+			return Promise.resolve();
 		},
 		logoutIfEvaluierungPeriodClosed(){
 			const startzeit = new Date(this.lvEvaluierung.startzeit);
