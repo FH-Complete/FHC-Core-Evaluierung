@@ -8,8 +8,9 @@ class Evaluierung extends Auth_Controller
 	 */
 	public function __construct()
 	{
+		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-			'index'=>'admin:rw'
+			'index'=> self::PERM_ANONYMOUS
 			)
 		);
 	}

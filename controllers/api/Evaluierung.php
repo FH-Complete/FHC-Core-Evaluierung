@@ -4,19 +4,17 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class Evaluierung extends FHCAPI_Controller
 {
-	const BERECHTIGUNG_EVLUIERUNG = 'admin:rw';
-
-
 	public function __construct()
 	{
+		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-				'getLvEvaluierungCode' => self::BERECHTIGUNG_EVLUIERUNG,
-				'getLvEvaluierung' => self::BERECHTIGUNG_EVLUIERUNG,
-				'getInitFragebogen' => self::BERECHTIGUNG_EVLUIERUNG,
-				'getLvInfo' => self::BERECHTIGUNG_EVLUIERUNG,
-				'setStartzeit' => self::BERECHTIGUNG_EVLUIERUNG,
-				'setEndezeit' => self::BERECHTIGUNG_EVLUIERUNG,
-				'saveAntworten' => self::BERECHTIGUNG_EVLUIERUNG
+				'getLvEvaluierungCode' => self::PERM_ANONYMOUS,
+				'getLvEvaluierung' => self::PERM_ANONYMOUS,
+				'getInitFragebogen' => self::PERM_ANONYMOUS,
+				'getLvInfo' => self::PERM_ANONYMOUS,
+				'setStartzeit' => self::PERM_ANONYMOUS,
+				'setEndezeit' => self::PERM_ANONYMOUS,
+				'saveAntworten' => self::PERM_ANONYMOUS
 			)
 		);
 
