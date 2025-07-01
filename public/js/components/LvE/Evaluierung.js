@@ -19,9 +19,13 @@ export default {
 			fbGruppen: [],
 			fbAntworten: [],
 			lvInfo: {},
-			lvInfoExpanded: true,
-			showCountdown: false
+			showCountdown: false,
+			windowWidth: window.innerWidth
 		}
+	},
+	computed: {
+		isScreenLg() { return this.windowWidth > 992 },
+		isScreenXl() { return this.windowWidth > 1800 }
 	},
 	watch: {
 		selectedLanguage(newVal) {
@@ -90,11 +94,11 @@ export default {
 			.catch(error => console.warn(error));
 	},
 	mounted() {
-		this.updateLvInfoExpanded();
-		window.addEventListener('resize', this.updateLvInfoExpanded);
+		this.handleResize();
+		window.addEventListener('resize', this.handleResize);
 	},
 	beforeUnmount() {
-		window.removeEventListener('resize', this.updateLvInfoExpanded);
+		window.removeEventListener('resize', this.handleResize);
 	},
 	methods: {
 		onSubmit(){
@@ -134,8 +138,8 @@ export default {
 				});
 			});
 		},
-		updateLvInfoExpanded() {
-			this.lvInfoExpanded = window.innerWidth > 1800;
+		handleResize() {
+			this.windowWidth = window.innerWidth;
 		},
 		logoutIfInvalidCode(result) {
 			if (result.data === false) {
@@ -351,11 +355,11 @@ export default {
 							<h2 class="accordion-header" id="headingOne">
 								<button 
 									class="accordion-button bg-white fw-bold text-dark fs-5" 
-									:class="{collapsed: !lvInfoExpanded}"
+									:class="{collapsed: !isScreenXl}"
 									type="button" 
 									data-bs-toggle="collapse" 
 									data-bs-target="#collapseLvinfo" 
-									:aria-expanded="lvInfoExpanded" 
+									:aria-expanded="isScreenXl" 
 									aria-controls="collapseLvinfo"
 								>
 									{{lvInfo.bezeichnung_by_language}}
@@ -364,7 +368,7 @@ export default {
 							<div 
 								id="collapseLvinfo" 
 								class="accordion-collapse collapse"
-								:class="{show: lvInfoExpanded}"
+								:class="{show: isScreenXl}"
 								aria-labelledby="headingOne" 
 								data-bs-parent="#accordionLvinfo"
 							>
@@ -384,16 +388,14 @@ export default {
 								</div>
 							</div>
 					  </div>
-				  </div><!-- .accordion LV Infos -->
+				  	</div><!-- .accordion LV Infos -->
 			
-					<!-- Countdown for lg+ only -->
+					<!-- Countdown DOM container for lg+ only 
+						The Countdown Component is teleported here when showCountdown and isScreenLg is true -->
 					<div class="card w-100 d-none d-lg-flex flex-grow-1">
-						<div class="card-body d-flex flex-column align-items-center justify-content-center">
-							<Countdown v-if="showCountdown" 
-								:duration="parseDauerToSeconds(lvEvaluierung.dauer)"
-								type="circle" 
-								@countdown-ended="onCountdownEnd"
-							/>
+						<div 
+							id="countdown-lg" 
+							class="card-body d-flex flex-column align-items-center justify-content-center">
 						</div>
 					</div>
 				</div><!-- .col LV Infos + Countdown (lg only) -->
@@ -402,14 +404,9 @@ export default {
 			<!-- LV-Evaluierung-Footer -->
 			<div class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
 		
-			<!-- Countdown for sm/md only -->
-			<div class="col-4 d-lg-none d-flex align-items-center">
-				<Countdown v-if="showCountdown" 
-					:duration="parseDauerToSeconds(lvEvaluierung.dauer)" 
-					type="icon"
-					@countdown-ended="onCountdownEnd"
-				/>
-			</div>
+			<!-- Countdown DOM container for sm/md only 
+				The Countdown Component is teleported here when showCountdown is true and isScreenLg is false -->
+			<div id="countdown-sm" class="col-4 d-lg-none d-flex align-items-center"></div>
 			
 			<!-- Submit button -->
 			<div class="col-8 col-lg-12 text-end">
@@ -417,5 +414,17 @@ export default {
 			</div>	
 		</div><!-- .row lv-evaluierung-footer-->
 	</form-form>
-	</div>`
+	</div>
+	
+	 <!-- Teleporting the countdown to the correct DOM node -->
+	<template>
+  		<teleport v-if="showCountdown" :to="isScreenLg ? '#countdown-lg' : '#countdown-sm'">
+			<Countdown 
+				:duration="parseDauerToSeconds(lvEvaluierung.dauer)"
+				:type="isScreenLg ? 'circle' : 'icon'" 
+				@countdown-ended="onCountdownEnd"
+			/>
+		</teleport>
+	</template>
+`
 }
