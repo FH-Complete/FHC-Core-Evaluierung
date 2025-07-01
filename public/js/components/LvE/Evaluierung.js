@@ -98,31 +98,28 @@ export default {
 	},
 	methods: {
 		onSubmit(){
-			// End Evaluierung
-			this.$api.call(ApiEvaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id))
-				.then(result => {
-					if (result.data === true) {
-						// Save Antworten
-						return this.$api.call(ApiEvaluierung.saveAntworten(this.fbAntworten))
-					}
-				})
-				.then(result => {
-					// On Success
-					if (result.data.length > 0) {
+			// SaveAntworten
+			this.$api.call(ApiEvaluierung.saveAntworten(
+				this.lvEvaluierungCode.lvevaluierung_code_id,
+				this.fbAntworten
+			))
+			.then(result => {
+				// On Success
+				if (result.data && result.data.length > 0) {
 
-						// Success message
-						this.$fhcAlert.alertSuccess('Saved!')
+					// Success message
+					this.$fhcAlert.alertSuccess('Saved!')
 
-						// Change to log out Site after 2 seconds
-						setTimeout(() => {
-							this.$router.push({name: 'Logout'});
-						}, 2000)
-					}
-					else {
-						this.$fhcAlert.alertInfo('No data was saved.')
-					}
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+					// Change to log out Site after 2 seconds
+					setTimeout(() => {
+						this.$router.push({name: 'Logout'});
+					}, 2000)
+				}
+				else {
+					this.$fhcAlert.alertInfo('No data was saved.')
+				}
+			})
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		initializeAntworten(fbGruppen) {
 			// Build initital fbAntworten antwort objects

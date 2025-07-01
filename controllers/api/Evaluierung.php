@@ -22,6 +22,7 @@ class Evaluierung extends FHCAPI_Controller
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrageAntwort_model', 'LvevaluierungFragebogenFrageAntwortModel');
@@ -147,6 +148,9 @@ class Evaluierung extends FHCAPI_Controller
 	public function setStartzeit(){
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 
+		// Validate Evaluation
+		$this->_validateEvaluation($lvevaluierung_code_id);
+
 		$result = $this->LvevaluierungCodeModel->update(
 			[
 				'lvevaluierung_code_id' => $lvevaluierung_code_id
@@ -205,25 +209,69 @@ class Evaluierung extends FHCAPI_Controller
 	 */
 	public function saveAntworten()
 	{
+		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 		$data = $this->input->post('data');
-		$insertedIds = [];
 
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
+		// Validate Evaluation
+		$this->_validateEvaluation($lvevaluierung_code_id);
 
 		// Validate Antworten
 		$result = $this->evaluierunglib->validateAntworten($data);
-
 		$validatedAntworten = $this->getDataOrTerminateWithError($result);
 
+		// Save Antworten
+		$insertedIds = [];
 		if (!empty($validatedAntworten))
 		{
-			// Save Antworten
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 			$result = $this->LvevaluierungAntwortModel->saveAntworten($validatedAntworten);
-
 			$insertedIds = $this->getDataOrTerminateWithError($result);
 		}
 
 		$this->terminateWithSuccess($insertedIds);
+	}
+
+	/**
+	 * Validate Evaluation by Evaluation
+	 * @param $lvevaluierung_code_id
+	 * @return void
+	 */
+	private function _validateEvaluation($lvevaluierung_code_id)
+	{
+		// Validate and get Evaluierung Code
+		$result = $this->evaluierunglib->getValidatedLvevaluierungCode($lvevaluierung_code_id);
+		if (isError($result)) $this->terminateWithError(getError($result));
+		$lvevaluierungCode = getData($result);
+
+		// Check if Evaluierung was already submitted
+		$result = $this->evaluierunglib->checkIfEvaluierungAlreadySubmitted($lvevaluierungCode);
+		if (isError($result)) $this->terminateWithError(getError($result));
+
+		// Validate and get Evaluierung
+		$result = $this->evaluierunglib->getValidatedLvevaluierung($lvevaluierungCode->lvevaluierung_id);
+		if (isError($result)) $this->terminateWithError(getError($result));
+		$lvevaluierung = getData($result);
+
+		// Check if Evaluierung Period is valid (between start- and endezeit)
+		$result = $this->evaluierunglib->checkIfEvaluierungPeriodIsValid($lvevaluierung);
+		if (isError($result)) $this->terminateWithError(getError($result));
+
+		// Validate and get Evaluierung-Lehrveranstaltung assignement
+		$result = $this->evaluierunglib->getValidatedLvevaluierungLehrveranstaltung(
+			$lvevaluierung->lvevaluierung_lehrveranstaltung_id
+		);
+		if (isError($result)) $this->terminateWithError(getError($result));
+		$lvevaluierungLehrveranstaltung = getData($result);
+
+		// Validate and get Lehrveranstaltung
+		$result = $this->evaluierunglib->getValidatedLehrveranstaltung(
+			$lvevaluierungLehrveranstaltung->lehrveranstaltung_id
+		);
+		if (isError($result)) $this->terminateWithError(getError($result));
+		$lehrveranstaltung = getData($result);
+
+		// Check if Lehrveranstaltung is evalubable
+		$result = $this->evaluierunglib->checkIfLehrveranstaltungIsEvaluable($lehrveranstaltung);
+		if (isError($result)) $this->terminateWithError(getError($result));
 	}
 }

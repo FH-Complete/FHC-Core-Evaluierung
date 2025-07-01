@@ -36,11 +36,14 @@ export default {
 			params: {lvevaluierung_code_id: lvevaluierung_code_id}
 		}
 	},
-	saveAntworten(data) {
+	saveAntworten(lvevaluierung_code_id, data) {
 		return {
 			method: 'post',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluierung/saveAntworten',
-			params: {data: data}
+			params: {
+				lvevaluierung_code_id: lvevaluierung_code_id,
+				data: data
+			}
 		}
 	}
 }

@@ -150,4 +150,146 @@ class EvaluierungLib
 
 		return hasData($result) ? getData($result)[0]->index : $defaultIdx;
 	}
+
+	// Validations and Checks
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Validate and get Evaluierung Code.
+	 *
+	 * @param $lvevaluierung_code_id
+	 * @return mixed
+	 */
+	public function getValidatedLvevaluierungCode($lvevaluierung_code_id)
+	{
+		$result = $this->_ci->LvevaluierungCodeModel->loadWhere([
+			'lvevaluierung_code_id' => $lvevaluierung_code_id
+		]);
+
+		if (!hasData($result))
+		{
+			return error('Evaluierung Code ID does not exist');
+		}
+
+		// On success
+		return success(getData($result)[0]);
+	}
+
+	/**
+	 * Validate and get Evaluierung.
+	 *
+	 * @param $lvevaluierung_id
+	 * @return mixed
+	 */
+	public function getValidatedLvevaluierung($lvevaluierung_id)
+	{
+		// Check if Evaluierung ID exists
+		$result = $this->_ci->LvevaluierungModel->load($lvevaluierung_id);
+
+		if (!hasData($result))
+		{
+			return error('Evaluierung ID does not exist');
+		}
+
+		// On success
+		return success(getData($result)[0]);
+	}
+
+	/**
+	 * Validate and get Evaluierung-Lehrveranstaltung assignement.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed
+	 */
+	public function getValidatedLvevaluierungLehrveranstaltung($lvevaluierung_lehrveranstaltung_id)
+	{
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->load($lvevaluierung_lehrveranstaltung_id);
+
+		if (!hasData($result))
+		{
+			return error('Lvevaluierung-Lehrveranstaltung ID does not exist');
+		}
+
+		// On success
+		return success(getData($result)[0]);
+	}
+
+	/**
+	 * Validate and get Lehrveranstaltung.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @return mixed
+	 */
+	public function getValidatedLehrveranstaltung($lehrveranstaltung_id)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+
+		if (!hasData($result))
+		{
+			return error('Lehrveranstaltung does not exist');
+		}
+
+		// On success
+		return success(getData($result)[0]);
+	}
+
+	/**
+	 * Check if Evaluierung was already submitted.
+	 *
+	 * @param $lvevaluierungCode
+	 * @return mixed
+	 */
+	public function checkIfEvaluierungAlreadySubmitted($lvevaluierungCode)
+	{
+		// Check if Evaluierung was already submitted
+		if (!is_null($lvevaluierungCode->endezeit))
+		{
+			return error('Evaluierung was already submitted');
+		}
+
+		return success(true);
+	}
+
+	/**
+	 * Check if Evaluierung Period is valid (between startzeit and endezeit).
+	 *
+	 * @param $lvevaluierung
+	 * @return mixed
+	 */
+	public function checkIfEvaluierungPeriodIsValid($lvevaluierung)
+	{
+		// Check if Evaluierung period is valid
+		$now = (new DateTime())->format("Y-m-d H:i:s");
+
+		if ($now < $lvevaluierung->startzeit)
+		{
+			return error('Evaluierung period has not started yet');
+		}
+
+		if ($now > $lvevaluierung->endezeit)
+		{
+			return error('Evaluierung period has ended');
+		}
+
+		// On success
+		return success(true);
+	}
+
+	/**
+	 * Check if Lehrveranstaltung is evaluable.
+	 *
+	 * @param $lehrveranstaltung
+	 * @return mixed
+	 */
+	public function checkIfLehrveranstaltungIsEvaluable($lehrveranstaltung)
+	{
+		// Check if Lehrveranstaltung should be evaluated
+		if ($lehrveranstaltung->evaluierung === false)
+		{
+			return error('Lehrveranstaltung is not evaluable');
+		}
+
+		// On success
+		return success(true);
+	}
 }
