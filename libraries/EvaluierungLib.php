@@ -50,29 +50,6 @@ class EvaluierungLib
 		return $data;
 	}
 
-
-	/**
-	 * Update Evaluierung Code Endezeit.
-	 *
-	 * @param $lvevaluierung_code_id
-	 * @return mixed
-	 */
-	public function setEndezeit($lvevaluierung_code_id)
-	{
-		// Update Endezeit
-		$result = $this->_ci->LvevaluierungCodeModel->update(
-			['lvevaluierung_code_id' => $lvevaluierung_code_id],
-			['endezeit' => 'NOW()']
-		);
-
-		if (isError($result))
-		{
-			return error(getError($result));
-		}
-
-		return success(true);
-	}
-
 	/**
 	 * Calculates the maximal Endezeit.
 	 * Maximal Endezeit = Startzeit + Dauer + Buffer for request retry handling

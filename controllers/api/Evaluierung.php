@@ -154,7 +154,7 @@ class Evaluierung extends FHCAPI_Controller
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 
 		// Validate Evaluation
-		$this->_validateEvaluation($lvevaluierung_code_id);
+		$this->_validateEvaluationBeforeSaving($lvevaluierung_code_id);
 
 		$result = $this->LvevaluierungCodeModel->update(
 			[
@@ -180,7 +180,7 @@ class Evaluierung extends FHCAPI_Controller
 	public function setEndezeit(){
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 
-		// Check if Evaluierung Dauer has exceeded
+		// Check if Evaluierung time has exceeded
 		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
 		if (isError($result))
 		{
@@ -188,10 +188,14 @@ class Evaluierung extends FHCAPI_Controller
 		}
 
 		// Validate Evaluation
-		$this->_validateEvaluation($lvevaluierung_code_id);
+		$this->_validateEvaluationBeforeSaving($lvevaluierung_code_id);
 
-		// Set Endezeit
-		$result = $this->evaluierunglib->setEndezeit($lvevaluierung_code_id);
+		// Update Endezeit
+		$result = $this->LvevaluierungCodeModel->update(
+			['lvevaluierung_code_id' => $lvevaluierung_code_id],
+			['endezeit' => 'NOW()']
+		);
+
 		if (isError($result))
 		{
 			$this->terminateWithError(getError($result));
@@ -210,7 +214,7 @@ class Evaluierung extends FHCAPI_Controller
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 		$data = $this->input->post('data');
 
-		// Check if Evaluierung Dauer has exceeded
+		// Check if Evaluierung time has exceeded
 		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
 		if (isError($result))
 		{
@@ -218,7 +222,7 @@ class Evaluierung extends FHCAPI_Controller
 		}
 
 		// Validate Evaluation
-		$this->_validateEvaluation($lvevaluierung_code_id);
+		$this->_validateEvaluationBeforeSaving($lvevaluierung_code_id);
 
 		// Validate Antworten
 		$result = $this->evaluierunglib->validateAntworten($data);
@@ -233,8 +237,12 @@ class Evaluierung extends FHCAPI_Controller
 			$insertedIds = $this->getDataOrTerminateWithError($result);
 		}
 
-		// Set Endezeit
-		$result = $this->evaluierunglib->setEndezeit($lvevaluierung_code_id);
+		// Update Endezeit
+		$result = $this->LvevaluierungCodeModel->update(
+			['lvevaluierung_code_id' => $lvevaluierung_code_id],
+			['endezeit' => 'NOW()']
+		);
+
 		if (isError($result))
 		{
 			$this->terminateWithError(getError($result));
@@ -249,7 +257,7 @@ class Evaluierung extends FHCAPI_Controller
 	 * @param $lvevaluierung_code_id
 	 * @return void
 	 */
-	private function _validateEvaluation($lvevaluierung_code_id)
+	private function _validateEvaluationBeforeSaving($lvevaluierung_code_id)
 	{
 		// Validate and get Evaluierung Code
 		$result = $this->evaluierunglib->getValidatedLvevaluierungCode($lvevaluierung_code_id);
