@@ -83,8 +83,6 @@ class EvaluierungLib
 	 */
 	public function getMaxEndezeit($lvevaluierung_code_id)
 	{
-		$this->_ci->load->model('education/LehrveranstaltungCode_model', 'LvevaluierungCodeModel');
-
 		// Get Evaluierung Startzeit and Dauer
 		$this->_ci->LvevaluierungCodeModel->addSelect('tbl_lvevaluierung_code.startzeit');
 		$this->_ci->LvevaluierungCodeModel->addSelect('dauer');
@@ -117,8 +115,6 @@ class EvaluierungLib
 	 */
 	public function validateAntworten($antworten)
 	{
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
-
 		$insertItems = [];
 
 		if ($antworten) {

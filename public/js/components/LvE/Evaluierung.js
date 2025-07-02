@@ -114,7 +114,7 @@ export default {
 					this.$router.push({name: 'Logout'});
 				}
 				else {
-					this.$fhcAlert.alertInfo('No data was saved.')
+					this.$fhcAlert.alertInfo(this.$p.t('fragebogen/evaluierungAntwortenNichtUebermittelt'))
 				}
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
