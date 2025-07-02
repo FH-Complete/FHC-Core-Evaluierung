@@ -61,10 +61,3 @@ ALTER TABLE extension.tbl_lvevaluierung
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_lvevaluierung_id TO vilesci;
-
-DO $$
-BEGIN
-ALTER TABLE extension.tbl_lvevaluierung ADD COLUMN IF NOT EXISTS aktiv boolean NOT NULL DEFAULT true;
-COMMENT ON COLUMN extension.tbl_lvevaluierung.aktiv IS 'Indicates if evaulation will be conducted';
-EXCEPTION WHEN OTHERS THEN NULL;
-END $$;

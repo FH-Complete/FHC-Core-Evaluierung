@@ -26,8 +26,6 @@ export default {
 			switch (reason) {
 				case 'evaulierungCodeExistiertNicht':
 					return this.$p.t('fragebogen/evaluierungCodeExistiertNicht');
-				case 'evaluierungNichtAktiv':
-					return this.$p.t('fragebogen/evaluierungNichtAktiv');
 				case 'evaluierungPeriodeBeendet':
 					return this.$p.t('fragebogen/evaluierungPeriodeBeendet', {date: this.date});
 				case 'evaluierungPeriodeStartetErst':
@@ -43,8 +41,6 @@ export default {
 		getContentByReason(reason) {
 			switch (reason) {
 				case 'evaulierungCodeExistiertNicht':
-					return this.$p.t('fragebogen/evaluierungNichtVerfuegbar');
-				case 'evaluierungNichtAktiv':
 					return this.$p.t('fragebogen/evaluierungNichtVerfuegbar');
 				case 'evaluierungPeriodeBeendet':
 					return this.$p.t('fragebogen/evaluierungNichtMehrVerfuegbar');

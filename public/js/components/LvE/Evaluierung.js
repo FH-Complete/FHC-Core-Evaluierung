@@ -62,7 +62,6 @@ export default {
 			.then(result => this.lvEvaluierung = result.data)
 			.then(() =>
 				Promise.all([
-					this.logoutIfEvaluierungNotActive(),
 					this.logoutIfEvaluierungPeriodClosed(),
 					this.logoutIfEvaluierungSubmitted()
 				])
@@ -146,21 +145,6 @@ export default {
 				return Promise.reject('EvaluierungCode does not exist');
 			}
 			return result;
-		},
-		logoutIfEvaluierungNotActive(){
-			// Redirect if Evaluation period is over
-			if (!this.lvEvaluierung.aktiv) {
-				this.$router.push({
-					name: 'Logout',
-					query: {
-						reason: 'evaluierungNichtAktiv'
-					}
-				});
-
-				return Promise.reject('Evaluierung is inactive');
-			}
-
-			return Promise.resolve();
 		},
 		logoutIfEvaluierungPeriodClosed(){
 			const startzeit = new Date(this.lvEvaluierung.startzeit);
