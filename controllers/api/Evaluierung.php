@@ -244,7 +244,8 @@ class Evaluierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Validate Evaluation by Evaluation
+	 * Validate Evaluation by Evaluation Code ID.
+	 *
 	 * @param $lvevaluierung_code_id
 	 * @return void
 	 */
