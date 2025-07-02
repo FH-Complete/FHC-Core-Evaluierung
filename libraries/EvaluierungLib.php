@@ -186,7 +186,7 @@ class EvaluierungLib
 
 		if (!hasData($result))
 		{
-			return error('Evaluierung Code ID does not exist');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungCodeExistiertNicht'));
 		}
 
 		// On success
@@ -206,7 +206,7 @@ class EvaluierungLib
 
 		if (!hasData($result))
 		{
-			return error('Evaluierung ID does not exist');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungNichtVerfuegbar'));
 		}
 
 		// On success
@@ -225,7 +225,7 @@ class EvaluierungLib
 
 		if (!hasData($result))
 		{
-			return error('Lvevaluierung-Lehrveranstaltung ID does not exist');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungNichtVerfuegbar'));
 		}
 
 		// On success
@@ -245,7 +245,7 @@ class EvaluierungLib
 
 		if (!hasData($result))
 		{
-			return error('Lehrveranstaltung does not exist');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungNichtVerfuegbar'));
 		}
 
 		// On success
@@ -263,7 +263,7 @@ class EvaluierungLib
 		// Check if Evaluierung was already submitted
 		if (!is_null($lvevaluierungCode->endezeit))
 		{
-			return error('Evaluierung was already submitted');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungNichtVerfuegbar'));
 		}
 
 		return success(true);
@@ -282,12 +282,16 @@ class EvaluierungLib
 
 		if ($now < $lvevaluierung->startzeit)
 		{
-			return error('Evaluierung period has not started yet');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungPeriodeStartetErst', [
+				'date' => $lvevaluierung->startzeit
+			]));
 		}
 
 		if ($now > $lvevaluierung->endezeit)
 		{
-			return error('Evaluierung period has ended');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungPeriodeBeendet', [
+				'date' => $lvevaluierung->endezeit
+		]));
 		}
 
 		// On success
@@ -305,7 +309,7 @@ class EvaluierungLib
 		// Check if Lehrveranstaltung should be evaluated
 		if ($lehrveranstaltung->evaluierung === false)
 		{
-			return error('Lehrveranstaltung is not evaluable');
+			return error($this->_ci->p->t('fragebogen', 'evaluierungNichtVerfuegbar'));
 		}
 
 		// On success

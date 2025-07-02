@@ -26,6 +26,11 @@ class Evaluierung extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrageAntwort_model', 'LvevaluierungFragebogenFrageAntwortModel');
+
+		// Load language phrases
+		$this->loadPhrases([
+			'fragebogen'
+		]);
 	}
 
 	/**
