@@ -110,14 +110,8 @@ export default {
 			.then(result => {
 				// On Success
 				if (result.data && result.data.length > 0) {
-
-					// Success message
-					this.$fhcAlert.alertSuccess('Saved!')
-
-					// Change to log out Site after 2 seconds
-					setTimeout(() => {
-						this.$router.push({name: 'Logout'});
-					}, 2000)
+					// Change to Logout Site
+					this.$router.push({name: 'Logout'});
 				}
 				else {
 					this.$fhcAlert.alertInfo('No data was saved.')
@@ -217,21 +211,22 @@ export default {
 
 			return Promise.resolve();
 		},
+		onCountdownEndSoon(){
+			this.$fhcAlert.alertWarning(this.$p.t('fragebogen/zeitLaeuftAb'))
+		},
 		onCountdownEnd(){
 			// Set Endezeit
 			this.$api
 				.call(ApiEvaluierung.setEndezeit(this.lvEvaluierungCode.lvevaluierung_code_id))
 				.then(result => {
 					if (result.data === true) {
-						// Change to log out Site after 2 seconds
-						setTimeout(() => {
-							this.$router.push({
-								name: 'Logout',
-								query: {
-									reason: 'evaluierungZeitAbgelaufen'
-								}
-							});
-						}, 2000)
+						// Change to Logout Site
+						this.$router.push({
+							name: 'Logout',
+							query: {
+								reason: 'evaluierungZeitAbgelaufen'
+							}
+						});
 					}
 				})
 		},
@@ -421,7 +416,8 @@ export default {
   		<teleport v-if="showCountdown" :to="isScreenLg ? '#countdown-lg' : '#countdown-sm'">
 			<Countdown 
 				:duration="parseDauerToSeconds(lvEvaluierung.dauer)"
-				:type="isScreenLg ? 'circle' : 'icon'" 
+				:type="isScreenLg ? 'circle' : 'icon'"
+				@countdown-end-soon="onCountdownEndSoon" 
 				@countdown-ended="onCountdownEnd"
 			/>
 		</teleport>

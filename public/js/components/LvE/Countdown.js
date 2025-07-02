@@ -1,6 +1,6 @@
 export default {
 	name: 'Countdown',
-	emits: ['countdownEnded'],
+	emits: ['countdownEndSoon', 'countdownEnded'],
 	props: {
 		duration: Number,
 		type: {
@@ -23,6 +23,13 @@ export default {
 	},
 	watch: {
 		timeLeft(newVal) {
+			// If only less time left
+			if (newVal === Math.round(this.duration * 0.25))
+			{
+				this.$emit('countdownEndSoon');
+			}
+
+			// If time is up
 			if (newVal === 0) {
 				this.endCountdown();
 			}
