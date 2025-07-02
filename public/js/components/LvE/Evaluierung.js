@@ -103,7 +103,7 @@ export default {
 	methods: {
 		onSubmit(){
 			// SaveAntworten
-			this.$api.call(ApiEvaluierung.saveAntworten(
+			this.$api.call(ApiEvaluierung.saveAntwortenAndSetEndezeit(
 				this.lvEvaluierungCode.lvevaluierung_code_id,
 				this.fbAntworten
 			))

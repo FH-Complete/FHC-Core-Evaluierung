@@ -50,6 +50,29 @@ class EvaluierungLib
 		return $data;
 	}
 
+
+	/**
+	 * Update Evaluierung Code Endezeit.
+	 *
+	 * @param $lvevaluierung_code_id
+	 * @return mixed
+	 */
+	public function setEndezeit($lvevaluierung_code_id)
+	{
+		// Update Endezeit
+		$result = $this->_ci->LvevaluierungCodeModel->update(
+			['lvevaluierung_code_id' => $lvevaluierung_code_id],
+			['endezeit' => 'NOW()']
+		);
+
+		if (isError($result))
+		{
+			return error(getError($result));
+		}
+
+		return success(true);
+	}
+
 	/**
 	 * Calculates the maximal Endezeit.
 	 * Maximal Endezeit = Startzeit + Dauer + Buffer for request retry handling
@@ -290,6 +313,28 @@ class EvaluierungLib
 		}
 
 		// On success
+		return success(true);
+	}
+
+	/**
+	 * Check the current time has exceeded the maximum allowed evaluation end time.
+	 *
+	 * @param $lvevaluierung_code_id
+	 * @return mixed
+	 * @throws DateMalformedStringException
+	 */
+	public function checkIfEvaluierungTimeExceeded($lvevaluierung_code_id)
+	{
+		// Calculate maximale Endezeit (Startzeit + Dauer + Buffer for request retry handling)
+		$maxEndezeit = $this->getMaxEndezeit($lvevaluierung_code_id);
+		$now = (new DateTime())->format("Y-m-d H:i:s");
+
+		// If Endezeit is valid
+		if ($now > $maxEndezeit)
+		{
+			return error($this->_ci->p->t('fragebogen', 'evaluierungZeitAbgelaufen'));
+		}
+
 		return success(true);
 	}
 }

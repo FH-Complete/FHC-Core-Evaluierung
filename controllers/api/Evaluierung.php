@@ -14,7 +14,7 @@ class Evaluierung extends FHCAPI_Controller
 				'getLvInfo' => self::PERM_ANONYMOUS,
 				'setStartzeit' => self::PERM_ANONYMOUS,
 				'setEndezeit' => self::PERM_ANONYMOUS,
-				'saveAntworten' => self::PERM_ANONYMOUS
+				'saveAntwortenAndSetEndezeit' => self::PERM_ANONYMOUS
 			)
 		);
 
@@ -175,42 +175,42 @@ class Evaluierung extends FHCAPI_Controller
 	public function setEndezeit(){
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 
-		// Calculate maximale Endezeit (Startzeit + Dauer + Buffer for request retry handling)
-		$maxEndezeit = $this->evaluierunglib->getMaxEndezeit($lvevaluierung_code_id);
-
-		$now = (new DateTime())->format("Y-m-d H:i:s");
-
-		// If Endezeit is valid
-		if ($now <= $maxEndezeit)
+		// Check if Evaluierung Dauer has exceeded
+		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
+		if (isError($result))
 		{
-			// Set Endezeit
-			$result = $this->LvevaluierungCodeModel->update(
-				[
-					'lvevaluierung_code_id' => $lvevaluierung_code_id
-				],
-				[
-					'endezeit' => 'NOW()'
-				]
-			);
-
-			if (isError($result)) $this->terminateWithError(getError($result));
-
-			$this->terminateWithSuccess(true);
+			$this->terminateWithError(getError($result));
 		}
-		else
+
+		// Validate Evaluation
+		$this->_validateEvaluation($lvevaluierung_code_id);
+
+		// Set Endezeit
+		$result = $this->evaluierunglib->setEndezeit($lvevaluierung_code_id);
+		if (isError($result))
 		{
-			$this->terminateWithError('The evaluation submission time has passed.');
+			$this->terminateWithError(getError($result));
 		}
+
+		// On success
+		$this->terminateWithSuccess(true);
 	}
 
 	/**
 	 * Save Students' Antworten.
 	 * @return void
 	 */
-	public function saveAntworten()
+	public function saveAntwortenAndSetEndezeit()
 	{
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 		$data = $this->input->post('data');
+
+		// Check if Evaluierung Dauer has exceeded
+		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
 
 		// Validate Evaluation
 		$this->_validateEvaluation($lvevaluierung_code_id);
@@ -226,6 +226,13 @@ class Evaluierung extends FHCAPI_Controller
 			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 			$result = $this->LvevaluierungAntwortModel->saveAntworten($validatedAntworten);
 			$insertedIds = $this->getDataOrTerminateWithError($result);
+		}
+
+		// Set Endezeit
+		$result = $this->evaluierunglib->setEndezeit($lvevaluierung_code_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
 		}
 
 		$this->terminateWithSuccess($insertedIds);
