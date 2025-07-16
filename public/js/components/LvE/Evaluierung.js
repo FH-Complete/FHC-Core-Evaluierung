@@ -239,6 +239,9 @@ export default {
 	},
 	template: `
 	<div class="lve-evaluierung d-lg-flex flex-column min-vh-100 py-5 ps-lg-2 overflow-auto">
+	
+		<h1 class="visually-hidden">{{ $p.t('fragebogen/fragebogen') }}</h1>
+		
 		<form-form ref="form" class="lve-evaluierung" @submit.prevent="onSubmit">
 			<!-- LV-Evaluierung-Body -->
 			<div class="lve-evaluierung-body row flex-grow-1">

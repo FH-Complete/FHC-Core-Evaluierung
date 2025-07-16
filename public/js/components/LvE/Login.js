@@ -25,9 +25,9 @@ export default {
 			<div class="col-10 col-md-8 col-lg-4 text-center align-content-center">
 				<img :src="logo" :alt="$p.t('fragebogen/fhtwLogo')" class="img-fluid mb-4 mb-lg-5" style="max-height: 80px;">
 				
-				<div class="text-start mb-3">
+				<h1 class="text-start mb-3 fw-normal fs-6">
 					<p>{{ $p.t('fragebogen/loginTextCodeEingeben') }}</p>
-			  	</div>
+			  	</h1>
 				<div class="input-group mb-3 mb-lg-5">
 					<label for="evaluation-code-input" class="visually-hidden">
 						{{ $p.t('fragebogen/evaluierungscodeEingeben')}}
