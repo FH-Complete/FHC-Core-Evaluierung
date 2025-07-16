@@ -100,8 +100,9 @@ export default {
 		<div v-if="frage.typ === 'text'">
 			<div class="card mb-4 px-0 px-md-1 d-flex text-center border-0">
 				<div class="card-body">
-					<label class="fw-bold mb-3">{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}</label>
+					<label class="fw-bold mb-3" :id="frage.lvevaluierung_frage_id">{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}</label>
 					<form-input
+						:aria-labelledby="frage.lvevaluierung_frage_id"
 				  		type="textarea"
 					  	:placeholder="frage.placeholder_by_language"
 						@input="$emit('update:antwort', $event.target.value)"
