@@ -81,7 +81,9 @@ export default {
 											'wert-' + antwort.wert,
 											lvevaluierung_frage_antwort_id == antwort.wert ? 'antwort-checked' : ''
 										  ]"
+										  aria-hidden="true"
 									></i>
+									<span class="visually-hidden">{{ antwort.wert }}</span><!-- screen-reader-accessible label-->
 								</label>
 							</div>
 						  	<div class="antwort-text-wrapper mt-1">

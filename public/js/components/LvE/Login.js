@@ -23,19 +23,22 @@ export default {
 	<div class="lve-login overflow-hidden">
 		<div class="row justify-content-center vh-100 mt-5">
 			<div class="col-10 col-md-8 col-lg-4 text-center align-content-center">
-				<img :src="logo" alt="Logo" class="img-fluid mb-4 mb-lg-5" style="max-height: 80px;">
+				<img :src="logo" :alt="$p.t('fragebogen/fhtwLogo')" class="img-fluid mb-4 mb-lg-5" style="max-height: 80px;">
 				
 				<div class="text-start mb-3">
 					<p>{{ $p.t('fragebogen/loginTextCodeEingeben') }}</p>
 			  	</div>
 				<div class="input-group mb-3 mb-lg-5">
-				  <input 
-				  	type="text" 
-				  	v-model="code"
-				  	class="form-control" 
-				  	:placeholder="$p.t('fragebogen/loginCodeEingeben')" 
-				  	aria-label="Evaluierung Code eingeben" 
-				  	@keyup.enter="onClickStart"
+					<label for="evaluation-code-input" class="visually-hidden">
+						{{ $p.t('fragebogen/evaluierungscodeEingeben')}}
+					</label>
+				  	<input 
+						id="evaluation-code-input"
+						type="text" 
+						v-model="code"
+						class="form-control" 
+						:placeholder="$p.t('fragebogen/loginCodeEingeben')" 
+						@keyup.enter="onClickStart"
 				  	>
 				  <button class="btn btn-primary" type="button" @click="onClickStart">Start</button>
 				</div>

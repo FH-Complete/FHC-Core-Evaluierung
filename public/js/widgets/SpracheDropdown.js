@@ -23,7 +23,8 @@ export default {
 	},
 	template:`
 		<div class="sprache-dropdown d-inline-block">
-			<select v-model="selectedLanguage" @change="changeLanguage" class="form-select form-select-sm" aria-label="Sprache Auswahl">
+			<label for="language-select" class="visually-hidden text-white bg-primary ">{{ $p.t('fragebogen/spracheAuswaehlen')}}</label>
+			<select v-model="selectedLanguage" @change="changeLanguage" id="language-select" class="form-select form-select-sm">
 				<option v-for="language in serverLanguages" :key="language.sprache" :value="language.sprache">
 					{{language.bezeichnung}}
 				</option>
