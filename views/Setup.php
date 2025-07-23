@@ -9,7 +9,7 @@ $includesArray = array(
 	'navigationcomponent' => true,
 	'customJSs' => array('vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js'),
 	'customJSModules' => array(
-        'public/extensions/FHC-Core-Evaluierung/js/apps/Init.js'
+        'public/extensions/FHC-Core-Evaluierung/js/apps/Setup.js'
     ),
 	'customCSSs' => array(
 		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css',

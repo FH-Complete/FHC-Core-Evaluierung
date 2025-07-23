@@ -1,4 +1,4 @@
-import LvLeitung from '../components/Init/LvLeitung.js';
+import LvLeitung from '../components/Setup/LvLeitung.js';
 import DateHelper from '../helpers/DateHelper';
 import FhcAlert from '../../../../js/plugins/FhcAlert.js';
 import FhcApi from "../../../../js/plugins/Api.js";

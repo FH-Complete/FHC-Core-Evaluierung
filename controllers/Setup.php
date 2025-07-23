@@ -1,7 +1,7 @@
 <?php
 if (! defined('BASEPATH')) exit('No direct script access allowed');
 
-class Init extends Auth_Controller
+class Setup extends Auth_Controller
 {
 	/**
 	 * Constructor
@@ -21,6 +21,6 @@ class Init extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->load->view('extensions/FHC-Core-Evaluierung/Init');
+		$this->load->view('extensions/FHC-Core-Evaluierung/Setup');
 	}
 }
