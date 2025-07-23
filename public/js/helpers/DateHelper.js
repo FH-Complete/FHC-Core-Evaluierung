@@ -51,6 +51,17 @@ export default {
 			minute: '2-digit'
 		}).format(dateObj);
 	},
+	/**
+	 * Format Date as PGSQL Timestamp DD.MM.YYYY HH:MM:SS
+	 * @param {Date | String} dateValue
+	 * */
+	formatToSqlTimestamp(dateValue) {
+		const dateObj = _toValidDate(dateValue);
+		const pad = (n) => n.toString().padStart(2, '0');
+
+		return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ` +
+				`${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
+	}
 }
 
 // Private functions
