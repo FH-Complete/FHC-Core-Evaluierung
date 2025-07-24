@@ -1,11 +1,13 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
+import Infobox from "../../widgets/Infobox";
 import DateHelper from "../../helpers/DateHelper";
 
 export default {
 	components: {
 		FormForm,
-		FormInput
+		FormInput,
+		Infobox
 	},
 	created() {
 		console.log('Component created');
@@ -48,7 +50,18 @@ export default {
 					dauer: '00:00:00',
 					lv_aufgeteilt: false
 				}
-			]
+			],
+			infoGesamtLv:  `
+		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
+				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
+				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
+			`,
+			infoStudierendenlink: `
+				Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.
+			`,
+			infoGruppenbasis: `
+				Infotext über Versand an Lektor*innen hier rein.
+			`
 		}
 	},
 	mounted() {
@@ -163,32 +176,11 @@ export default {
 													<!-- Infobox -->
 													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
 														<div class="bg-light border rounded p-3 h-100">
-														<!-- Info Box XS + MD - collapsed by default -->
-															<div class="d-lg-none">
-																<p class="mb-1 text-dark small">
-																	<i class="fa-solid fa-circle-info text-primary me-2" aria-hidden="true"></i>
-																	<a data-bs-toggle="collapse" href="#collapseInfoBox" role="button" aria-expanded="false" aria-controls="collapseInfoBox">Mehr Infos anzeigen</a>
-															  	</p>
-																<div class="collapse mt-2" id="collapseInfoBox">
-																	<p class="mb-2 text-muted small">
-																	  <i class="fa-solid fa-circle-info text-primary me-2" aria-hidden="true"></i>
-																	  Diese LV wird auf Gruppenbasis evaluiert.
-																	</p>
-																	<p class="mb-2 text-muted small">Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.</p>
-																	<p class="mb-2 text-muted small">Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.</p>
-																	<p class="mb-2 text-muted small">Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.</p>
-																</div>
-															</div>
-															<!-- Info Box LG +-->
-															<div class="d-none d-lg-block">
-																<p class="mb-2 text-muted small">
-																	  <i class="fa-solid fa-circle-info text-primary me-2"  aria-hidden="true"></i>
-																	  Diese LV wird auf Gruppenbasis evaluiert.
-																</p>
-																<p class="mb-2 text-muted small">Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.</p>
-																<p class="mb-2 text-muted small">Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.</p>
-<!--																<p class="mb-2 text-muted small">Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.</p>-->
-															</div>
+															<Infobox 
+																collapseBreakpoint="lg" 
+																:text="infoGesamtLv"
+															>
+															</Infobox>
 														</div>
 													</div><!--.end Infobox cols -->
 												</div><!--.end row -->
@@ -206,10 +198,7 @@ export default {
 													<!-- Info Box -->
 													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
 														<div class="bg-light border rounded p-3 h-100">
-															<p class="mb-0">
-																  <i class="fa-solid fa-circle-info text-primary me-2"></i>
-																  <span class="text-muted small">Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.</span>
-															</p>
+															<Infobox :text="infoStudierendenlink"></Infobox>
 														</div>
 													</div>
 												</div><!--.end row -->
@@ -229,26 +218,11 @@ export default {
 													<!-- Info Box -->
 													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
 														<div class="bg-light border rounded p-3 h-100">
-														<!-- Info Box XS + MD - collapsed by default -->
-															<div class="d-lg-none">
-																<p class="mb-1 text-dark small">
-																	<i class="fa-solid fa-circle-info text-primary me-2" aria-hidden="true"></i>
-																	<a data-bs-toggle="collapse" href="#collapseInfoBox" role="button" aria-expanded="false" aria-controls="collapseInfoBox">Mehr Infos anzeigen</a>
-															  	</p>
-																<div class="collapse mt-2" id="collapseInfoBox">
-																	<p class="mb-0">
-																		  <i class="fa-solid fa-circle-info text-primary me-2"></i>
-																		  <span class="text-muted small">Infotext über Versand an Lektor*innen hier rein</span>
-																	</p>
-																</div>
-															</div>
-															<!-- Info Box LG +-->
-															<div class="d-none d-lg-block">
-																<p class="mb-0">
-																  <i class="fa-solid fa-circle-info text-primary me-2"></i>
-																  <span class="text-muted small">Infotext über Versand an Lektor*innen hier rein</span>
-																</p>
-															</div>
+															<Infobox 
+																collapseBreakpoint="lg" 
+																:text="infoGruppenbasis" 
+															>
+															</Infobox>
 														</div>
 													</div><!--.end Infobox cols -->
 												</div><!--.end row -->
