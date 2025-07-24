@@ -81,17 +81,29 @@ export default {
 				<template v-for="(lv, index) in lvs" :key="index">	
 					<div class="accordion-item">
 						<h2 class="accordion-header" :id="'flush-heading' + index">
-						  	<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" :data-bs-target="'#flush-collapse' + index" aria-expanded="false" aria-controls="flush-collapseOne">
+						  	<button 
+						  		class="accordion-button collapsed" 
+						  		type="button" data-bs-toggle="collapse" 
+						  		:data-bs-target="'#flush-collapse' + index" 
+						  		aria-expanded="false" 
+						  		aria-controls="flush-collapseOne"
+							>
 							{{ lv.bezeichnung + index }}
 						  </button>
 						</h2>
-						<div :id="'flush-collapse' + index" class="accordion-collapse collapse show" :aria-labelledby="'flush-heading' + index" data-bs-parent="#accordionFlushExample">
+						<div 
+							:id="'flush-collapse' + index" 
+							class="accordion-collapse collapse" 
+							:aria-labelledby="'flush-heading' + index" 
+							data-bs-parent="#accordionFlushExample"
+						>
 						  	<div class="p-md-3">
 								<form-form ref="form" class="lve-setup-form">
 									<div class="card">
 										<div class="card-header bg-white py-3">
 											<div class="d-flex flex-wrap justify-content-md-between">
-												<div class="form-check form-check-inline ps-0">
+											  	<div class="flex-grow-1 flex-md-grow-0">
+													<div class="form-check form-check-inline ps-0">
 													<form-input
 														label="Gesamt-LV evaluieren"
 														class="form-check-input"
@@ -101,7 +113,7 @@ export default {
 													>
 													</form-input>
 												</div>
-												<div class="form-check form-check-inline ps-0">
+													<div class="form-check form-check-inline ps-0">
 													<form-input
 													label="LV auf Gruppenbasis evaluieren"
 													class="form-check-input"
@@ -111,9 +123,10 @@ export default {
 													>
 													</form-input>
 												</div>
-<!--<div class="d-flex">-->
-													<button class="btn btn-primary ms-md-auto">Speichern</button>
-<!--												</div>					-->
+												</div>
+												<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0">
+													<button class="btn btn-primary w-100 ms-md-auto">Speichern</button>
+												</div>					
 											</div>			
 										</div>
 										<!-- Wenn Gesamt-LV evaluiert wird -->
@@ -172,7 +185,7 @@ export default {
 																>
 																</form-input>
 															</div>
-															<div class="d-flex align-items-end">
+															<div class="flex-grow-1 flex-md-grow-0 align-self-end ">
 																<button class="btn btn-primary w-100 w-md-auto">Speichern</button>
 															</div>
 														</div>
@@ -215,7 +228,7 @@ export default {
 												<div class="row">
 													<!-- Button -->
 													<div class="col-12 col-md-7 order-1">
-														<div class="d-grid d-lg-block">
+														<div class="d-grid d-md-block">
 															<button class="btn btn-success mt-3">Mail an Lektor*Innen versenden</button>
 													  	</div>
 													</div>
