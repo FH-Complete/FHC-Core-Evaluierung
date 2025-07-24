@@ -1,6 +1,6 @@
 <?php
 $includesArray = array(
-	'title' => 'Evaluierung starten',
+	'title' => 'Evaluierung Setup',
 	'vue3' => true,
 	'axios027' => true,
 	'bootstrap5' => true,
@@ -21,6 +21,6 @@ $includesArray = array(
 $this->load->view('templates/FHC-Header', $includesArray);
 ?>
 
-<div id="lve-starten-main"></div>
+<div id="lve-setup-main"></div>
 
 <?php $this->load->view('templates/FHC-Footer', $includesArray); ?>

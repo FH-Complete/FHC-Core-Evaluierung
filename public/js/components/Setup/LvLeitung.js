@@ -74,8 +74,8 @@ export default {
 	},
 	methods: {},
 	template: `
-	<div class="lve-starten-body container-fluid">
-		<h1>LV-Evaluierung starten</h1>
+	<div class="lve-setup-body container-fluid">
+		<h1>LV-Evaluierung initialisieren</h1>
 		<div class="row">
 			<div class="accordion" id="accordionFlushExample">
 				<template v-for="(lv, index) in lvs" :key="index">	
@@ -85,31 +85,36 @@ export default {
 							{{ lv.bezeichnung + index }}
 						  </button>
 						</h2>
-						<div :id="'flush-collapse' + index" class="accordion-collapse collapse" :aria-labelledby="'flush-heading' + index" data-bs-parent="#accordionFlushExample">
+						<div :id="'flush-collapse' + index" class="accordion-collapse collapse show" :aria-labelledby="'flush-heading' + index" data-bs-parent="#accordionFlushExample">
 						  	<div class="p-md-3">
-								<form-form ref="form" class="lve-starten">
+								<form-form ref="form" class="lve-setup-form">
 									<div class="card">
 										<div class="card-header bg-white py-3">
-											<div class="form-check form-check-inline ps-0">
-												<form-input
-													label="Gesamt-LV evaluieren"
-													class="form-check-input"
-													type="radio"
-													:value="false"
-													v-model="lv.lv_aufgeteilt"
-												>
-												</form-input>
-											</div>
-											<div class="form-check form-check-inline ps-0">
-												<form-input
+											<div class="d-flex flex-wrap justify-content-md-between">
+												<div class="form-check form-check-inline ps-0">
+													<form-input
+														label="Gesamt-LV evaluieren"
+														class="form-check-input"
+														type="radio"
+														:value="false"
+														v-model="lv.lv_aufgeteilt"
+													>
+													</form-input>
+												</div>
+												<div class="form-check form-check-inline ps-0">
+													<form-input
 													label="LV auf Gruppenbasis evaluieren"
 													class="form-check-input"
 													type="radio"
 													:value="true"
 													v-model="lv.lv_aufgeteilt"
-												>
-												</form-input>
-											</div>
+													>
+													</form-input>
+												</div>
+<!--<div class="d-flex">-->
+													<button class="btn btn-primary ms-md-auto">Speichern</button>
+<!--												</div>					-->
+											</div>			
 										</div>
 										<!-- Wenn Gesamt-LV evaluiert wird -->
 										<div v-if="lv.lv_aufgeteilt === false" >
@@ -118,7 +123,7 @@ export default {
 												<h5 class="card-title">Evaluierungskriterien festlegen</h5>
 												<div class="row gx-5">
 													<!-- Form Inputs + Button -->
-													<div class="col-12 col-lg-6 order-1">
+													<div class="col-12 col-lg-7 order-1">
 														<div class="d-flex flex-wrap flex-md-nowrap gap-3">
 															<div class="flex-grow-1">
 																<form-input 
@@ -167,17 +172,16 @@ export default {
 																>
 																</form-input>
 															</div>
-														</div>
-														<div class="d-grid d-md-block">
-															<button class="btn btn-primary mt-3 me-2">Speichern</button>
-<!--															<button class="btn btn-primary mt-3">Studierendenlinks versenden</button>-->
+															<div class="d-flex align-items-end">
+																<button class="btn btn-primary w-100 w-md-auto">Speichern</button>
+															</div>
 														</div>
 													</div>
-													<!-- Infobox -->
-													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
+													 <!--Infobox -->
+													<div class="col-12 col-lg-5 order-2 mt-3">
 														<div class="bg-light border rounded p-3 h-100">
 															<Infobox 
-																collapseBreakpoint="lg" 
+																collapseBreakpoint="all" 
 																:text="infoGesamtLv"
 															>
 															</Infobox>
@@ -190,13 +194,13 @@ export default {
 <!--												<h5 class="card-title mt-2">Studierendenlinks versenden</h5>-->
 												<div class="row gx-5">
 													<!-- Button -->
-													<div class="col-12 col-lg-6 order-1">
+													<div class="col-12 col-lg-7 order-1">
 														<div class="d-grid d-md-block">
 															<button class="btn btn-success mt-3">Studierendenlinks versenden</button>
 														</div>
 													</div>
 													<!-- Info Box -->
-													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
+													<div class="col-12 col-lg-5 order-2 mt-3">
 														<div class="bg-light border rounded p-3 h-100">
 															<Infobox :text="infoStudierendenlink"></Infobox>
 														</div>
@@ -210,13 +214,13 @@ export default {
 <!--												<h5 class="card-title">Evaluierungskriterien durch Lektor*innen festlegen lassen</h5>-->
 												<div class="row">
 													<!-- Button -->
-													<div class="col-12 col-md-6 order-1">
+													<div class="col-12 col-md-7 order-1">
 														<div class="d-grid d-lg-block">
 															<button class="btn btn-success mt-3">Mail an Lektor*Innen versenden</button>
 													  	</div>
 													</div>
 													<!-- Info Box -->
-													<div class="col-12 col-lg-6 order-2 mt-3 mt-lg-0">
+													<div class="col-12 col-lg-5 order-2 mt-3">
 														<div class="bg-light border rounded p-3 h-100">
 															<Infobox 
 																collapseBreakpoint="lg" 

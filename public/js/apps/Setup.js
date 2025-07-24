@@ -18,4 +18,4 @@ app
 	.use(FhcApi)
 	.use(Phrasen)
 	.use(DateHelper)
-	.mount('#lve-starten-main')
+	.mount('#lve-setup-main')
