@@ -20,35 +20,40 @@ export default {
 					startzeit: null,
 					endezeit: null,
 					dauer: '00:00:00',
-					lv_aufgeteilt: false
+					lv_aufgeteilt: true,
+					codes_gemailt: true
 				},
 				{
 					bezeichnung: 'Lehrveranstaltung',
 					startzeit: null,
 					endezeit: null,
 					dauer: '00:00:00',
-					lv_aufgeteilt: false
+					lv_aufgeteilt: false,
+					codes_gemailt: false
 				},
 				{
 					bezeichnung: 'Lehrveranstaltung',
 					startzeit: null,
 					endezeit: null,
 					dauer: '00:00:00',
-					lv_aufgeteilt: false
+					lv_aufgeteilt: false,
+					codes_gemailt: false
 				},
 				{
 					bezeichnung: 'Lehrveranstaltung',
 					startzeit: null,
 					endezeit: null,
 					dauer: '00:00:00',
-					lv_aufgeteilt: false
+					lv_aufgeteilt: true,
+					codes_gemailt: false
 				},
 				{
 					bezeichnung: 'Lehrveranstaltung',
 					startzeit: null,
 					endezeit: null,
 					dauer: '00:00:00',
-					lv_aufgeteilt: false
+					lv_aufgeteilt: false,
+					codes_gemailt: true
 				}
 			],
 			infoGesamtLv:  `
@@ -88,8 +93,30 @@ export default {
 						  		aria-expanded="false" 
 						  		aria-controls="flush-collapseOne"
 							>
-							{{ lv.bezeichnung + index }}
-						  </button>
+								<span class="gap-2">
+									<i 
+										:class="[
+										  'fa-solid',
+										  lv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full',
+										  'text-dark'
+										]"
+										:title="lv.lv_aufgeteilt ? 'LV auf Gruppenbasis evaluieren' : 'Gesamt-LV evaluieren'"
+										data-bs-toggle="tooltip"
+									>
+									</i> |
+									<i 
+										:class="[
+										  'fa-solid',
+										  lv.codes_gemailt ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-muted',
+										  'me-2'
+										]"
+										:title="lv.codes_gemailt  ? 'Codes wurden an Studierende versendet' : 'Codes wurden noch nicht an Studierende versendet'"
+										data-bs-toggle="tooltip"
+									>
+									</i>
+									{{ lv.bezeichnung + index }}
+								</span>
+						  	</button>
 						</h2>
 						<div 
 							:id="'flush-collapse' + index" 
