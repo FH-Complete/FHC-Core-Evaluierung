@@ -92,7 +92,7 @@ export default {
 		}
 	},
 	template: `
-	<div class="lve-setup-body container-fluid">
+	<div class="lve-initiierung-body container-fluid">
 		<h1>LV-Evaluierung initiieren</h1>
 		<div class="row">
 			<div class="col-sm-2 offset-sm-10 mb-3">
@@ -155,7 +155,7 @@ export default {
 							data-bs-parent="#accordionFlushExample"
 						>
 						  	<div class="p-md-3">
-								<form-form ref="form" class="lve-setup-form">
+								<form-form ref="form" class="lve-initiierung-form">
 									<div class="card">
 										<div class="card-header bg-white py-3">
 											<div class="d-flex flex-wrap justify-content-md-between">

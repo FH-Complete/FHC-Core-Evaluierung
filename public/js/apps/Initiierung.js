@@ -1,4 +1,4 @@
-import LvLeitung from '../components/Setup/LvLeitung.js';
+import LvLeitung from '../components/Initiierung/LvLeitung.js';
 import DateHelper from '../helpers/DateHelper';
 import FhcAlert from '../../../../js/plugins/FhcAlert.js';
 import FhcApi from "../../../../js/plugins/Api.js";
@@ -18,4 +18,4 @@ app
 	.use(FhcApi)
 	.use(Phrasen)
 	.use(DateHelper)
-	.mount('#lve-setup-main')
+	.mount('#lve-initiierung-main')
