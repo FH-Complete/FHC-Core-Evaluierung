@@ -2,6 +2,7 @@ import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import Infobox from "../../widgets/Infobox";
 import DateHelper from "../../helpers/DateHelper";
+import ApiFhc from "../../api/fhc.js";
 
 export default {
 	components: {
@@ -10,10 +11,18 @@ export default {
 		Infobox
 	},
 	created() {
-		console.log('Component created');
+		// Set Studiensemester
+		this.$api
+			.call(ApiFhc.Studiensemester.getAktNext())
+			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
+			.then(() => this.$api.call(ApiFhc.Studiensemester.getAll()))
+			.then(result => this.studiensemester = result.data)
+			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
 	data() {
 		return {
+			studiensemester: [],
+			selStudiensemester: '',
 			lvs: [
 				{
 					bezeichnung: 'Lehrveranstaltung',
@@ -77,10 +86,31 @@ export default {
 			}
 		})
 	},
-	methods: {},
+	methods: {
+		onChangeStudiensemester(){
+			console.log(this.selStudiensemester);
+		}
+	},
 	template: `
 	<div class="lve-setup-body container-fluid">
-		<h1>LV-Evaluierung initialisieren</h1>
+		<h1>LV-Evaluierung initiieren</h1>
+		<div class="row">
+			<div class="col-sm-2 offset-sm-10 mb-3">
+				<form-input
+					type="select"
+					v-model="selStudiensemester"
+					name="studiensemester"
+					:label="$p.t('lehre/studiensemester')"
+					@change="onChangeStudiensemester">
+					<option 
+						v-for="(studSem, index) in studiensemester"
+						:key="index" 
+						:value="selStudiensemester">
+						{{ studSem.studiensemester_kurzbz }}
+					</option>
+				</form-input>
+			</div>
+		</div><!--.end row -->	
 		<div class="row">
 			<div class="accordion" id="accordionFlushExample">
 				<template v-for="(lv, index) in lvs" :key="index">	
