@@ -13,10 +13,10 @@ export default {
 	created() {
 		// Set Studiensemester
 		this.$api
-			.call(ApiFhc.Studiensemester.getAktNext())
-			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
-			.then(() => this.$api.call(ApiFhc.Studiensemester.getAll()))
+			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
+			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
+			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
 	data() {
@@ -105,7 +105,7 @@ export default {
 					<option 
 						v-for="(studSem, index) in studiensemester"
 						:key="index" 
-						:value="selStudiensemester">
+						:value="studSem.studiensemester_kurzbz">
 						{{ studSem.studiensemester_kurzbz }}
 					</option>
 				</form-input>

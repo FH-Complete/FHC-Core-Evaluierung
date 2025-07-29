@@ -4,7 +4,7 @@ export default {
 			return {
 				method: 'get',
 				url: 'api/frontend/v1/organisation/Studiensemester/getAll',
-				params: {start: '2025-08-01'}	// todo config
+				params: {start: '2025-02-01'}	// todo config
 			}
 		},
 		getAktNext(){
