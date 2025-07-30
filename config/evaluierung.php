@@ -1,0 +1,3 @@
+<?php
+// Initial definition
+$config = [];
