@@ -1,3 +1,0 @@
-<?php
-// Initial definition
-$config = [];

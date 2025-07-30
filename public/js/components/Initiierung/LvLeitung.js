@@ -3,6 +3,7 @@ import FormInput from "../../../../../js/components/Form/Input.js";
 import Infobox from "../../widgets/Infobox";
 import DateHelper from "../../helpers/DateHelper";
 import ApiFhc from "../../api/fhc.js";
+import ApiInitiierung from "../../api/initiierung.js";
 
 export default {
 	components: {
@@ -11,60 +12,20 @@ export default {
 		Infobox
 	},
 	created() {
-		// Set Studiensemester
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
 			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
 			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
+			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
+			.then(result => this.lvs = result.data)
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
 	data() {
 		return {
 			studiensemester: [],
 			selStudiensemester: '',
-			lvs: [
-				{
-					bezeichnung: 'Lehrveranstaltung',
-					startzeit: null,
-					endezeit: null,
-					dauer: '00:00:00',
-					lv_aufgeteilt: true,
-					codes_gemailt: true
-				},
-				{
-					bezeichnung: 'Lehrveranstaltung',
-					startzeit: null,
-					endezeit: null,
-					dauer: '00:00:00',
-					lv_aufgeteilt: false,
-					codes_gemailt: false
-				},
-				{
-					bezeichnung: 'Lehrveranstaltung',
-					startzeit: null,
-					endezeit: null,
-					dauer: '00:00:00',
-					lv_aufgeteilt: false,
-					codes_gemailt: false
-				},
-				{
-					bezeichnung: 'Lehrveranstaltung',
-					startzeit: null,
-					endezeit: null,
-					dauer: '00:00:00',
-					lv_aufgeteilt: true,
-					codes_gemailt: false
-				},
-				{
-					bezeichnung: 'Lehrveranstaltung',
-					startzeit: null,
-					endezeit: null,
-					dauer: '00:00:00',
-					lv_aufgeteilt: false,
-					codes_gemailt: true
-				}
-			],
+			lvs: [],
 			infoGesamtLv:  `
 		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
 				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
@@ -78,17 +39,12 @@ export default {
 			`
 		}
 	},
-	mounted() {
-		// todo: tbd in API call
-		this.lvs.forEach((lv) => {
-			if (!lv.startzeit) {
-				lv.startzeit = DateHelper.formatToSqlTimestamp(new Date());  // Sets current date/time
-			}
-		})
-	},
 	methods: {
-		onChangeStudiensemester(){
-			console.log(this.selStudiensemester);
+		onChangeStudiensemester(e){
+			this.$api
+				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
+				.then(result => this.lvs = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error) );
 		}
 	},
 	template: `
@@ -144,7 +100,7 @@ export default {
 										data-bs-toggle="tooltip"
 									>
 									</i>
-									{{ lv.bezeichnung + index }}
+									{{ lv.studiengang_kz + ' ' + lv.bezeichnung + ' ' + lv.orgform_kurzbz + ' ' + lv.lehrform_kurzbz }}
 								</span>
 						  	</button>
 						</h2>
