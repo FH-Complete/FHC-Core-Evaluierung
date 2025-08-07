@@ -39,11 +39,13 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 						lv.semester,
 						lv.studiengang_kz,
 						lema.mitarbeiter_uid,
-						lema.lehrfunktion_kurzbz
+						lema.lehrfunktion_kurzbz,
+						stg.kurzbzlang
 					FROM
 						lehre.tbl_lehrveranstaltung lv
 						join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
 						join lehre.tbl_lehreinheitmitarbeiter lema using (lehreinheit_id)
+						join public.tbl_studiengang stg USING (studiengang_kz)
 					WHERE
 						-- filter studiensemester
 						le.studiensemester_kurzbz = ?

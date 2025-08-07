@@ -19,4 +19,14 @@ export default {
 			}
 		}
 	},
+	getLveLvWithLesAndGruppenById(lvevaluierung_lehrveranstaltung_id)
+	{
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvWithLesAndGruppenById',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	}
 }
