@@ -11,6 +11,7 @@ class Initiierung extends FHCAPI_Controller
 				'getLveLvs' => 'admin:rw', // todo ändern
 				'getLveLvsWithLes' => 'admin:rw', // todo ändern
 				'getLveLvWithLesAndGruppenById' => 'admin:rw', // todo ändern
+				'getLvEvaluierungenByID' => 'admin:rw', // todo ändern
 			)
 		);
 
@@ -107,5 +108,24 @@ class Initiierung extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess(array_values($grouped));
+	}
+
+	/**
+	 * Get all Lvevaluierungen of given Lvevaluierung-Lehrveranstaltung-ID.
+	 *
+	 * @return void
+	 */
+	public function getLvEvaluierungenByID()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		// Get Lv Evaluierungen
+		$result = $this->LvevaluierungModel->loadWhere([
+			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
+		]);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
 	}
 }

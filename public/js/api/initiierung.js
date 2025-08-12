@@ -28,5 +28,15 @@ export default {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
 			}
 		}
+	},
+	getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id)
+	{
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLvEvaluierungenByID',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
 	}
 }

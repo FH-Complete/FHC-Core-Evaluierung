@@ -25,9 +25,11 @@ export default {
 		return {
 			studiensemester: [],
 			selStudiensemester: '',
-			lveLvs: [],					// Lvs to be evaluated, where user is assigned to at least one Le as a Lektor.
-			lveLvWithLesAndGruppen: [],	// Data of selected Lv
-			selLveLvId: '',				// Unique Lvevaluierung-Lehrveranstaltung-ID of selected Lv
+			lveLvs: [],					// All Lvs to be evaluated, where user is assigned to at least one Le as a Lektor.
+			selLveLvId: '',				// Lve-Lv-ID of selected Lv
+			lveLvWithLesAndGruppen: [],	// Lvs and Lehreinheiten Info of selected Lve-Lv-ID
+			lveLvDetails: [],			// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
+			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
 			infoGesamtLv:  `
 		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
 				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
@@ -44,22 +46,22 @@ export default {
 	computed: {
 		activeLveLv() {
 			return this.lveLvs.find(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
-		},
-		lveLvDetails() {
-			if (!this.lveLvWithLesAndGruppen.length) return [];
-
-			return this.activeLveLv?.lv_aufgeteilt
-				? this.lveLvWithLesAndGruppen
-				: this.groupByLv(this.lveLvWithLesAndGruppen);
 		}
 	},
 	watch: {
 		selLveLvId(newId) {
 			if (newId) {
-				this.getLveLvWithLesAndGruppenById(newId);  // API call nur hier
+				this.getLveLvWithLesAndGruppenById(newId)
+					.then(() => this.getLvevaluierungen(newId))
+					.then(() => {
+						const structuredLveLvDetails = this.structureLveLvDetails();
+						this.lveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
+					});
 			}
 			else {
 				this.lveLvWithLesAndGruppen = [];
+				this.lvevaluierungen = [];
+				this.lveLvDetails = [];
 			}
 		}
 	},
@@ -100,10 +102,31 @@ export default {
 			}
 		},
 		getLveLvWithLesAndGruppenById(lvevaluierung_lehrveranstaltung_id) {
-			this.$api
+			// Get Lvs and Lehreinheiten Info of selected Lve-Lv-ID
+			return this.$api
 				.call(ApiInitiierung.getLveLvWithLesAndGruppenById(lvevaluierung_lehrveranstaltung_id))
-				.then(result => this.lveLvWithLesAndGruppen = result.data)
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+				.then(result => {
+					this.lveLvWithLesAndGruppen = result.data;
+				});
+		},
+		getLvevaluierungen(lvevaluierung_lehrveranstaltung_id) {
+			return this.$api
+				.call(ApiInitiierung.getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id))
+				.then(result => {
+					this.lvevaluierungen = result.data;
+				});
+		},
+		structureLveLvDetails() {
+			if (!this.lveLvWithLesAndGruppen.length) {
+				this.lveLvDetails = [];
+				return;
+			}
+
+			const isAufgeteilt = this.activeLveLv?.lv_aufgeteilt;
+
+			return isAufgeteilt
+				? this.lveLvWithLesAndGruppen
+				: this.groupByLv(this.lveLvWithLesAndGruppen);
 		},
 		groupByLv(data) {
 			const grouped = [];
@@ -137,6 +160,41 @@ export default {
 			});
 
 			return grouped;
+		},
+		// Helper: merges start/ende/dauer from lvevaluierungen into detail list
+		mergeEvaluierungenIntoDetails(details) {
+			const isAufgeteilt = this.activeLveLv?.lv_aufgeteilt;
+			const now = DateHelper.formatToSqlTimestamp(new Date());
+
+			details.forEach(detail => {
+				const evalMatch = this.findMatchingEvaluierung(detail.lehreinheit_id, isAufgeteilt);
+
+				if (detail.startzeit == null) {
+					detail.startzeit = evalMatch?.startzeit ?? now;
+				}
+				if (detail.endezeit == null) {
+					detail.endezeit = evalMatch?.endezeit ?? '';
+				}
+				if (detail.dauer == null) {
+					detail.dauer = evalMatch?.dauer ?? '';
+				}
+			});
+
+			return details;
+		},
+		// Helper: finds the correct evaluierung for a given Lehreinheit
+		findMatchingEvaluierung(lehreinheit_id, isAufgeteilt) {
+			if (isAufgeteilt) {
+				return this.lvevaluierungen.find(ev =>
+					ev.lehreinheit_id === lehreinheit_id &&
+					ev.lvevaluierung_lehrveranstaltung_id === this.selLveLvId
+				);
+			}
+			else {
+				return this.lvevaluierungen.find(ev =>
+					ev.lvevaluierung_lehrveranstaltung_id === this.selLveLvId
+				);
+			}
 		},
 		getLvInfoString(lv){
 			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung;
@@ -304,7 +362,7 @@ export default {
 											<h5 class="card-title mb-3">Evaluierungskriterien festlegen</h5>
 											<div class="row gx-5">
 												<!-- Form Inputs + Button -->
-												<div class="col-12 col-lg-7 order-1">
+												<div class="col-12 col-lg-4 order-1">
 													<div class="d-flex flex-wrap flex-md-nowrap gap-3">
 														<div class="flex-grow-1">
 															<form-input 
@@ -334,25 +392,25 @@ export default {
 															>
 															</form-input>
 														</div>
-														<div class="flex-grow-1">
-															<form-input
-																label="Dauer (HH:MM)" 
-																type="datepicker"
-																v-model="lveLvDetail.dauer"
-																name="lveLvDetail.dauer"
-																locale="de"								
-																:time-picker="true"
-																:is-24="true"
-																:hide-input-icon="true"
-																:minutes-increment="5"
-																format="HH:mm"
-																model-type="HH:mm:ss"
-																:text-input="true"
-																:auto-apply="true"
-																:disabled="true"
-															>
-															</form-input>
-														</div>
+<!--														<div class="flex-grow-1">-->
+<!--															<form-input-->
+<!--																label="Dauer (HH:MM)" -->
+<!--																type="datepicker"-->
+<!--																v-model="lveLvDetail.dauer"-->
+<!--																name="lveLvDetail.dauer"-->
+<!--																locale="de"								-->
+<!--																:time-picker="true"-->
+<!--																:is-24="true"-->
+<!--																:hide-input-icon="true"-->
+<!--																:minutes-increment="5"-->
+<!--																format="HH:mm"-->
+<!--																model-type="HH:mm:ss"-->
+<!--																:text-input="true"-->
+<!--																:auto-apply="true"-->
+<!--																:disabled="true"-->
+<!--															>-->
+<!--															</form-input>-->
+<!--														</div>-->
 														<div class="flex-grow-1 flex-md-grow-0 align-self-end ">
 															<button class="btn btn-primary w-100 w-md-auto">Speichern</button>
 														</div>
