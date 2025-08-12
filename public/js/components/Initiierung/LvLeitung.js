@@ -318,6 +318,7 @@ export default {
 														type="radio"
 														:value="false"
 														v-model="lveLv.lv_aufgeteilt"
+														:disabled="lvevaluierungen.length > 0"
 													>
 													</form-input>
 												</div>
@@ -328,12 +329,14 @@ export default {
 														type="radio"
 														:value="true"
 														v-model="lveLv.lv_aufgeteilt"
+														:disabled="lvevaluierungen.length > 0"
 													>
 													</form-input>
 												</div>
 											</div>
-											<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0">
-												<button class="btn btn-primary w-100 ms-md-auto">Speichern</button>
+											<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0 d-flex gap-2">
+												<button class="btn btn-outline-danger w-100 ms-md-auto" :hidden="lvevaluierungen.length == 0">Zurücksetzen</button>
+												<button class="btn btn-primary w-100 ms-md-auto" :disabled="lvevaluierungen.length > 0">Speichern</button>
 											</div>					
 										</div>			
 									</div><!--.card-body -->
