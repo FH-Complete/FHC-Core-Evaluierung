@@ -28,7 +28,7 @@ export default {
 			lveLvs: [],					// All Lvs to be evaluated, where user is assigned to at least one Le as a Lektor.
 			selLveLvId: '',				// Lve-Lv-ID of selected Lv
 			lveLvWithLesAndGruppen: [],	// Lvs and Lehreinheiten Info of selected Lve-Lv-ID
-			lveLvDetails: [],			// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
+			selLveLvDetails: [],		// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
 			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
 			infoGesamtLv:  `
 		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
@@ -44,7 +44,7 @@ export default {
 		}
 	},
 	computed: {
-		activeLveLv() {
+		selLveLv() {
 			return this.lveLvs.find(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
 		}
 	},
@@ -53,16 +53,25 @@ export default {
 			if (newId) {
 				this.getLveLvWithLesAndGruppenById(newId)
 					.then(() => this.getLvevaluierungen(newId))
-					.then(() => {
-						const structuredLveLvDetails = this.structureLveLvDetails();
-						this.lveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
-					});
+						.then(() => {
+							if (this.selLveLv) {
+								const structuredLveLvDetails = this.structureLveLvDetails() || [];
+								this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
+							}
+						})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
 			}
 			else {
 				this.lveLvWithLesAndGruppen = [];
 				this.lvevaluierungen = [];
-				this.lveLvDetails = [];
+				this.selLveLvDetails = [];
 			}
+		},
+		'selLveLv.lv_aufgeteilt'(newVal) {
+			if (!this.selLveLvId || !this.lveLvWithLesAndGruppen?.length) return;
+
+			const structuredLveLvDetails = this.structureLveLvDetails() || [];
+			this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
 		}
 	},
 	mounted() {
@@ -118,11 +127,11 @@ export default {
 		},
 		structureLveLvDetails() {
 			if (!this.lveLvWithLesAndGruppen.length) {
-				this.lveLvDetails = [];
+				this.selLveLvDetails = [];
 				return;
 			}
 
-			const isAufgeteilt = this.activeLveLv?.lv_aufgeteilt;
+			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
 
 			return isAufgeteilt
 				? this.lveLvWithLesAndGruppen
@@ -138,7 +147,8 @@ export default {
 				const group = grouped.find(g => g.lehrveranstaltung_id === item.lehrveranstaltung_id);
 
 				if (!group) {
-					grouped.push({ ...item });
+					// Set lehreinheit_id to null, as we group by Lv here
+					grouped.push({ ...item, lehreinheit_id: null });
 				}
 				else {
 					// Uniquely collect lektoren of all Lehreinheiten
@@ -163,12 +173,15 @@ export default {
 		},
 		// Helper: merges start/ende/dauer from lvevaluierungen into detail list
 		mergeEvaluierungenIntoDetails(details) {
-			const isAufgeteilt = this.activeLveLv?.lv_aufgeteilt;
+			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
 			const now = DateHelper.formatToSqlTimestamp(new Date());
 
 			details.forEach(detail => {
 				const evalMatch = this.findMatchingEvaluierung(detail.lehreinheit_id, isAufgeteilt);
 
+				if (detail.lvevaluierung_id == null) {
+					detail.lvevaluierung_id = evalMatch?.lvevaluierung_id ?? '';
+				}
 				if (detail.startzeit == null) {
 					detail.startzeit = evalMatch?.startzeit ?? now;
 				}
