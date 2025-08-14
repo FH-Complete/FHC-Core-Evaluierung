@@ -58,6 +58,9 @@ CREATE SEQUENCE IF NOT EXISTS extension.seq_tbl_lvevaluierung_lvevaluierung_id
 ALTER TABLE extension.tbl_lvevaluierung
     ALTER COLUMN lvevaluierung_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_lvevaluierung_id');
 
+ALTER TABLE extension.tbl_lvevaluierung
+    ALTER COLUMN codes_gemailt SET DEFAULT FALSE;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_lvevaluierung_id TO vilesci;
