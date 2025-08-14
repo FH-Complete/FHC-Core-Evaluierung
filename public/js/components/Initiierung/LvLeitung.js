@@ -344,10 +344,10 @@ export default {
 									<i 
 										:class="[
 										  'fa-solid',
-										  lveLv.codes_gemailt ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-muted',
+										  lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light',
 										  'me-2'
 										]"
-										:title="lveLv.codes_gemailt  ? 'Codes wurden an Studierende versendet' : 'Codes wurden noch nicht an Studierende versendet'"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
 										data-bs-toggle="tooltip"
 									>
 									</i>
