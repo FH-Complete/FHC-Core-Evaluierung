@@ -168,8 +168,12 @@ class Initiierung extends FHCAPI_Controller
 	 *
 	 * @return void
 	 */
-	public function saveOrUpdateLvevaluierung(){
+	public function saveOrUpdateLvevaluierung()
+	{
 		$data = $this->input->post('data');
+
+		// Validate post data
+		$this->_validateSaveOrUpdateLvevaluierungData($data);
 
 		// Get LV-ID and Studiensemester
 		$result = $this->LvevaluierungLehrveranstaltungModel->load($data['lvevaluierung_lehrveranstaltung_id']);
@@ -212,5 +216,57 @@ class Initiierung extends FHCAPI_Controller
 		$data = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($data[0]);
+	}
+
+	// Checks and Validations
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Validates posted json data for saving/updateing Lvevaluierung.
+	 *
+	 * @param $data
+	 * @return void
+	 */
+	private function _validateSaveOrUpdateLvevaluierungData($data)
+	{
+		$this->load->library('form_validation');
+
+		$this->form_validation->set_data($data);
+		$this->form_validation->set_rules('lvevaluierung_lehrveranstaltung_id', 'LveLv-ID', 'required');
+		$this->form_validation->set_rules('startzeit', 'Startzeit', 'required');
+		$this->form_validation->set_rules(
+			'endezeit',
+			'Endezeit',
+			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']'
+		);
+		$this->form_validation->set_message('checkEndezeitAfterStartzeit', $this->p->t('ui', 'datumEndeVorDatumStart'));
+
+		// If Evaluierung is done by Lehreinheit
+		$lv_aufgeteilt = $this->initiierunglib->isLvAufgeteilt($data['lvevaluierung_lehrveranstaltung_id']);
+
+		if ($lv_aufgeteilt)
+		{
+			$this->form_validation->set_rules('lehreinheit_id', 'LE-ID', 'required');
+		}
+
+		// On error
+		if ($this->form_validation->run() == false)
+		{
+			$this->terminateWithValidationErrors($this->form_validation->error_array());
+		}
+
+	}
+
+	/**
+	 * Checks if Endezeit is after Startzeit.
+	 *
+	 * @param string $endezeit
+	 * @param string $startzeit
+	 * @return bool
+	 */
+	public function checkEndezeitAfterStartzeit($endezeit, $startzeit)
+	{
+		if (isEmptyString($endezeit) || isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+
+		return strtotime($endezeit) > strtotime($startzeit);
 	}
 }
