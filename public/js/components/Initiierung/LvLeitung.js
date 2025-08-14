@@ -337,7 +337,7 @@ export default {
 										  lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full',
 										  'text-dark'
 										]"
-										:title="lveLv.lv_aufgeteilt ? 'LV auf Gruppenbasis evaluieren' : 'Gesamt-LV evaluieren'"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
 										data-bs-toggle="tooltip"
 									>
 									</i> |
