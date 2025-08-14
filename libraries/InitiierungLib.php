@@ -81,4 +81,19 @@ class InitiierungLib
 
 		return $grouped;
 	}
+
+	/**
+	 * Check if Evaluation is evaluated by Lehreinheit/Gruppenbasis.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed If true, Evaluation is evaluated by Lehreinheiten (Gruppenbasis). If false, then on Gesamt-LV.
+	 */
+	public function isLvAufgeteilt($lvevaluierung_lehrveranstaltung_id)
+	{
+		$this->_ci->LvevaluierungLehrveranstaltungModel->addSelect('lv_aufgeteilt');
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->load($lvevaluierung_lehrveranstaltung_id);
+		$lvelv = hasData($result) ? getData($result)[0] : [];
+
+		return $lvelv->lv_aufgeteilt;
+	}
 }
