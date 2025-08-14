@@ -96,8 +96,52 @@ export default {
 				bsCollapse.show();
 			}
 		},
-		onSave(data) {
-			console.log('Saved:', data);
+		updateLvAufgeteilt(e) {
+			if (this.lvevaluierungen.length > 0) return;
+
+			this.$api
+					.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLvId, this.selLveLv.lv_aufgeteilt))
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		saveOrUpdateLvevaluierung(lveLvDetail){
+			this.$api
+				.call(ApiInitiierung.saveOrUpdateLvevaluierung({
+					lvevaluierung_id: lveLvDetail.lvevaluierung_id,
+					lvevaluierung_lehrveranstaltung_id: lveLvDetail.lvevaluierung_lehrveranstaltung_id,
+					startzeit: lveLvDetail.startzeit,
+					endezeit: lveLvDetail.endezeit,
+					lehreinheit_id: lveLvDetail.lehreinheit_id
+				}))
+				.then(result => {
+					if (result.data?.lvevaluierung_id) {
+						const newId = result.data.lvevaluierung_id;
+
+						// Update in selLveLvDetails source array (persistent)
+						const foundInDetails = this.selLveLvDetails?.find(item =>
+								item.lvevaluierung_lehrveranstaltung_id === lveLvDetail.lvevaluierung_lehrveranstaltung_id &&
+								item.lehreinheit_id === lveLvDetail.lehreinheit_id
+						);
+						if (foundInDetails) {
+							foundInDetails.lvevaluierung_id = newId;
+						}
+
+						// Update in lvevaluierungen array (has gui effects like disable button)
+						const foundEvaluierung = this.lvevaluierungen.find(lve =>
+								lve.lvevaluierung_lehrveranstaltung_id === lveLvDetail.lvevaluierung_lehrveranstaltung_id &&
+								lve.lehreinheit_id === lveLvDetail.lehreinheit_id
+						);
+
+						if (!foundEvaluierung) {
+							this.lvevaluierungen.push({
+								...lveLvDetail,
+								lvevaluierung_id: newId
+							});
+						}
+
+						this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'))
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onSendLinks(data) {
 			console.log('Send Links:', data);
@@ -318,43 +362,43 @@ export default {
 							data-bs-parent="#accordionFlush"
 							:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<form-form ref="form" class="lve-initiierung-form p-md-3">
-								<!-- Radio Buttons -->
-								<div class="card mb-3">
-									<div class="card-body">
-										<div class="d-flex flex-wrap justify-content-md-between align-items-center">
-											<div class="flex-grow-1 flex-md-grow-0">
-												<div class="form-check form-check-inline ps-0">
-													<form-input
-														label="Gesamt-LV evaluieren"
-														class="form-check-input"
-														type="radio"
-														:value="false"
-														v-model="lveLv.lv_aufgeteilt"
-														:disabled="lvevaluierungen.length > 0"
-													>
-													</form-input>
-												</div>
-												<div class="form-check form-check-inline ps-0">
-													<form-input
-														label="LV auf Gruppenbasis evaluieren"
-														class="form-check-input"
-														type="radio"
-														:value="true"
-														v-model="lveLv.lv_aufgeteilt"
-														:disabled="lvevaluierungen.length > 0"
-													>
-													</form-input>
-												</div>
+							<!-- Radio Buttons -->
+							<div class="card my-3">
+								<div class="card-body">
+									<div class="d-flex flex-wrap justify-content-md-between align-items-center">
+										<div class="flex-grow-1 flex-md-grow-0">
+											<div class="form-check form-check-inline ps-0">
+												<form-input
+													label="Gesamt-LV evaluieren"
+													class="form-check-input"
+													type="radio"
+													:value="false"
+													v-model="lveLv.lv_aufgeteilt"
+													:disabled="lvevaluierungen.length > 0"
+													@change="updateLvAufgeteilt"
+												>
+												</form-input>
 											</div>
-											<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0 d-flex gap-2">
-												<button class="btn btn-outline-danger w-100 ms-md-auto" :hidden="lvevaluierungen.length == 0">Zurücksetzen</button>
-												<button class="btn btn-primary w-100 ms-md-auto" :disabled="lvevaluierungen.length > 0">Speichern</button>
-											</div>					
-										</div>			
-									</div><!--.card-body -->
-								</div><!--.card -->
-								<template v-for="lveLvDetail in lveLvDetails" :key="lveLvDetail.lehreinheit_id">
+											<div class="form-check form-check-inline ps-0">
+												<form-input
+													label="LV auf Gruppenbasis evaluieren"
+													class="form-check-input"
+													type="radio"
+													:value="true"
+													v-model="lveLv.lv_aufgeteilt"
+													:disabled="lvevaluierungen.length > 0"
+													@change="updateLvAufgeteilt"
+												>
+												</form-input>
+											</div>
+										</div>
+										<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0 d-flex gap-2">
+											<button class="btn btn-outline-danger w-100 ms-md-auto" :hidden="lvevaluierungen.length == 0">Zurücksetzen</button>
+										</div>					
+									</div>	
+								</div><!--.card-body -->
+							</div><!--.card -->
+							<template v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 									<div class="card mb-3">
 										<div class="card-body border-bottom" v-if="lveLv.lv_aufgeteilt">
 											LE: {{lveLvDetail.lehreinheit_id}} | <span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
@@ -374,9 +418,11 @@ export default {
 												</template>
 										</div><!--.end card body-->
 										<div class="card-body">
-											<!-- Evaluierungskriterien festlegen -->
-											<h5 class="card-title mb-3">Evaluierungskriterien festlegen</h5>
-											<div class="row gx-5">
+											 <!-- Form 2: Date/Time Inputs -->
+											<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">
+												<!-- Evaluierungskriterien festlegen -->
+												<h5 class="card-title mb-3">Evaluierungskriterien festlegen</h5>
+												<div class="row gx-5">
 												<!-- Form Inputs + Button -->
 												<div class="col-12 col-lg-4 order-1">
 													<div class="d-flex flex-wrap flex-md-nowrap gap-3">
@@ -428,7 +474,12 @@ export default {
 <!--															</form-input>-->
 <!--														</div>-->
 														<div class="flex-grow-1 flex-md-grow-0 align-self-end ">
-															<button class="btn btn-primary w-100 w-md-auto">Speichern</button>
+															<button
+																type="submit"  
+																class="btn btn-primary w-100 w-md-auto"
+															>
+																Speichern
+															</button>
 														</div>
 													</div>
 												</div>
@@ -443,6 +494,7 @@ export default {
 													</div>
 												</div><!--.end Infobox cols -->
 											</div><!--.end row -->
+											</form-form><!--.end form -->
 										</div><!--.end card-body -->
 										<!-- Studierendenlinks versenden -->
 										<div class="card-footer bg-white">
@@ -464,7 +516,6 @@ export default {
 										</div><!--.end card-footer -->
 									</div><!--.end card-->
 								</template>
-							</form-form><!--.end form -->
 						</div><!--.end accordion-collapse -->
 					  </div><!--.end accordion-item -->
 				</template><!--.end template v-for -->

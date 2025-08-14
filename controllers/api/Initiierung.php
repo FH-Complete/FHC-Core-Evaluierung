@@ -12,6 +12,8 @@ class Initiierung extends FHCAPI_Controller
 				'getLveLvsWithLes' => 'admin:rw', // todo ändern
 				'getLveLvWithLesAndGruppenById' => 'admin:rw', // todo ändern
 				'getLvEvaluierungenByID' => 'admin:rw', // todo ändern
+				'updateLvAufgeteilt' => 'admin:rw', // todo ändern
+				'saveOrUpdateLvevaluierung' => 'admin:rw', // todo ändern
 			)
 		);
 
@@ -19,6 +21,11 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+
+		// Load language phrases
+		$this->loadPhrases([
+			'ui'
+		]);
 	}
 
 	/**
@@ -127,5 +134,83 @@ class Initiierung extends FHCAPI_Controller
 		$data = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Update the lectors selection for type of Evaluation (Gesamt-Lv or Lehreinheiten/Gruppenbasis).
+	 *
+	 * @return void
+	 */
+	public function updateLvAufgeteilt(){
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$lv_aufgeteilt = $this->input->post('lv_aufgeteilt');
+
+		// Get Lv Evaluierungen
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			[
+				'lv_aufgeteilt' => $lv_aufgeteilt
+			]
+		);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Insert or update Lvevaluierung. Update if Lvevaluierung ID is provided, otherwise insert new Lvevaluierung.
+	 *
+	 * Checks:
+	 * - Studienplan of Lv and Studiensemester is retrieved by given Lvevaluierung-Lehrveranstaltung-ID.
+	 * - Fragebogen must be assigned to that Studienplan.
+	 * - Provided Evaluation-Startzeit must within period of Fragebogen.
+	 *
+	 * @return void
+	 */
+	public function saveOrUpdateLvevaluierung(){
+		$data = $this->input->post('data');
+
+		// Get LV-ID and Studiensemester
+		$result = $this->LvevaluierungLehrveranstaltungModel->load($data['lvevaluierung_lehrveranstaltung_id']);
+		if (!hasData($result))
+		{
+			$this->terminateWithError('No Evaluierung assigned to this Lehrveranstaltung');
+		}
+		$lvelv = getData($result)[0];
+
+
+		// Get valid Fragebogen
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
+
+		$result = $this->LvevaluierungFragebogenModel->getActiveFragebogen(
+			$lvelv->lehrveranstaltung_id,
+			$lvelv->studiensemester_kurzbz,
+			$data['startzeit']
+		);
+
+		if (!hasData($result))
+		{
+			$this->terminateWithError('No Active Fragebogen for this Lehrveranstaltung');
+		}
+
+		// Add Fragebogen ID to insert/update data
+		$data['fragebogen_id']	= getData($result)[0]->fragebogen_id;
+		
+
+		// Insert / Update Lvevaluierung
+		if (empty($data['lvevaluierung_id']))
+		{
+			unset($data['lvevaluierung_id']);
+			$result = $this->LvevaluierungModel->insertLvevaluierung($data);
+		}
+		else
+		{
+			$result = $this->LvevaluierungModel->updateLvevaluierung($data);
+		}
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data[0]);
 	}
 }

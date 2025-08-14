@@ -38,5 +38,24 @@ export default {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
 			}
 		}
+	},
+	updateLvAufgeteilt(lvevaluierung_lehrveranstaltung_id, lv_aufgeteilt) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/updateLvAufgeteilt',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				lv_aufgeteilt: lv_aufgeteilt
+			}
+		}
+	},
+	saveOrUpdateLvevaluierung(data) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/saveOrUpdateLvevaluierung',
+			params: {
+				data: data
+			}
+		}
 	}
 }
