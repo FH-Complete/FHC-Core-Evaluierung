@@ -363,11 +363,13 @@ export default {
 						</h2>
 						<div 
 							:id="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
-							class="accordion-collapse collapse" 
+							class="accordion-collapse collapse md-mx-3" 
 							:aria-labelledby="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							data-bs-parent="#accordionFlush"
 							:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
+						<!-- Evaluierungskriterien festlegen -->
+						<h5 class="card-title my-4">Evaluierungskriterien festlegen</h5>
 							<!-- Radio Buttons -->
 							<div class="card my-3">
 								<div class="card-body">
@@ -406,33 +408,33 @@ export default {
 							</div><!--.card -->
 							<template v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 									<div class="card mb-3">
-										<div class="card-body border-bottom" v-if="lveLv.lv_aufgeteilt">
-											LE: {{lveLvDetail.lehreinheit_id}} | <span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
+										<div class="card-body pb-0" v-if="lveLv.lv_aufgeteilt">
+											<i class="fa fa-users me-2"></i><span class="d-none d-md-inline me-2">Gruppen:</span>
+											<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
+											 | LE: {{lveLvDetail.lehreinheit_id}}
 										</div><!--.end card-body -->
 										<div class="card-body border-bottom">
-											 LektorInnen:
-												<template v-for="(lektor, i) in lveLvDetail.lektoren" :key="i">
-													<span class="">
-														{{ i !== 0 ? ', ' : '' }}{{ lektor.fullname }}
-													</span>
-													<span
-														v-if="lektor.lehrfunktion_kurzbz === 'LV-Leitung'"
-														class="badge rounded-pill bg-dark ms-1 me-2"
-													>
-													LV-Leitung
-													</span>
-												</template>
+											<i class="fa fa-graduation-cap me-2"></i><span class="d-none d-md-inline me-2">LektorInnen:</span>
+											<template v-for="(lektor, i) in lveLvDetail.lektoren" :key="i">
+												<span class="">
+													{{ i !== 0 ? ', ' : '' }}{{ lektor.fullname }}
+												</span>
+												<span
+													v-if="lektor.lehrfunktion_kurzbz === 'LV-Leitung'"
+													class="badge rounded-pill bg-dark ms-1 me-2"
+												>
+												LV-Leitung
+												</span>
+											</template>
 										</div><!--.end card body-->
-										<div class="card-body">
+										<div class="card-body mb-3">
 											 <!-- Form 2: Date/Time Inputs -->
-											<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">
-												<!-- Evaluierungskriterien festlegen -->
-												<h5 class="card-title mb-3">Evaluierungskriterien festlegen</h5>
+											<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
 												<div class="row gx-5">
 												<!-- Form Inputs + Button -->
-												<div class="col-12 col-lg-4 order-1">
+												<div class="col-12 order-1">
 													<div class="d-flex flex-wrap flex-md-nowrap gap-3">
-														<div class="flex-grow-1">
+														<div class="flex-grow-1 flex-md-grow-0">
 															<form-input 
 																label="Startdatum" 
 																type="datepicker"
@@ -445,7 +447,7 @@ export default {
 															>
 															</form-input>
 														</div>
-														<div class="flex-grow-1">
+														<div class="flex-grow-1 flex-md-grow-0">
 															<form-input 
 																label="Endedatum" 
 																type="datepicker"
@@ -479,7 +481,7 @@ export default {
 <!--															>-->
 <!--															</form-input>-->
 <!--														</div>-->
-														<div class="flex-grow-1 flex-md-grow-0 align-self-end ">
+														<div class="flex-grow-1 flex-md-grow-0 align-self-end">
 															<button
 																type="submit"  
 																class="btn btn-primary w-100 w-md-auto"
@@ -487,35 +489,36 @@ export default {
 																Speichern
 															</button>
 														</div>
-													</div>
-												</div>
+													</div><!--.d-flex -->
+												</div><!--.col -->
 												 <!--Infobox -->
-												<div class="col-12 col-lg-5 order-2 mt-3">
-													<div class="bg-light border rounded p-3 h-100">
-														<Infobox 
-															collapseBreakpoint="all" 
-															:text="infoGesamtLv"
-														>
-														</Infobox>
-													</div>
+												<div class="col-12 order-2 mt-3">
+<!--													<div class="bg-light border rounded p-3 h-100">-->
+<!--														<Infobox -->
+<!--															collapseBreakpoint="all" -->
+<!--															:text="infoGesamtLv"-->
+<!--														>-->
+<!--														</Infobox>-->
+<!--													</div>-->
 												</div><!--.end Infobox cols -->
 											</div><!--.end row -->
 											</form-form><!--.end form -->
 										</div><!--.end card-body -->
 										<!-- Studierendenlinks versenden -->
-										<div class="card-footer bg-white">
-<!--												<h5 class="card-title mt-2">Studierendenlinks versenden</h5>-->
+										<div class="card-footer bg-white mb-3">
 											<div class="row gx-5">
-												<!-- Button -->
-												<div class="col-12 col-lg-7 order-1">
-													<div class="d-grid d-md-block">
-														<button class="btn btn-success mt-3">Studierendenlinks versenden</button>
-													</div>
+												<div class="col-6">
+													<span><i class="fa fa-envelope me-2"></i>Email Status</span>
 												</div>
-												<!-- Info Box -->
-												<div class="col-12 col-lg-5 order-2 mt-3">
-													<div class="bg-light border rounded p-3 h-100">
-														<Infobox :text="infoStudierendenlink"></Infobox>
+												<div class="col-6 text-end">
+													<span v-if="!lveLvDetail.lvevaluierung_id" class="text-muted"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Cannot send - Save dates first</span>
+													<span v-if="lveLvDetail.lvevaluierung_id" class="text-muted"><i class="fa fa-check text-success me-2"></i>Ready to send</span>
+													<span v-if="lveLvDetail.codes_gemailt" class="text-muted"><i class="fa fa-envelope-circle-check text-success me-2"></i>{{lveLvDetail.codes_ausgegeben}} Codes already sent</span>									
+												</div>
+												<!-- Button -->
+												<div class="col-12 text-end">
+													<div class="d-grid d-md-block">
+														<button :disabled="!lveLvDetail.lvevaluierung_id" class="btn btn-success mt-3">Studierendenlinks versenden</button>
 													</div>
 												</div>
 											</div><!--.end row -->
