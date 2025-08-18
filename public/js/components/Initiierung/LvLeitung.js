@@ -235,6 +235,12 @@ export default {
 				if (detail.dauer == null) {
 					detail.dauer = evalMatch?.dauer ?? '';
 				}
+				if (detail.codes_gemailt == null) {
+					detail.codes_gemailt = evalMatch?.codes_gemailt ?? false;
+				}
+				if (detail.codes_ausgegeben == null) {
+					detail.codes_ausgegeben = evalMatch?.codes_ausgegeben ?? 0;
+				}
 			});
 
 			return details;
