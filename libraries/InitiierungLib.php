@@ -17,6 +17,8 @@ class InitiierungLib
 	public function __construct()
 	{
 		$this->_ci =& get_instance();
+
+		$this->_ci->load->helper('hlp_sancho_helper');
 	}
 
 
@@ -95,5 +97,53 @@ class InitiierungLib
 		$lvelv = hasData($result) ? getData($result)[0] : [];
 
 		return $lvelv->lv_aufgeteilt;
+	}
+
+	/**
+	 * Generates code and sends mail to single student: transaction safe
+	 */
+	public function generateAndSendCodeForStudent($lvevaluierung_id, $student)
+	{
+		$this->_ci->db->trans_begin();
+
+		$code = $this->_ci->LvevaluierungCodeModel->getUniqueCode();
+		$url  = APP_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Evaluierung?code=' . urlencode($code);
+
+		$mailData = [
+			'vorname'         => $student->vorname,
+			'nachname'        => $student->nachname,
+			'evaluierunglink' => $url,
+		];
+
+		$mailSent = sendSanchoMail(
+			'Lvevaluierung_Mail_Codeversand',
+			$mailData,
+			$student->uid . '@' . DOMAIN,
+			'Evaluieren Sie jetzt Ihre Lehrveranstaltung'
+		);
+
+		if ($mailSent)
+		{
+			// Save Code mapping
+			$this->_ci->LvevaluierungCodeModel->insert([
+				'lvevaluierung_id' => $lvevaluierung_id,
+				'code'             => $code
+			]);
+
+			// Save Prestudent mapping
+			$this->_ci->LvevaluierungPrestudentModel->insert([
+				'prestudent_id'     => $student->prestudent_id,
+				'lvevaluierung_id'  => $lvevaluierung_id,
+				'insertvon'         => getAuthUid(),
+			]);
+
+			$this->_ci->db->trans_commit();
+			return true;
+		}
+		else
+		{
+			$this->_ci->db->trans_rollback();
+			return false;
+		}
 	}
 }
