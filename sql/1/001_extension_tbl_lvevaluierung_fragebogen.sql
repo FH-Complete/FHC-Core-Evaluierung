@@ -24,6 +24,30 @@ ALTER TABLE extension.tbl_lvevaluierung_fragebogen
     ALTER COLUMN fragebogen_id
     SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_fragebogen_fragebogen_id');
 
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen ADD COLUMN IF NOT EXISTS insertamum timestamp DEFAULT NOW();
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen ADD COLUMN IF NOT EXISTS insertvon varchar(32);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen ADD COLUMN IF NOT EXISTS updateamum timestamp;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen ADD COLUMN IF NOT EXISTS updatevon varchar(32);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_fragebogen TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_fragebogen TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_fragebogen_fragebogen_id TO vilesci;
