@@ -219,15 +219,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				legr.gruppe,
 				legr.gruppe_kurzbz,
 				lv.kurzbz,
-				stg.kurzbzlang,
-				(
-					SELECT 
-						COUNT(*)
-					FROM
-						campus.vw_student_lehrveranstaltung
-					WHERE 
-						lehreinheit_id = le.lehreinheit_id
-				) as studentcount
+				stg.kurzbzlang
 			FROM 
 				lehre.tbl_lehreinheit le 
 				JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)

@@ -11,9 +11,11 @@ class Initiierung extends FHCAPI_Controller
 				'getLveLvs' => 'admin:rw', // todo ändern
 				'getLveLvsWithLes' => 'admin:rw', // todo ändern
 				'getLveLvWithLesAndGruppenById' => 'admin:rw', // todo ändern
+				'getLveLvPrestudenten' => 'admin:rw', // todo ändern
 				'getLvEvaluierungenByID' => 'admin:rw', // todo ändern
 				'updateLvAufgeteilt' => 'admin:rw', // todo ändern
 				'saveOrUpdateLvevaluierung' => 'admin:rw', // todo ändern
+				'generateCodesAndSendLinksToStudents' => 'admin:rw', // todo ändern
 			)
 		);
 
@@ -21,6 +23,8 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
 
 		// Load language phrases
 		$this->loadPhrases([
@@ -112,9 +116,30 @@ class Initiierung extends FHCAPI_Controller
 				$g->lektoren = array_values($g->lektoren);
 				$g->gruppen = array_values($g->gruppen);
 			}
+
+			// Add group Studenten
+			$this->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+			$result = $this->LehreinheitModel->getStudenten($item->lehreinheit_id);
+			$g->studenten = hasData($result) ? getData($result) : [];
 		}
 
 		$this->terminateWithSuccess(array_values($grouped));
+	}
+
+	/**
+	 * Get all Prestudenten of given Lvevaluierung Lehrveranstaltung ID, that were already mailed.
+	 *
+	 * @return void
+	 */
+	public function getLveLvPrestudenten()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
 	}
 
 	/**
@@ -132,6 +157,16 @@ class Initiierung extends FHCAPI_Controller
 		]);
 
 		$data = $this->getDataOrTerminateWithError($result);
+
+		foreach ($data as &$item) {
+
+			// Add Lvevaluierung-Prestudenten (mailed students)
+			if ($item->lvevaluierung_id && !empty($item->lvevaluierung_id))
+			{
+				$result = $this->LvevaluierungPrestudentModel->getByLve($item->lvevaluierung_id);
+			}
+			$item->lvevaluierung_prestudenten = hasData($result) ? getData($result) : [];
+		}
 
 		$this->terminateWithSuccess($data);
 	}
@@ -218,6 +253,108 @@ class Initiierung extends FHCAPI_Controller
 		$this->terminateWithSuccess($data[0]);
 	}
 
+	/**
+	 * Generate Codes and mail to students that are adressed by the given Lvevaluierung ID.
+	 * This could be students of LV or students of LE, depending on evaluation type (Gesamt-LV or LV auf Gruppenbasis).
+	 * Codes are only generated/mailed, if not done earlier (e.g.by sending via other Lehreinheit of the same LV)
+	 *
+	 * @return void
+	 */
+	public function generateCodesAndSendLinksToStudents()
+	{
+		$lvevaluierung_id = $this->input->post('lvevaluierung_id');
+
+		// Get Lvevaluierung
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+
+		// Get Lvevaluierung-Lehrveranstaltung
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// Get Students of LV or LE, depending on Evaluation type
+		$studenten = $lveLv->lv_aufgeteilt
+			? $this->getStudentsForLe($lve)
+			: $this->getStudentsForLv($lveLv);
+
+		if (empty($studenten))
+		{
+			$this->terminateWithError('No Students assigned to this course');
+		}
+
+		// Get all students of LV that already got a code
+		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+		$mailedPrestudentIds = hasData($result) ? array_column(getData($result), 'prestudent_id') : [];
+
+		// Filter studenten to keep only unmailed
+		$unmailedStudenten = array_values(array_filter($studenten, function ($s) use ($mailedPrestudentIds) {
+			return !in_array($s->prestudent_id, $mailedPrestudentIds, true);
+		}));
+
+		// Return if all Students of LV or LE already got mail
+		if (empty($unmailedStudenten))
+		{
+			$this->terminateWithError('Cannot send. All Students of this LV already received emails. Reset if necessary.');
+		}
+
+		// Mail codes to Students
+		$codes_ausgegeben = 0;
+		$failedMailStudenten = [];
+
+		foreach ($unmailedStudenten as $student)
+		{
+			if ($this->initiierunglib->generateAndSendCodeForStudent($lvevaluierung_id, $student))
+			{
+				$codes_ausgegeben++;
+			}
+			else
+			{
+				// Collect students that did not get mail
+				$failedMailStudenten[]= $student;
+			}
+		}
+
+		// Update codes_ausgegeben and codes_gemailt values
+		if ($codes_ausgegeben > 0)
+		{
+			$this->LvevaluierungModel->update(
+				$lvevaluierung_id,
+				[
+					'codes_gemailt' => true,
+					'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben // Sum up already ausgegebene
+				]
+			);
+		}
+
+		$result = $this->LvevaluierungPrestudentModel->getByLve($lvevaluierung_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$lvePrestudenten = getData($result);
+
+		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$lveLvPrestudenten = getData($result);
+
+		$result = success(
+			[
+				'codes_gemailt' => $codes_ausgegeben > 0,
+				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
+				'lvevaluierung_prestudenten' => $lvePrestudenten,
+				'lveLvPrestudenten' => $lveLvPrestudenten,
+				'failedMailStudenten' => $failedMailStudenten
+			]
+		);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
 	// Checks and Validations
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
@@ -268,5 +405,92 @@ class Initiierung extends FHCAPI_Controller
 		if (isEmptyString($endezeit) || isEmptyString($startzeit)) return true; // 'required' rule handles missing field
 
 		return strtotime($endezeit) > strtotime($startzeit);
+	}
+
+	/**
+	 * Get Lvevaluierung.
+	 * Terminate with error on fail.
+	 *
+	 * @param $lvevaluierung_id
+	 * @return mixed
+	 */
+	public function getLvevaluierungOrFail($lvevaluierung_id)
+	{
+		if (!$lvevaluierung_id)
+		{
+			$this->terminateWithError('Evaluierung needs to be initialised by saving Start- end Endzeit.');
+		}
+
+		$result = $this->LvevaluierungModel->load($lvevaluierung_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		}
+
+		return getData($result)[0];
+	}
+
+	/**
+	 * Get Lvevaluierung Lehrveranstaltung.
+	 * Terminate with error on fail.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed
+	 */
+	public function getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id)
+	{
+		$result = $this->LvevaluierungLehrveranstaltungModel->load($lvevaluierung_lehrveranstaltung_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		return getData($result)[0];
+	}
+
+	/**
+	 * Get Students of Lehrveranstaltung of given Lvevaluierung Lehrveranstaltung data.
+	 * Terminate with error on fail.
+	 *
+	 * @param $lveLv
+	 * @return array
+	 */
+	private function getStudentsForLv($lveLv)
+	{
+		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->LehrveranstaltungModel->getStudentsByLv(
+			$lveLv->studiensemester_kurzbz,
+			$lveLv->lehrveranstaltung_id,
+			true	// true = only active students
+		);
+
+		if(isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+	/**
+	 * Get Students of Lehreinheit by given Lvevaluierung Lehreinheit ID.
+	 * Terminate with error on fail.
+	 *
+	 * @param $lve
+	 * @return array
+	 */
+	private function getStudentsForLe($lve)
+	{
+		$this->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$result = $this->LehreinheitModel->getStudenten($lve->lehreinheit_id);
+
+		if(isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		return hasData($result) ? getData($result) : [];
 	}
 }

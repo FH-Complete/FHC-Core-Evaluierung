@@ -30,6 +30,7 @@ export default {
 			lveLvWithLesAndGruppen: [],	// Lvs and Lehreinheiten Info of selected Lve-Lv-ID
 			selLveLvDetails: [],		// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
 			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
+			lveLvPrestudenten: [],		// All students of selected Lve-Lehrveranstaltung-ID, that were already mailed
 			infoGesamtLv:  `
 		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
 				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
@@ -53,18 +54,23 @@ export default {
 			if (newId) {
 				this.getLveLvWithLesAndGruppenById(newId)
 					.then(() => this.getLvevaluierungen(newId))
-						.then(() => {
-							if (this.selLveLv) {
-								const structuredLveLvDetails = this.structureLveLvDetails() || [];
-								this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
-							}
-						})
+					.then(() => this.getLveLvPrestudenten(newId))
+					.then(() => {
+						if (this.selLveLv) {
+							const structuredLveLvDetails = this.structureLveLvDetails() || [];
+							this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
+
+
+							this.setAlreadySentByLv(this.selLveLvDetails);
+						}
+					})
 					.catch(error => this.$fhcAlert.handleSystemError(error));
 			}
 			else {
 				this.lveLvWithLesAndGruppen = [];
 				this.lvevaluierungen = [];
 				this.selLveLvDetails = [];
+				this.lveLvPrestudenten = [];
 			}
 		},
 		'selLveLv.lv_aufgeteilt'(newVal) {
@@ -72,6 +78,7 @@ export default {
 
 			const structuredLveLvDetails = this.structureLveLvDetails() || [];
 			this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
+			this.setAlreadySentByLv(this.selLveLvDetails); // todo check ob hier nötig?
 		}
 	},
 	mounted() {
@@ -143,8 +150,37 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		onSendLinks(data) {
-			console.log('Send Links:', data);
+		onSendLinks(lveDetail) {
+			this.$api
+				.call(ApiInitiierung.generateCodesAndSendLinksToStudents(lveDetail.lvevaluierung_id))
+				.then(result => {
+					if (result.data)
+					{
+						// Tell user about students, that did not get mail (and code was not generated)
+						if (result.data.failedMailStudenten.length > 0)
+						{
+							let msg = 'Could not mail to students: ';
+							result.data.failedMailStudenten.forEach(student => {
+								msg += student.vorname + ' ' + student.nachname + ' ';
+							})
+
+							this.$fhcAlert.alertWarning(msg);
+						}
+
+						// Update data
+						lveDetail.codes_gemailt = result.data.codes_gemailt;
+						lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
+						lveDetail.lvevaluierung_prestudenten = result.data.lvevaluierung_prestudenten;
+
+						this.lveLvPrestudenten = result.data.lveLvPrestudenten;
+
+						this.setAlreadySentByLv(this.selLveLvDetails);
+
+						// Success info
+						this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		handleAccordionShown(e) {
 			const accBtn = e.target;
@@ -168,6 +204,11 @@ export default {
 				.then(result => {
 					this.lvevaluierungen = result.data;
 				});
+		},
+		getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id) {
+			return this.$api
+				.call(ApiInitiierung.getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id))
+				.then(result => this.lveLvPrestudenten = result.data);
 		},
 		structureLveLvDetails() {
 			if (!this.lveLvWithLesAndGruppen.length) {
@@ -210,17 +251,23 @@ export default {
 						if (!group.lektoren.some(l => l.mitarbeiter_uid === lektor.mitarbeiter_uid))
 							group.lektoren.push(lektor);
 					});
+
+					// Uniquely collect gruppen of all students
+					item.studenten.forEach(student => {
+						if (!group.studenten.some(s => s.prestudent_id === student.prestudent_id))
+							group.studenten.push(student);
+					});
 				}
 			});
 
 			return grouped;
 		},
 		// Helper: merges start/ende/dauer from lvevaluierungen into detail list
-		mergeEvaluierungenIntoDetails(details) {
+		mergeEvaluierungenIntoDetails(selLveLvDetails) {
 			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
 			const now = DateHelper.formatToSqlTimestamp(new Date());
 
-			details.forEach(detail => {
+			selLveLvDetails.forEach(detail => {
 				const evalMatch = this.findMatchingEvaluierung(detail.lehreinheit_id, isAufgeteilt);
 
 				if (detail.lvevaluierung_id == null) {
@@ -241,9 +288,19 @@ export default {
 				if (detail.codes_ausgegeben == null) {
 					detail.codes_ausgegeben = evalMatch?.codes_ausgegeben ?? 0;
 				}
+				if (detail.lvevaluierung_prestudenten == null) {
+					detail.lvevaluierung_prestudenten = evalMatch?.lvevaluierung_prestudenten ?? [];
+				}
 			});
 
-			return details;
+			return selLveLvDetails;
+		},
+		setAlreadySentByLv(selLveLvDetails) {
+			selLveLvDetails.forEach(detail => {
+				detail.alreadyMailedByLv = this.lveLvPrestudenten.filter(lvelvpst =>
+						detail.studenten.some(sent => sent.prestudent_id === lvelvpst.prestudent_id)
+				);
+			});
 		},
 		// Helper: finds the correct evaluierung for a given Lehreinheit
 		findMatchingEvaluierung(lehreinheit_id, isAufgeteilt) {
@@ -278,8 +335,8 @@ export default {
 				infoString += gruppenStrings.join(', ');
 			}
 
-			if (item.studentcount) {
-				infoString += ' | <i class="fa-solid fa-user"></i> ' + item.studentcount;
+			if (item.studenten) {
+				infoString += ' | <i class="fa-solid fa-user"></i> ' + item.studenten.length;
 			}
 
 			return infoString;
@@ -407,61 +464,61 @@ export default {
 								</div><!--.card-body -->
 							</div><!--.card -->
 							<template v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
-									<div class="card mb-3">
-										<div class="card-body pb-0" v-if="lveLv.lv_aufgeteilt">
-											<i class="fa fa-users me-2"></i><span class="d-none d-md-inline me-2">Gruppen:</span>
-											<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
-											 | LE: {{lveLvDetail.lehreinheit_id}}
-										</div><!--.end card-body -->
-										<div class="card-body border-bottom">
-											<i class="fa fa-graduation-cap me-2"></i><span class="d-none d-md-inline me-2">LektorInnen:</span>
-											<template v-for="(lektor, i) in lveLvDetail.lektoren" :key="i">
-												<span class="">
-													{{ i !== 0 ? ', ' : '' }}{{ lektor.fullname }}
-												</span>
-												<span
-													v-if="lektor.lehrfunktion_kurzbz === 'LV-Leitung'"
-													class="badge rounded-pill bg-dark ms-1 me-2"
-												>
-												LV-Leitung
-												</span>
-											</template>
-										</div><!--.end card body-->
-										<div class="card-body mb-3">
-											 <!-- Form 2: Date/Time Inputs -->
-											<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
-												<div class="row gx-5">
-												<!-- Form Inputs + Button -->
-												<div class="col-12 order-1">
-													<div class="d-flex flex-wrap flex-md-nowrap gap-3">
-														<div class="flex-grow-1 flex-md-grow-0">
-															<form-input 
-																label="Startdatum" 
-																type="datepicker"
-																v-model="lveLvDetail.startzeit"
-																name="lveLvDetail.startzeit"
-																locale="de"
-																format="dd.MM.yyyy HH:mm"
-																model-type="yyyy-MM-dd HH:mm:ss"
-																:auto-apply="true"
-															>
-															</form-input>
-														</div>
-														<div class="flex-grow-1 flex-md-grow-0">
-															<form-input 
-																label="Endedatum" 
-																type="datepicker"
-																v-model="lveLvDetail.endezeit"
-																name="lveLvDetail.endezeit"
-																locale="de"
-																format="dd.MM.yyyy HH:mm"
-																model-type="yyyy-MM-dd HH:mm:ss"
-																:minutes-increment="5"
-																:auto-apply="true"
-																:start-time="{hours: 0, minutes: 0}"
-															>
-															</form-input>
-														</div>
+								<div class="card mb-3">
+									<div class="card-body pb-0" v-if="lveLv.lv_aufgeteilt">
+										<i class="fa fa-users me-2"></i><span class="d-none d-md-inline me-2">Gruppen:</span>
+										<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
+										 | LE: {{lveLvDetail.lehreinheit_id}}
+									</div><!--.end card-body -->
+									<div class="card-body border-bottom">
+										<i class="fa fa-graduation-cap me-2"></i><span class="d-none d-md-inline me-2">LektorInnen:</span>
+										<template v-for="(lektor, i) in lveLvDetail.lektoren" :key="i">
+											<span class="">
+												{{ i !== 0 ? ', ' : '' }}{{ lektor.fullname }}
+											</span>
+											<span
+												v-if="lektor.lehrfunktion_kurzbz === 'LV-Leitung'"
+												class="badge rounded-pill bg-dark ms-1 me-2"
+											>
+											LV-Leitung
+											</span>
+										</template>
+									</div><!--.end card body-->
+									<div class="card-body mb-3">
+										 <!-- Form 2: Date/Time Inputs -->
+										<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
+											<div class="row gx-5">
+											<!-- Form Inputs + Button -->
+											<div class="col-12 order-1">
+												<div class="d-flex flex-wrap flex-md-nowrap gap-3">
+													<div class="flex-grow-1 flex-md-grow-0">
+														<form-input 
+															label="Startdatum" 
+															type="datepicker"
+															v-model="lveLvDetail.startzeit"
+															name="lveLvDetail.startzeit"
+															locale="de"
+															format="dd.MM.yyyy HH:mm"
+															model-type="yyyy-MM-dd HH:mm:ss"
+															:auto-apply="true"
+														>
+														</form-input>
+													</div>
+													<div class="flex-grow-1 flex-md-grow-0">
+														<form-input 
+															label="Endedatum" 
+															type="datepicker"
+															v-model="lveLvDetail.endezeit"
+															name="lveLvDetail.endezeit"
+															locale="de"
+															format="dd.MM.yyyy HH:mm"
+															model-type="yyyy-MM-dd HH:mm:ss"
+															:minutes-increment="5"
+															:auto-apply="true"
+															:start-time="{hours: 0, minutes: 0}"
+														>
+														</form-input>
+													</div>
 <!--														<div class="flex-grow-1">-->
 <!--															<form-input-->
 <!--																label="Dauer (HH:MM)" -->
@@ -481,18 +538,18 @@ export default {
 <!--															>-->
 <!--															</form-input>-->
 <!--														</div>-->
-														<div class="flex-grow-1 flex-md-grow-0 align-self-end">
-															<button
-																type="submit"  
-																class="btn btn-primary w-100 w-md-auto"
-															>
-																Speichern
-															</button>
-														</div>
-													</div><!--.d-flex -->
-												</div><!--.col -->
-												 <!--Infobox -->
-												<div class="col-12 order-2 mt-3">
+													<div class="flex-grow-1 flex-md-grow-0 align-self-end">
+														<button
+															type="submit"  
+															class="btn btn-primary w-100 w-md-auto"
+														>
+															Speichern
+														</button>
+													</div>
+												</div><!--.d-flex -->
+											</div><!--.col -->
+											 <!--Infobox -->
+											<div class="col-12 order-2 mt-3">
 <!--													<div class="bg-light border rounded p-3 h-100">-->
 <!--														<Infobox -->
 <!--															collapseBreakpoint="all" -->
@@ -500,31 +557,69 @@ export default {
 <!--														>-->
 <!--														</Infobox>-->
 <!--													</div>-->
-												</div><!--.end Infobox cols -->
-											</div><!--.end row -->
-											</form-form><!--.end form -->
-										</div><!--.end card-body -->
-										<!-- Studierendenlinks versenden -->
-										<div class="card-footer bg-white mb-3">
-											<div class="row gx-5">
-												<div class="col-6">
-													<span><i class="fa fa-envelope me-2"></i>Email Status</span>
+											</div><!--.end Infobox cols -->
+										</div><!--.end row -->
+										</form-form><!--.end form -->
+									</div><!--.end card-body -->
+									<!-- Studierendenlinks versenden -->
+									<div class="card-footer bg-white mb-3">
+										<div class="row gx-5">
+											<div class="col-6">
+												<span><i class="fa fa-envelope me-2"></i>Email Status</span>
+											</div>
+											<div class="col-6 text-end">
+												<span 
+													v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.studenten.length > lveLvDetail.alreadyMailedByLv.length" 
+													class="text-muted me-2">
+													<i class="fa fa-triangle-exclamation text-warning"></i>
+													Cannot send - Save dates first
+												</span>
+												<span 
+													v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt && !lveLvDetail.alreadyMailedByLv.length > 0" 
+													class="text-muted">
+													<i class="fa fa-check text-success"></i>
+													Ready to send
+												</span>
+												<span 
+													v-if="lveLvDetail.alreadyMailedByLv.length > 0"
+													class="text-muted">
+													<i class="fa fa-envelope-circle-check text-success"></i>
+													 {{lveLvDetail.alreadyMailedByLv.length}} Emails sent to
+													<i 
+														class="fa fa-users text-muted mx-2" 
+														:title="lveLvDetail.alreadyMailedByLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
+														data-bs-toggle="tooltip"
+														data-bs-html="true">
+													</i>
+												</span>	
+												<span 
+													v-if="lveLvDetail.codes_gemailt"
+													class="text-muted">
+													{{lveLvDetail.codes_ausgegeben}} Codes generated for
+													<i class="fa fa-users text-muted mx-2" 
+														:title="lveLvDetail.lvevaluierung_prestudenten.map(s => s.vorname + ' ' + s.nachname).join(', ')"
+														data-bs-toggle="tooltip"
+														data-bs-html="true"
+													>
+													</i>
+												</span>								
+											</div>
+											<!-- Button -->
+											<div class="col-12 text-end">
+												<div class="d-grid d-md-block">
+													<button 
+														:disabled="!lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt || lveLvDetail.studenten.length > 0 && (lveLvDetail.studenten.length == lveLvDetail.alreadyMailedByLv.length)" 
+														class="btn btn-success mt-3"
+														@click="onSendLinks(lveLvDetail)"
+													>
+													Studierendenlinks versenden
+													</button>
 												</div>
-												<div class="col-6 text-end">
-													<span v-if="!lveLvDetail.lvevaluierung_id" class="text-muted"><i class="fa fa-triangle-exclamation text-warning me-2"></i>Cannot send - Save dates first</span>
-													<span v-if="lveLvDetail.lvevaluierung_id" class="text-muted"><i class="fa fa-check text-success me-2"></i>Ready to send</span>
-													<span v-if="lveLvDetail.codes_gemailt" class="text-muted"><i class="fa fa-envelope-circle-check text-success me-2"></i>{{lveLvDetail.codes_ausgegeben}} Codes already sent</span>									
-												</div>
-												<!-- Button -->
-												<div class="col-12 text-end">
-													<div class="d-grid d-md-block">
-														<button :disabled="!lveLvDetail.lvevaluierung_id" class="btn btn-success mt-3">Studierendenlinks versenden</button>
-													</div>
-												</div>
-											</div><!--.end row -->
-										</div><!--.end card-footer -->
-									</div><!--.end card-->
-								</template>
+											</div>
+										</div><!--.end row -->
+									</div><!--.end card-footer -->
+								</div><!--.end card-->
+							</template>
 						</div><!--.end accordion-collapse -->
 					  </div><!--.end accordion-item -->
 				</template><!--.end template v-for -->
