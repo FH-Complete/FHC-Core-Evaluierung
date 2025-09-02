@@ -224,8 +224,7 @@ class Initiierung extends FHCAPI_Controller
 
 		$result = $this->LvevaluierungFragebogenModel->getActiveFragebogen(
 			$lvelv->lehrveranstaltung_id,
-			$lvelv->studiensemester_kurzbz,
-			$data['startzeit']
+			$lvelv->studiensemester_kurzbz
 		);
 
 		if (!hasData($result))
