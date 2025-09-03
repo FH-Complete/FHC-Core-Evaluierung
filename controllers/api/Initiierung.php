@@ -8,14 +8,14 @@ class Initiierung extends FHCAPI_Controller
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-				'getLveLvs' => 'admin:rw', // todo ändern
-				'getLveLvsWithLes' => 'admin:rw', // todo ändern
-				'getLveLvWithLesAndGruppenById' => 'admin:rw', // todo ändern
-				'getLveLvPrestudenten' => 'admin:rw', // todo ändern
-				'getLvEvaluierungenByID' => 'admin:rw', // todo ändern
-				'updateLvAufgeteilt' => 'admin:rw', // todo ändern
-				'saveOrUpdateLvevaluierung' => 'admin:rw', // todo ändern
-				'generateCodesAndSendLinksToStudents' => 'admin:rw', // todo ändern
+				'getLveLvs' => 'extension/lvevaluierung_init:r',
+				'getLveLvsWithLes' => 'extension/lvevaluierung_init:r',
+				'getLveLvWithLesAndGruppenById' => 'extension/lvevaluierung_init:r',
+				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
+				'getLvEvaluierungenByID' => 'extension/lvevaluierung_init:r',
+				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
+				'saveOrUpdateLvevaluierung' => 'extension/lvevaluierung_init:rw',
+				'generateCodesAndSendLinksToStudents' => 'extension/lvevaluierung_init:rw',
 			)
 		);
 

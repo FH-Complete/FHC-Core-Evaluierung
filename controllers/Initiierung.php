@@ -10,9 +10,11 @@ class Initiierung extends Auth_Controller
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-			'index'=> self::PERM_ANONYMOUS	// todo ändern
+			'index'=> 'extension/lvevaluierung_init:r'
 			)
 		);
+
+		$this->load->library('PermissionLib');
 	}
 
 	/**
@@ -21,6 +23,9 @@ class Initiierung extends Auth_Controller
 	 */
 	public function index()
 	{
-		$this->load->view('extensions/FHC-Core-Evaluierung/Initiierung');
+		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_init:r'))
+		{
+			$this->load->view('extensions/FHC-Core-Evaluierung/Initiierung');
+		}
 	}
 }
