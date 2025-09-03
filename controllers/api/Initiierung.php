@@ -180,6 +180,16 @@ class Initiierung extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
 		$lv_aufgeteilt = $this->input->post('lv_aufgeteilt');
 
+		// Return if at least one Lvevaluierung exists for this Lehrveranstaltung
+		$result = $this->LvevaluierungModel->loadWhere([
+			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
+		]);
+
+		if (hasData($result))
+		{
+			$this->terminateWithError('Änderung nicht möglich. Mindestens eine Lvevaluierung ist bereits gespeichert worden.');
+		}
+
 		// Get Lv Evaluierungen
 		$result = $this->LvevaluierungLehrveranstaltungModel->update(
 			$lvevaluierung_lehrveranstaltung_id,
