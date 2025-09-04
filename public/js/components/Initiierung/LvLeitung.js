@@ -343,7 +343,7 @@ export default {
 		},
 	},
 	template: `
-	<div class="lve-initiierung-body container-fluid">
+	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
 		<h1>LV-Evaluierung initiieren</h1>
 		<!-- Dropdowns -->
 		<div class="row">
@@ -378,7 +378,15 @@ export default {
 					</option>
 				</form-input>
 			</div>
-		</div><!--.end row -->	
+		</div><!--.end row -->
+		<!-- Placeholder Card: If no LV for Evaluation found -->
+		<div class="card card flex-grow-1 mb-3" v-if="lveLvs.length == 0">
+			<div class="card-body d-flex justify-content-center align-items-center text-center">
+				<span class="h5 text-muted">
+					Keine Lehrveranstaltungen zur Evaluierung freigegeben in {{ selStudiensemester}}
+				</span>
+			</div>
+		</div>	
 		<!-- LV Accordion List -->
 		<div class="row">
 			<div class="accordion accordion-flush" id="accordionFlush">
