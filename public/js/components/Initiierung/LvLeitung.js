@@ -447,7 +447,14 @@ export default {
 							:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
 						<!-- Evaluierungskriterien festlegen -->
-						<h5 class="card-title my-4">Evaluierungskriterien festlegen</h5>
+						<div class="d-flex align-items-center justify-content-between my-4">
+							<h5 class="card-title">Evaluierungskriterien festlegen</h5>
+							<button 
+								class="btn btn-outline-danger ms-md-auto" 
+								:hidden="lvevaluierungen.length == 0">
+								Zurücksetzen
+							</button>
+						</div>	
 							<!-- Radio Buttons -->
 							<div class="card my-3">
 								<div class="card-body">
@@ -478,9 +485,6 @@ export default {
 												</form-input>
 											</div>
 										</div>
-										<div class="flex-grow-1 flex-md-grow-0 mt-2 mt-md-0 d-flex gap-2">
-											<button class="btn btn-outline-danger w-100 ms-md-auto" :hidden="lvevaluierungen.length == 0">Zurücksetzen</button>
-										</div>					
 									</div>	
 								</div><!--.card-body -->
 							</div><!--.card -->
