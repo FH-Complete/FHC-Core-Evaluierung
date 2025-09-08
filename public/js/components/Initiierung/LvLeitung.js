@@ -330,7 +330,8 @@ export default {
 			}
 		},
 		getLvInfoString(lv){
-			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung;
+			// return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
+			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz ;
 		},
 		getLeGruppenInfoString(item) {
 			let infoString = '';
@@ -351,6 +352,8 @@ export default {
 			if (item.studenten) {
 				infoString += ' | <i class="fa-solid fa-user"></i> ' + item.studenten.length;
 			}
+
+		//	infoString += ' | LE: ' + item.lehreinheit_id; // todo delete after testing
 
 			return infoString;
 		},
@@ -435,7 +438,7 @@ export default {
 										data-bs-toggle="tooltip"
 									>
 									</i>
-									  {{ getLvInfoString(lveLv) + ' - ' + lveLv.orgform_kurzbz + '  | LV-ID: ' + lveLv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lveLv.lvevaluierung_lehrveranstaltung_id }} 
+									  {{ getLvInfoString(lveLv)}}
 								</span>
 						  	</button>
 						</h2>
@@ -493,7 +496,6 @@ export default {
 									<div class="card-body pb-0" v-if="lveLv.lv_aufgeteilt">
 										<i class="fa fa-users me-2"></i><span class="d-none d-md-inline me-2">Gruppen:</span>
 										<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
-										 | LE: {{lveLvDetail.lehreinheit_id}}
 									</div><!--.end card-body -->
 									<div class="card-body border-bottom">
 										<i class="fa fa-graduation-cap me-2"></i><span class="d-none d-md-inline me-2">LektorInnen:</span>
