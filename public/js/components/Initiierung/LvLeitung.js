@@ -137,6 +137,8 @@ export default {
 								lve.lvevaluierung_lehrveranstaltung_id === lveLvDetail.lvevaluierung_lehrveranstaltung_id &&
 								lve.lehreinheit_id === lveLvDetail.lehreinheit_id
 						);
+						lveLvDetail.insertamum = DateHelper.formatDate(result.data.insertamum),
+						lveLvDetail.insertvon = result.data.insertvon
 
 						if (!foundEvaluierung) {
 							this.lvevaluierungen.push({
@@ -295,6 +297,12 @@ export default {
 				}
 				if (detail.lvevaluierung_prestudenten == null) {
 					detail.lvevaluierung_prestudenten = evalMatch?.lvevaluierung_prestudenten ?? [];
+				}
+				if (detail.insertvon == null) {
+					detail.insertvon = evalMatch?.insertvon ?? '';
+				}
+				if (detail.insertamum == null) {
+					detail.insertamum = evalMatch?.insertamum ? DateHelper.formatDate(evalMatch.insertamum) : '';
 				}
 			});
 
@@ -558,6 +566,9 @@ export default {
 														>
 															Speichern
 														</button>
+													</div>
+													<div v-if="lveLvDetail.insertamum" class="flex-grow-1 flex-md-grow-0 ms-auto text-muted">
+														Saved on {{lveLvDetail.insertamum}} by {{lveLvDetail.insertvon}}
 													</div>
 												</div><!--.d-flex -->
 											</div><!--.col -->
