@@ -180,6 +180,8 @@ class Initiierung extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
 		$lv_aufgeteilt = $this->input->post('lv_aufgeteilt');
 
+		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
 		// Return if at least one Lvevaluierung exists for this Lehrveranstaltung
 		$result = $this->LvevaluierungModel->loadWhere([
 			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
@@ -221,12 +223,13 @@ class Initiierung extends FHCAPI_Controller
 		$this->_validateSaveOrUpdateLvevaluierungData($data);
 
 		// Get LV-ID and Studiensemester
-		$result = $this->LvevaluierungLehrveranstaltungModel->load($data['lvevaluierung_lehrveranstaltung_id']);
-		if (!hasData($result))
+		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($data['lvevaluierung_lehrveranstaltung_id']);
+
+		// If Lvevaluierung is evaluated as Gesamt-Lv
+		if ($lvelv->lv_aufgeteilt === false)
 		{
 			$this->terminateWithError('No Evaluierung assigned to this Lehrveranstaltung');
 		}
-		$lvelv = getData($result)[0];
 
 
 		// Get valid Fragebogen
@@ -454,6 +457,11 @@ class Initiierung extends FHCAPI_Controller
 		if (isError($result))
 		{
 			$this->terminateWithError(getError($result));
+		}
+
+		if (!hasData($result))
+		{
+			$this->terminateWithError('No Evaluierung assigned to this Lehrveranstaltung');
 		}
 
 		return getData($result)[0];
