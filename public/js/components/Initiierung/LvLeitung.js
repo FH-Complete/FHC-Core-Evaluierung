@@ -324,15 +324,15 @@ export default {
 			infoString = item.kurzbz + ' - ' + item.lehrform_kurzbz + ' - ';
 
 			if (item.gruppen && item.gruppen.length > 0) {
-				const gruppenStrings = item.gruppen.map(g => {
-					const parts = [];
-					if (g.kurzbzlang) parts.push(g.kurzbzlang);
-					if (g.semester !== null && g.semester !== undefined) parts.push(g.semester);
-					if (g.verband) parts.push(g.verband);
-					if (g.gruppe) parts.push(g.gruppe);
-					return parts.join('-');
-				});
-				infoString += gruppenStrings.join(', ');
+				infoString += item.gruppen.map(g => {
+					let str = '';
+					if (g.kurzbzlang) str += g.kurzbzlang;
+					if (g.semester || g.verband || g.gruppe) {
+						str += '-';
+						str += (g.semester ?? '') + (g.verband ?? '') + (g.gruppe ?? '');
+					}
+					return str;
+				}).join(', ');
 			}
 
 			if (item.studenten) {
