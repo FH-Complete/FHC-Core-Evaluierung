@@ -265,7 +265,12 @@ export default {
 		// Helper: merges start/ende/dauer from lvevaluierungen into detail list
 		mergeEvaluierungenIntoDetails(selLveLvDetails) {
 			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
-			const now = DateHelper.formatToSqlTimestamp(new Date());
+			let startzeit = new Date();
+			let endezeit = new Date();
+			endezeit.setDate(startzeit.getDate() + 3);
+
+			startzeit = DateHelper.formatToSqlTimestamp(startzeit);
+			endezeit = DateHelper.formatToSqlTimestamp(endezeit);
 
 			selLveLvDetails.forEach(detail => {
 				const evalMatch = this.findMatchingEvaluierung(detail.lehreinheit_id, isAufgeteilt);
@@ -274,10 +279,10 @@ export default {
 					detail.lvevaluierung_id = evalMatch?.lvevaluierung_id ?? '';
 				}
 				if (detail.startzeit == null) {
-					detail.startzeit = evalMatch?.startzeit ?? now;
+					detail.startzeit = evalMatch?.startzeit ?? startzeit;
 				}
 				if (detail.endezeit == null) {
-					detail.endezeit = evalMatch?.endezeit ?? '';
+					detail.endezeit = evalMatch?.endezeit ?? endezeit;
 				}
 				if (detail.dauer == null) {
 					detail.dauer = evalMatch?.dauer ?? '';
