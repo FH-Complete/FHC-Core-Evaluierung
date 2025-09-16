@@ -360,7 +360,8 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1>LV-Evaluierung initiieren</h1>
+		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evalueriungskriterien festlegen und Codes an Studierende mailen</small></h1>
+		
 		<!-- Dropdowns -->
 		<div class="row">
 			<div class="col-sm-10 col-lg-3 offset-lg-7 mb-3">
@@ -449,15 +450,6 @@ export default {
 							data-bs-parent="#accordionFlush"
 							:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-						<!-- Evaluierungskriterien festlegen -->
-						<div class="d-flex align-items-center justify-content-between my-4">
-							<h5 class="card-title">Evaluierungskriterien festlegen</h5>
-							<button 
-								class="btn btn-outline-danger ms-md-auto" 
-								:hidden="lvevaluierungen.length == 0">
-								Zurücksetzen
-							</button>
-						</div>	
 							<!-- Radio Buttons -->
 							<div class="card my-3">
 								<div class="card-body">
@@ -493,7 +485,8 @@ export default {
 							</div><!--.card -->
 							<template v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 								<div class="card mb-3">
-									<div class="card-body pb-0" v-if="lveLv.lv_aufgeteilt">
+									<div class="card-header">LV-Evaluierung</div>
+									<div class="card-body pb-0">
 										<i class="fa fa-users me-2"></i><span class="d-none d-md-inline me-2">Gruppen:</span>
 										<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
 									</div><!--.end card-body -->
