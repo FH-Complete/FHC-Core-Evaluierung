@@ -553,18 +553,12 @@ export default {
 										</form-form><!--.end form -->
 									</div><!--.end card-body -->
 									<!-- Studierendenlinks versenden -->
-									<div class="card-footer bg-white mb-3">
+									<div class="card-footer bg-white mb-3" v-if="lveLvDetail.lvevaluierung_id">
 										<div class="row gx-5">
 											<div class="col-6">
 												<span><i class="fa fa-envelope me-2"></i>Email Status</span>
 											</div>
 											<div class="col-6 text-end">
-												<span 
-													v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.codes_gemailt == 0" 
-													class="text-muted me-2">
-													<i class="fa fa-triangle-exclamation text-warning"></i>
-													Cannot send - Save dates first
-												</span>
 												<span 
 													v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt" 
 													class="text-muted">
