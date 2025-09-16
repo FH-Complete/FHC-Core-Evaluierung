@@ -534,7 +534,7 @@ export default {
 															Speichern
 														</button>
 													</div>
-													<div v-if="lveLvDetail.insertamum" class="flex-grow-1 flex-md-grow-0 ms-auto text-muted">
+													<div class="flex-grow-1 flex-md-grow-0 ms-auto text-muted" v-if="lveLvDetail.insertamum" >
 														Saved on {{lveLvDetail.insertamum}} by {{lveLvDetail.insertvon}}
 													</div>
 												</div><!--.d-flex -->
