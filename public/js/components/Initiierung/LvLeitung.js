@@ -59,9 +59,6 @@ export default {
 						if (this.selLveLv) {
 							const structuredLveLvDetails = this.structureLveLvDetails() || [];
 							this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
-
-
-							this.setAlreadySentByLv(this.selLveLvDetails);
 						}
 					})
 					.catch(error => this.$fhcAlert.handleSystemError(error));
@@ -78,7 +75,6 @@ export default {
 
 			const structuredLveLvDetails = this.structureLveLvDetails() || [];
 			this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
-			this.setAlreadySentByLv(this.selLveLvDetails); // todo check ob hier nötig?
 		}
 	},
 	mounted() {
@@ -175,8 +171,6 @@ export default {
 						lveDetail.lvevaluierung_prestudenten = result.data.lvevaluierung_prestudenten;
 
 						this.lveLvPrestudenten = result.data.lveLvPrestudenten;
-
-						this.setAlreadySentByLv(this.selLveLvDetails);
 
 						// Success info
 						this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
@@ -307,13 +301,6 @@ export default {
 			});
 
 			return selLveLvDetails;
-		},
-		setAlreadySentByLv(selLveLvDetails) {
-			selLveLvDetails.forEach(detail => {
-				detail.alreadyMailedByLv = this.lveLvPrestudenten.filter(lvelvpst =>
-						detail.studenten.some(sent => sent.prestudent_id === lvelvpst.prestudent_id)
-				);
-			});
 		},
 		// Helper: finds the correct evaluierung for a given Lehreinheit
 		findMatchingEvaluierung(lehreinheit_id, isAufgeteilt) {
@@ -573,33 +560,22 @@ export default {
 											</div>
 											<div class="col-6 text-end">
 												<span 
-													v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.studenten.length > lveLvDetail.alreadyMailedByLv.length" 
+													v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.codes_gemailt == 0" 
 													class="text-muted me-2">
 													<i class="fa fa-triangle-exclamation text-warning"></i>
 													Cannot send - Save dates first
 												</span>
 												<span 
-													v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt && !lveLvDetail.alreadyMailedByLv.length > 0" 
+													v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt" 
 													class="text-muted">
 													<i class="fa fa-check text-success"></i>
 													Ready to send
 												</span>
 												<span 
-													v-if="lveLvDetail.alreadyMailedByLv.length > 0"
-													class="text-muted">
-													<i class="fa fa-envelope-circle-check text-success"></i>
-													 {{lveLvDetail.alreadyMailedByLv.length}} Emails sent to
-													<i 
-														class="fa fa-users text-muted mx-2" 
-														:title="lveLvDetail.alreadyMailedByLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
-														data-bs-toggle="tooltip"
-														data-bs-html="true">
-													</i>
-												</span>	
-												<span 
 													v-if="lveLvDetail.codes_gemailt"
 													class="text-muted">
-													{{lveLvDetail.codes_ausgegeben}} Codes generated for
+													<i class="fa fa-envelope-circle-check text-success"></i>
+													{{lveLvDetail.codes_ausgegeben}} Emails sent to
 													<i class="fa fa-users text-muted mx-2" 
 														:title="lveLvDetail.lvevaluierung_prestudenten.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 														data-bs-toggle="tooltip"
