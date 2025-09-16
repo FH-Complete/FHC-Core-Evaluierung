@@ -539,25 +539,6 @@ export default {
 														>
 														</form-input>
 													</div>
-<!--														<div class="flex-grow-1">-->
-<!--															<form-input-->
-<!--																label="Dauer (HH:MM)" -->
-<!--																type="datepicker"-->
-<!--																v-model="lveLvDetail.dauer"-->
-<!--																name="lveLvDetail.dauer"-->
-<!--																locale="de"								-->
-<!--																:time-picker="true"-->
-<!--																:is-24="true"-->
-<!--																:hide-input-icon="true"-->
-<!--																:minutes-increment="5"-->
-<!--																format="HH:mm"-->
-<!--																model-type="HH:mm:ss"-->
-<!--																:text-input="true"-->
-<!--																:auto-apply="true"-->
-<!--																:disabled="true"-->
-<!--															>-->
-<!--															</form-input>-->
-<!--														</div>-->
 													<div class="flex-grow-1 flex-md-grow-0 align-self-end">
 														<button
 															type="submit"  
