@@ -10,7 +10,7 @@ class Initiierung extends FHCAPI_Controller
 		parent::__construct(array(
 				'getLveLvs' => 'extension/lvevaluierung_init:r',
 				'getLveLvsWithLes' => 'extension/lvevaluierung_init:r',
-				'getLveLvWithLesAndGruppenById' => 'extension/lvevaluierung_init:r',
+				'getLveLvDataGroups' => 'extension/lvevaluierung_init:r',
 				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
 				'getLvEvaluierungenByID' => 'extension/lvevaluierung_init:r',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
@@ -71,59 +71,48 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Get Lv of given ID, including its Lehreinheiten, associated Gruppen and Lektoren, grouped by Lehreinheit ID.
+	 * Get grouped Data for Evaluierung by Gesamt-LV and for Evaluierung by Gruppenbasis.
+	 * Returns LV data of given LVE-LV-ID, including its associated Gruppen and Lektoren and Studierenden.
 	 *
-	 * @return void
+	 * @return:
+	 * lveLvDataGroupedByLv: returns data grouped by Lehrveranstaltung
+	 * lveLvDataGroupedByLeUnique: returns data grouped by Lehreinheiten, but ONLY if each LE within the LV has UNIQUE
+	 * lector+Gruppenzusammensetzung (purpose is: Students MUST be unique for each lector)
 	 */
-	public function getLveLvWithLesAndGruppenById()
+	public function getLveLvDataGroups()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
 		// Get Lvs with Lehreinheiten and Gruppen
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
 
+		// Base Data (raw rows with Lektoren + Gruppen info)
 		$data = $this->getDataOrTerminateWithError($result);
 
-		// Group data by Lehreinheit
-		$grouped = [];
-		foreach($data as $item)
+		// Group Lektoren and Gruppen by Lehreinheit
+		$groupedByLehreinheit = $this->initiierunglib->groupByLehreinheit($data);
+
+		// Grouped data for Evaluierung by Gesamt-Lv
+		$groupedByLv = $this->initiierunglib->groupByLv($groupedByLehreinheit);
+
+		// Grouped data for Evaluierung by Gruppenbasis
+		$groupedByLeWithUniqueLectorAndGruppe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLehreinheit);
+
+		// Get LV-Leitung if required
+		$lvLeitungen = null;
+		if ($this->config->item('lvLeitungRequired'))
 		{
-			$lehreinheit_id = $item->lehreinheit_id;
-
-			if (!isset($grouped[$lehreinheit_id])) {
-				$grouped[$lehreinheit_id] = clone $item;
-				$grouped[$lehreinheit_id]->lektoren = [];
-				$grouped[$lehreinheit_id]->gruppen = [];
-			}
-
-			// Uniquely group Lektoren
-			$grouped = $this->initiierunglib->groupLektoren($grouped, $item);
-
-			// Uniquely group Gruppen
-			$grouped = $this->initiierunglib->groupGruppen($grouped, $item);
-
-			// Remove redundant fields that were grouped yet
-			foreach ($grouped as $g) {
-				unset(
-					$g->mitarbeiter_uid,
-					$g->fullname,
-					$g->lehrfunktion_kurzbz,
-					$g->semester,
-					$g->verband,
-					$g->gruppe
-				);
-
-				$g->lektoren = array_values($g->lektoren);
-				$g->gruppen = array_values($g->gruppen);
-			}
-
-			// Add group Studenten
-			$this->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-			$result = $this->LehreinheitModel->getStudenten($item->lehreinheit_id);
-			$g->studenten = hasData($result) ? getData($result) : [];
+			$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$result = $this->LehrveranstaltungModel->getLvLeitung($lvelv->lehrveranstaltung_id, $lvelv->studiensemester_kurzbz);
+			$lvLeitungen = hasData($result) ? getData($result) : null;
 		}
 
-		$this->terminateWithSuccess(array_values($grouped));
+		$this->terminateWithSuccess([
+			'lvLeitungen' => $lvLeitungen,
+			'selLveLvDataGroupedByLv' => array_values($groupedByLv),
+			'selLveLvDataGroupedByLeUnique' => array_values($groupedByLeWithUniqueLectorAndGruppe),
+		]);
 	}
 
 	/**

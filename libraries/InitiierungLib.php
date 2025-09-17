@@ -87,6 +87,186 @@ class InitiierungLib
 	}
 
 	/**
+	 * Group data by Lehreinheit
+	 *
+	 * @param $data
+	 * @return array
+	 */
+	public function groupByLehreinheit($data)
+	{
+		$grouped = [];
+
+		foreach ($data as $item)
+		{
+			$lehreinheitId = $item->lehreinheit_id;
+
+			if (!isset($grouped[$lehreinheitId])) {
+				$grouped[$lehreinheitId] = clone $item;
+				$grouped[$lehreinheitId]->lektoren = [];
+				$grouped[$lehreinheitId]->gruppen = [];
+			}
+
+			// Uniquely group Lektoren
+			$grouped = $this->groupLektoren($grouped, $item);
+
+			// Uniquely group Gruppen
+			$grouped = $this->groupGruppen($grouped, $item);
+
+			// Cleanup duplicates
+			foreach ($grouped as $g)
+			{
+				unset(
+					$g->mitarbeiter_uid,
+					$g->fullname,
+					$g->lehrfunktion_kurzbz,
+					$g->semester,
+					$g->verband,
+					$g->gruppe
+				);
+
+				$g->lektoren = array_values($g->lektoren);
+				$g->gruppen  = array_values($g->gruppen);
+			}
+
+			// Studenten
+			$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+			$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
+			$g->studenten = hasData($result) ? getData($result) : [];
+		}
+
+		return $grouped;
+	}
+
+	/**
+	 * Group by Lehrveranstaltung (collapse multiple Lehreinheiten into one).
+	 *
+	 * @param $data
+	 * @return array
+	 */
+	public function groupByLv($data)
+	{
+		$grouped = [];
+
+		foreach ($data as $item)
+		{
+			$lvId = $item->lehrveranstaltung_id;
+
+			if (!isset($grouped[$lvId])) {
+				$clone = clone $item;
+				$clone->lehreinheit_id = null;
+				$clone->lektoren = [];
+				$clone->gruppen  = [];
+				$clone->studenten = [];
+				$grouped[$lvId] = $clone;
+			}
+
+			// Merge gruppen
+			foreach ($item->gruppen as $gruppe) {
+				$exists = false;
+				foreach ($grouped[$lvId]->gruppen as $g) {
+					if (
+						$g->kurzbzlang === $gruppe->kurzbzlang &&
+						$g->semester   === $gruppe->semester &&
+						$g->verband    === $gruppe->verband &&
+						$g->gruppe     === $gruppe->gruppe
+					) {
+						$exists = true;
+						break;
+					}
+				}
+				if (!$exists) {
+					$grouped[$lvId]->gruppen[] = $gruppe;
+				}
+			}
+
+			// Merge lektoren
+			foreach ($item->lektoren as $lektor) {
+				$exists = false;
+				foreach ($grouped[$lvId]->lektoren as $l) {
+					if ($l->mitarbeiter_uid === $lektor->mitarbeiter_uid) {
+						$exists = true;
+						break;
+					}
+				}
+				if (!$exists) {
+					$grouped[$lvId]->lektoren[] = $lektor;
+				}
+			}
+
+			// Merge studenten
+			foreach ($item->studenten as $student) {
+				$exists = false;
+				foreach ($grouped[$lvId]->studenten as $s) {
+					if ($s->prestudent_id === $student->prestudent_id) {
+						$exists = true;
+						break;
+					}
+				}
+				if (!$exists) {
+					$grouped[$lvId]->studenten[] = $student;
+				}
+			}
+		}
+
+		return $grouped;
+	}
+
+	/**
+	 * Filter  by Lehreinheit if unique lector + gruppen structure.
+	 *
+	 * @param $data
+	 * @return array|mixed
+	 */
+	public function filterWhereUniqueLectorAndGruppe($data)
+	{
+		if (!$this->hasUniqueLectorPerLehreinheit($data)) {
+			return [];
+		}
+
+		if ($this->hasHierarchicalDuplicateGruppen($data)) {
+			return [];
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Check if current user has LV-Leitung access for a given Lehrveranstaltung.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function checkLvLeitungAccess($lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		// Check for LV-Leitung
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz);
+
+		// If LV-Leitung exist
+		if (hasData($result))
+		{
+			// check if user is LV-Leitung
+			if (getData($result)[0]->mitarbeiter_uid != getAuthUid())
+			{
+				// exit if not
+				return error('Access for LV-Leitung only.');
+
+			}
+
+			return success(getData($result)[0]);
+		}
+		else
+		{
+			// todo check mit Ösi: config ok?
+			if ($this->_ci->config->item('lvLeitungRequired'))
+			{
+				return error('No LV-Leitung assigned for this LV.');
+			}
+		}
+	}
+
+	/**
 	 * Check if Evaluation is evaluated by Lehreinheit/Gruppenbasis.
 	 *
 	 * @param $lvevaluierung_lehrveranstaltung_id
@@ -147,5 +327,58 @@ class InitiierungLib
 			$this->_ci->db->trans_rollback();
 			return false;
 		}
+	}
+
+	// Private functions
+	// -----------------------------------------------------------------------------------------------------------------
+
+	/** Check if Lehreinheit has only one Lektor.
+	 * @param $data
+	 * @return bool	False if more than one Lector found.
+	 */
+	private function hasUniqueLectorPerLehreinheit($data)
+	{
+		foreach ($data as $le)
+		{
+			if (!isset($le->lektoren) || count($le->lektoren) !== 1) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
+	 * Checks if Lehrveranstaltung has...
+	 * ...duplicate Studierendengruppen (BBE-2A1 <-> BBE-2A1)
+	 * ...duplicate combination of Studierendengruppen (BBE-2A1, BBE-2A2 <-> BBE-2A1, BBE-2A2)
+	 * ...duplicate hierarchical Studierendengruppen (BBE-2 <-> BBE-2A1)
+	 * @param $data
+	 * @return bool	True, if duplicates found.
+	 */
+	private function hasHierarchicalDuplicateGruppen($data)
+	{
+		foreach ($data as $i => $le1) {
+			foreach ($data as $j => $le2) {
+				foreach ($le1->gruppen as $g1) {
+					foreach ($le2->gruppen as $g2) {
+						if ($i === $j) continue;
+
+						if ($g1->kurzbzlang === $g2->kurzbzlang &&
+							$g1->semester === $g2->semester &&
+							(
+								($g1->verband === $g2->verband && $g1->gruppe === $g2->gruppe) ||
+								($g1->verband === $g2->verband && !$g1->gruppe && $g2->gruppe) ||
+								(!$g1->verband && !$g1->gruppe && $g2->verband) ||
+								($g2->verband === $g1->verband && !$g2->gruppe && $g1->gruppe) ||
+								(!$g2->verband && !$g2->gruppe && $g1->verband)
+							)
+						) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
 	}
 }

@@ -27,10 +27,11 @@ export default {
 			selStudiensemester: '',
 			lveLvs: [],					// All Lvs to be evaluated, where user is assigned to at least one Le as a Lektor.
 			selLveLvId: '',				// Lve-Lv-ID of selected Lv
-			lveLvWithLesAndGruppen: [],	// Lvs and Lehreinheiten Info of selected Lve-Lv-ID
 			selLveLvDetails: [],		// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
+			selLveLvDataGroupedByLv: [],	// Basis data for selLveLvDetails, grouped for Gesamt-LV Evaluierung
+			selLveLvDataGroupedByLeUnique: [],	// Basis data for selLveLvDetails, grouped for Gruppenbasis Evaluierung
 			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
-			lveLvPrestudenten: [],		// All students of selected Lve-Lehrveranstaltung-ID, that were already mailed
+			lvLeitungen: null,
 			infoGesamtLv:  `
 		  		Diese LV wird auf Gruppenbasis evaluiert.<br><br>
 				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
@@ -52,29 +53,35 @@ export default {
 	watch: {
 		selLveLvId(newId) {
 			if (newId) {
-				this.getLveLvWithLesAndGruppenById(newId)
-					.then(() => this.getLvevaluierungen(newId))
-					.then(() => this.getLveLvPrestudenten(newId))
-					.then(() => {
-						if (this.selLveLv) {
-							const structuredLveLvDetails = this.structureLveLvDetails() || [];
-							this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
-						}
+				this.$api
+					.call(ApiInitiierung.getLveLvDataGroups(newId))
+					.then(result => {
+						// Set LV-Leitung
+						this.lvLeitungen = result.data.lvLeitungen;
+
+						// Set basic data sets
+						this.selLveLvDataGroupedByLv = result.data.selLveLvDataGroupedByLv;
+						this.selLveLvDataGroupedByLeUnique = result.data.selLveLvDataGroupedByLeUnique;
+
+						// Set final data set depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
+						this.selLveLvDetails =  this.decideLveLvDataGroup() || [];
 					})
+					.then(() => this.fetchAndSetLvevaluierungen(newId))
+					.then(() => this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails))
+					.then(() => this.fetchAndSetLveLvPrestudenten(newId))
 					.catch(error => this.$fhcAlert.handleSystemError(error));
 			}
 			else {
-				this.lveLvWithLesAndGruppen = [];
 				this.lvevaluierungen = [];
 				this.selLveLvDetails = [];
 				this.lveLvPrestudenten = [];
 			}
 		},
 		'selLveLv.lv_aufgeteilt'(newVal) {
-			if (!this.selLveLvId || !this.lveLvWithLesAndGruppen?.length) return;
+			if (!this.selLveLvId) return;
 
-			const structuredLveLvDetails = this.structureLveLvDetails() || [];
-			this.selLveLvDetails = this.mergeEvaluierungenIntoDetails(structuredLveLvDetails);
+			this.selLveLvDetails  = this.decideLveLvDataGroup() || [];
+			this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails);
 		}
 	},
 	mounted() {
@@ -186,80 +193,27 @@ export default {
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
 		},
-		getLveLvWithLesAndGruppenById(lvevaluierung_lehrveranstaltung_id) {
-			// Get Lvs and Lehreinheiten Info of selected Lve-Lv-ID
-			return this.$api
-				.call(ApiInitiierung.getLveLvWithLesAndGruppenById(lvevaluierung_lehrveranstaltung_id))
-				.then(result => {
-					this.lveLvWithLesAndGruppen = result.data;
-				});
-		},
-		getLvevaluierungen(lvevaluierung_lehrveranstaltung_id) {
+		fetchAndSetLvevaluierungen(lvevaluierung_lehrveranstaltung_id) {
 			return this.$api
 				.call(ApiInitiierung.getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id))
 				.then(result => {
 					this.lvevaluierungen = result.data;
 				});
 		},
-		getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id) {
+		fetchAndSetLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id) {
 			return this.$api
 				.call(ApiInitiierung.getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id))
 				.then(result => this.lveLvPrestudenten = result.data);
 		},
-		structureLveLvDetails() {
-			if (!this.lveLvWithLesAndGruppen.length) {
-				this.selLveLvDetails = [];
-				return;
-			}
-
+		decideLveLvDataGroup() {
 			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
 
 			return isAufgeteilt
-				? this.lveLvWithLesAndGruppen
-				: this.groupByLv(this.lveLvWithLesAndGruppen);
-		},
-		groupByLv(data) {
-			const grouped = [];
-
-			// Deep clone lveLvWithLesAndGruppen to avoid mutating original, which causes cumulating gruppen or lektoren
-			const clonedData = JSON.parse(JSON.stringify(data));
-
-			clonedData.forEach(item => {
-				const group = grouped.find(g => g.lehrveranstaltung_id === item.lehrveranstaltung_id);
-
-				if (!group) {
-					// Set lehreinheit_id to null, as we group by Lv here
-					grouped.push({ ...item, lehreinheit_id: null });
-				}
-				else {
-					// Uniquely collect lektoren of all Lehreinheiten
-					item.gruppen.forEach(gruppe => {
-						if (!group.gruppen.some(g =>
-								g.kurzbzlang === gruppe.kurzbzlang &&
-								g.semester === gruppe.semester &&
-								g.verband === gruppe.verband &&
-								g.gruppe === gruppe.gruppe
-						)) group.gruppen.push(gruppe);
-					});
-
-					// Uniquely collect gruppen of all Lehreinheiten
-					item.lektoren.forEach(lektor => {
-						if (!group.lektoren.some(l => l.mitarbeiter_uid === lektor.mitarbeiter_uid))
-							group.lektoren.push(lektor);
-					});
-
-					// Uniquely collect gruppen of all students
-					item.studenten.forEach(student => {
-						if (!group.studenten.some(s => s.prestudent_id === student.prestudent_id))
-							group.studenten.push(student);
-					});
-				}
-			});
-
-			return grouped;
+				? this.selLveLvDataGroupedByLeUnique
+				: this.selLveLvDataGroupedByLv
 		},
 		// Helper: merges start/ende/dauer from lvevaluierungen into detail list
-		mergeEvaluierungenIntoDetails(selLveLvDetails) {
+		mergeLvevaluierungenIntoDetails(selLveLvDetails) {
 			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
 			let startzeit = new Date();
 			let endezeit = new Date();
@@ -289,14 +243,16 @@ export default {
 				if (detail.codes_ausgegeben == null) {
 					detail.codes_ausgegeben = evalMatch?.codes_ausgegeben ?? 0;
 				}
-				if (detail.lvevaluierung_prestudenten == null) {
-					detail.lvevaluierung_prestudenten = evalMatch?.lvevaluierung_prestudenten ?? [];
-				}
 				if (detail.insertvon == null) {
 					detail.insertvon = evalMatch?.insertvon ?? '';
 				}
 				if (detail.insertamum == null) {
 					detail.insertamum = evalMatch?.insertamum ? DateHelper.formatDate(evalMatch.insertamum) : '';
+				}
+
+				// Merge also mailed Studenten
+				if (detail.lvevaluierung_prestudenten == null) {
+					detail.lvevaluierung_prestudenten = evalMatch?.lvevaluierung_prestudenten ?? [];
 				}
 			});
 
@@ -454,14 +410,21 @@ export default {
 												>
 												</form-input>
 											</div>
-											<div class="form-check form-check-inline ps-0">
+											<div 
+												class="form-check form-check-inline ps-0" 													
+												:title="selLveLvDataGroupedByLeUnique.length === 0 
+												  	? 'Nur verfügbar, wenn Gruppen eindeutig Lehrenden zugeordnet sind.' 
+												  	: ''"
+												data-bs-toggle="tooltip"
+												data-bs-placement="top"
+											>
 												<form-input
 													label="LV auf Gruppenbasis evaluieren"
 													class="form-check-input"
 													type="radio"
 													:value="true"
 													v-model="lveLv.lv_aufgeteilt"
-													:disabled="lvevaluierungen.length > 0"
+													:disabled="lvevaluierungen.length > 0 || selLveLvDataGroupedByLeUnique.length === 0"
 													@change="updateLvAufgeteilt"
 												>
 												</form-input>
