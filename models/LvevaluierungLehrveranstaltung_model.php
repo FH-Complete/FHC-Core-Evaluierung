@@ -200,38 +200,40 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					extension.tbl_lvevaluierung_lehrveranstaltung
 			  	WHERE
 					lvevaluierung_lehrveranstaltung_id = ?
-			)
-	
-			SELECT DISTINCT
-				lvevaluierung_lehrveranstaltung.*, 
-				lv.lehrveranstaltung_id,
-				le.lehreinheit_id,
-				le.lehrform_kurzbz,
-				lv.bezeichnung,
-				lv.orgform_kurzbz,
-				lv.semester,
-				lv.studiengang_kz,
-				lema.mitarbeiter_uid,
-				lema.lehrfunktion_kurzbz,
-				concat(p.vorname, \' \', p.nachname) AS fullname,
-				legr.semester,
-				legr.verband,
-				legr.gruppe,
-				legr.gruppe_kurzbz,
-				lv.kurzbz,
-				stg.kurzbzlang
-			FROM 
-				lehre.tbl_lehreinheit le 
-				JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
-				JOIN lehre.tbl_lehreinheitmitarbeiter lema USING (lehreinheit_id)
-				JOIN public.tbl_benutzer b ON b.uid = lema.mitarbeiter_uid
-				JOIN public.tbl_person p USING (person_id)
-				LEFT JOIN lehre.tbl_lehreinheitgruppe legr USING (lehreinheit_id)
-				LEFT JOIN public.tbl_studiengang stg ON (legr.studiengang_kz = stg.studiengang_kz)
-				JOIN lvevaluierung_lehrveranstaltung 
-					ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
-					AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
-			WHERE
+			),
+			lve AS (
+				SELECT DISTINCT
+					lvevaluierung_lehrveranstaltung.*, 
+					lv.lehrveranstaltung_id,
+					le.lehreinheit_id,
+					le.lehrform_kurzbz,
+					lv.bezeichnung,
+					lv.orgform_kurzbz,
+					lv.semester,
+					lv.studiengang_kz,
+					lema.mitarbeiter_uid,
+					lema.lehrfunktion_kurzbz,
+					concat(p.vorname, \' \', p.nachname) AS fullname,
+					p.vorname,
+					p.nachname,
+					legr.semester,
+					legr.verband,
+					legr.gruppe,
+					legr.gruppe_kurzbz,
+					lv.kurzbz,
+					stg.kurzbzlang
+				FROM 
+					lehre.tbl_lehreinheit le 
+					JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
+					JOIN lehre.tbl_lehreinheitmitarbeiter lema USING (lehreinheit_id)
+					JOIN public.tbl_benutzer b ON b.uid = lema.mitarbeiter_uid
+					JOIN public.tbl_person p USING (person_id)
+					LEFT JOIN lehre.tbl_lehreinheitgruppe legr USING (lehreinheit_id)
+					LEFT JOIN public.tbl_studiengang stg ON (legr.studiengang_kz = stg.studiengang_kz)
+					JOIN lvevaluierung_lehrveranstaltung 
+						ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
+						AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
+				WHERE
 					EXISTS (
 						SELECT
 							1
@@ -241,7 +243,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 						WHERE
 							le2.lehrveranstaltung_id = lv.lehrveranstaltung_id
 							AND lema2.mitarbeiter_uid = ?
-				)';
+					)';
 
 			if (is_array($excludedLehrformen) && count($excludedLehrformen) > 0)
 			{
@@ -250,8 +252,15 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			}
 
 			$qry .= '
-				ORDER BY
-					legr.gruppe_kurzbz;
+			-- End CTE (lve)
+			)
+			
+			SELECT 
+				* 
+			FROM 
+				lve
+			ORDER BY
+				nachname
 			';
 
 		return $this->execQuery($qry, $params);

@@ -45,6 +45,8 @@ class InitiierungLib
 
 		$grouped[$lehreinheit_id]->lektoren[] = (object)[
 			'mitarbeiter_uid' => $item->mitarbeiter_uid,
+			'vorname' => $item->vorname,
+			'nachname' => $item->nachname,
 			'fullname' => $item->fullname,
 			'lehrfunktion_kurzbz' => $item->lehrfunktion_kurzbz
 		];
