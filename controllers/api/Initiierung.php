@@ -246,6 +246,8 @@ class Initiierung extends FHCAPI_Controller
 		}
 		else
 		{
+			$this->exitIfStartzeitPassed($data['lvevaluierung_id']);
+
 			$result = $this->LvevaluierungModel->updateLvevaluierung($data);
 		}
 
@@ -370,7 +372,13 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->form_validation->set_data($data);
 		$this->form_validation->set_rules('lvevaluierung_lehrveranstaltung_id', 'LveLv-ID', 'required');
-		$this->form_validation->set_rules('startzeit', 'Startzeit', 'required');
+		$this->form_validation->set_rules(
+			'startzeit',
+			'Startzeit',
+			'required|callback_checkStartzeitNotPast[' . $data['lvevaluierung_id'] . ']'
+		);
+		$this->form_validation->set_message('checkStartzeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
+
 		$this->form_validation->set_rules(
 			'endezeit',
 			'Endezeit',
@@ -406,6 +414,42 @@ class Initiierung extends FHCAPI_Controller
 		if (isEmptyString($endezeit) || isEmptyString($startzeit)) return true; // 'required' rule handles missing field
 
 		return strtotime($endezeit) > strtotime($startzeit);
+	}
+
+	/**
+	 * Checks if Startzeit before Today.
+	 *
+	 * @param string $startzeit
+	 * @return bool
+	 */
+	public function checkStartzeitNotPast($startzeit, $lvevaluierung_id)
+	{
+		// Return if Evaluierung already exist
+		if (is_numeric($lvevaluierung_id)) return true;
+
+		if (isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+
+		$nowDate   = (new DateTime())->format('Y-m-d');
+		$startDate = (new DateTime($startzeit))->format('Y-m-d');
+
+		return $nowDate <= $startDate;
+	}
+
+	/**
+	 * Exit if Evaluierung time period already started. (Now > Startzeit)
+	 * @param $lvevaluierung_id
+	 * @return void
+	 * @throws DateMalformedStringException
+	 */
+	public function exitIfStartzeitPassed($lvevaluierung_id)
+	{
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$nowDate   = (new DateTime())->format('Y-m-d');
+		$startDate = (new DateTime($lve->startzeit))->format('Y-m-d');
+		if ($nowDate >= $startDate)
+		{
+			$this->terminateWithError('Cannot update after LV-Evaluierung has already startet.');
+		}
 	}
 
 	/**
