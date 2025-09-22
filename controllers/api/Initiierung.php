@@ -83,6 +83,8 @@ class Initiierung extends FHCAPI_Controller
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
+		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
 		// Get Lvs with Lehreinheiten and Gruppen
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
 
@@ -93,7 +95,11 @@ class Initiierung extends FHCAPI_Controller
 		$groupedByLehreinheit = $this->initiierunglib->groupByLehreinheit($data);
 
 		// Grouped data for Evaluierung by Gesamt-Lv
-		$groupedByLv = $this->initiierunglib->groupByLv($groupedByLehreinheit);
+		$groupedByLv = $this->initiierunglib->groupByLv(
+			$groupedByLehreinheit,
+			$lvelv->lehrveranstaltung_id,
+			$lvelv->studiensemester_kurzbz
+		);
 
 		// Grouped data for Evaluierung by Gruppenbasis
 		$groupedByLeWithUniqueLectorAndGruppe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLehreinheit);
@@ -102,7 +108,6 @@ class Initiierung extends FHCAPI_Controller
 		$lvLeitungen = null;
 		if ($this->config->item('lvLeitungRequired'))
 		{
-			$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 			$result = $this->LehrveranstaltungModel->getLvLeitung($lvelv->lehrveranstaltung_id, $lvelv->studiensemester_kurzbz);
 			$lvLeitungen = hasData($result) ? getData($result) : null;

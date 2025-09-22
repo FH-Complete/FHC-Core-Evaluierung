@@ -96,6 +96,9 @@ class InitiierungLib
 	{
 		$grouped = [];
 
+		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+
 		foreach ($data as $item)
 		{
 			$lehreinheitId = $item->lehreinheit_id;
@@ -129,9 +132,12 @@ class InitiierungLib
 			}
 
 			// Studenten
-			$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 			$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
 			$g->studenten = hasData($result) ? getData($result) : [];
+
+			// Add Stundenplantermine
+			$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
+			$g->stundenplan = hasData($result) ? getData($result) : [];
 		}
 
 		return $grouped;
@@ -143,27 +149,25 @@ class InitiierungLib
 	 * @param $data
 	 * @return array
 	 */
-	public function groupByLv($data)
+	public function groupByLv($data, $lehrveranstaltung_id, $studiensemester_kurzbz)
 	{
 		$grouped = [];
 
 		foreach ($data as $item)
 		{
-			$lvId = $item->lehrveranstaltung_id;
-
-			if (!isset($grouped[$lvId])) {
+			if (!isset($grouped[$lehrveranstaltung_id])) {
 				$clone = clone $item;
 				$clone->lehreinheit_id = null;
 				$clone->lektoren = [];
 				$clone->gruppen  = [];
 				$clone->studenten = [];
-				$grouped[$lvId] = $clone;
+				$grouped[$lehrveranstaltung_id] = $clone;
 			}
 
 			// Merge gruppen
 			foreach ($item->gruppen as $gruppe) {
 				$exists = false;
-				foreach ($grouped[$lvId]->gruppen as $g) {
+				foreach ($grouped[$lehrveranstaltung_id]->gruppen as $g) {
 					if (
 						$g->kurzbzlang === $gruppe->kurzbzlang &&
 						$g->semester   === $gruppe->semester &&
@@ -175,38 +179,43 @@ class InitiierungLib
 					}
 				}
 				if (!$exists) {
-					$grouped[$lvId]->gruppen[] = $gruppe;
+					$grouped[$lehrveranstaltung_id]->gruppen[] = $gruppe;
 				}
 			}
 
 			// Merge lektoren
 			foreach ($item->lektoren as $lektor) {
 				$exists = false;
-				foreach ($grouped[$lvId]->lektoren as $l) {
+				foreach ($grouped[$lehrveranstaltung_id]->lektoren as $l) {
 					if ($l->mitarbeiter_uid === $lektor->mitarbeiter_uid) {
 						$exists = true;
 						break;
 					}
 				}
 				if (!$exists) {
-					$grouped[$lvId]->lektoren[] = $lektor;
+					$grouped[$lehrveranstaltung_id]->lektoren[] = $lektor;
 				}
 			}
 
 			// Merge studenten
 			foreach ($item->studenten as $student) {
 				$exists = false;
-				foreach ($grouped[$lvId]->studenten as $s) {
+				foreach ($grouped[$lehrveranstaltung_id]->studenten as $s) {
 					if ($s->prestudent_id === $student->prestudent_id) {
 						$exists = true;
 						break;
 					}
 				}
 				if (!$exists) {
-					$grouped[$lvId]->studenten[] = $student;
+					$grouped[$lehrveranstaltung_id]->studenten[] = $student;
 				}
 			}
 		}
+
+		// Override Stundenplantermine for LV
+		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+		$result = $this->_ci->StundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
+		$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
 
 		return $grouped;
 	}
