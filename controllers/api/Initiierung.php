@@ -30,6 +30,8 @@ class Initiierung extends FHCAPI_Controller
 		$this->loadPhrases([
 			'ui'
 		]);
+
+		$this->_uid = getAuthUid();
 	}
 
 	/**
@@ -82,8 +84,9 @@ class Initiierung extends FHCAPI_Controller
 	public function getLveLvDataGroups()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
 
-		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		// Get Lvs with Lehreinheiten and Gruppen
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
@@ -92,31 +95,57 @@ class Initiierung extends FHCAPI_Controller
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group Lektoren and Gruppen by Lehreinheit
-		$groupedByLehreinheit = $this->initiierunglib->groupByLehreinheit($data);
+		$groupedByLe = $this->initiierunglib->groupByLeAndAddData($data);
 
 		// Grouped data for Evaluierung by Gesamt-Lv
-		$groupedByLv = $this->initiierunglib->groupByLv(
-			$groupedByLehreinheit,
-			$lvelv->lehrveranstaltung_id,
-			$lvelv->studiensemester_kurzbz
+		$groupedByLv = $this->initiierunglib->groupByLvAndAddData(
+			$groupedByLe,
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
 		);
 
-		// Grouped data for Evaluierung by Gruppenbasis
-		$groupedByLeWithUniqueLectorAndGruppe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLehreinheit);
-
-		// Get LV-Leitung if required
-		$lvLeitungen = null;
-		if ($this->config->item('lvLeitungRequired'))
+		if ($this->config->item('filterLehreinheitenByUniqueLectorAndGruppen'))
 		{
+			// Filter only Lehreinheiten with unique Lector
+			$groupedByLe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLe);
+		}
+
+		$lvLeitungen = null;
+		$canSwitch = true;
+
+		// If LV-Leitung is required
+		if ($lvLeitungRequired)
+		{
+			// Get LV-Leitungen
 			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-			$result = $this->LehrveranstaltungModel->getLvLeitung($lvelv->lehrveranstaltung_id, $lvelv->studiensemester_kurzbz);
-			$lvLeitungen = hasData($result) ? getData($result) : null;
+			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+			$lvLeitungen = hasData($result) ? getData($result) : [];
+			if (empty($lvLeitungen))
+			{
+				$canSwitch = false;
+			}
+
+			// If user is not LV-Leitung
+			if (!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')))
+			{
+				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
+				$canSwitch = false;
+
+				// User cannot start Lvevaluierung
+				array_values($groupedByLv)[0]->isReadonly = true;
+
+				// User should only see own Lehreinheiten
+				$groupedByLe = array_filter($groupedByLe, function ($item) {
+					return empty($item->isReadonly) || $item->isReadonly === false;
+				});
+			}
 		}
 
 		$this->terminateWithSuccess([
 			'lvLeitungen' => $lvLeitungen,
-			'selLveLvDataGroupedByLv' => array_values($groupedByLv),
-			'selLveLvDataGroupedByLeUnique' => array_values($groupedByLeWithUniqueLectorAndGruppe),
+			'canSwitch' => $canSwitch,
+			'groupedByLv' => array_values($groupedByLv),
+			'groupedByLe' => array_values($groupedByLe),
 		]);
 	}
 
@@ -174,12 +203,12 @@ class Initiierung extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
 		$lv_aufgeteilt = $this->input->post('lv_aufgeteilt');
 
-		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		// If LV has LV-Leitung, user must be LV-Leitung
 		if ($this->config->item('lvLeitungRequired'))
 		{
-			$this->checkLvLeitungAccessOrExit($lvelv->lehrveranstaltung_id, $lvelv->studiensemester_kurzbz);
+			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
 
 		// Return if at least one Lvevaluierung exists for this Lehrveranstaltung
@@ -223,10 +252,10 @@ class Initiierung extends FHCAPI_Controller
 		$this->_validateSaveOrUpdateLvevaluierungData($data);
 
 		// Get LV-ID and Studiensemester
-		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($data['lvevaluierung_lehrveranstaltung_id']);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($data['lvevaluierung_lehrveranstaltung_id']);
 
 		// If Lvevaluierung is evaluated as Gesamt-Lv
-		if ($this->config->item('lvLeitungRequired') && $lvelv->lv_aufgeteilt === false)
+		if ($this->config->item('lvLeitungRequired') && $lveLv->lv_aufgeteilt === false)
 		{
 			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
@@ -235,8 +264,8 @@ class Initiierung extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
 
 		$result = $this->LvevaluierungFragebogenModel->getActiveFragebogen(
-			$lvelv->lehrveranstaltung_id,
-			$lvelv->studiensemester_kurzbz
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
 		);
 
 		if (!hasData($result))

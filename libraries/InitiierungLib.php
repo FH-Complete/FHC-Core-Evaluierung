@@ -21,7 +21,6 @@ class InitiierungLib
 		$this->_ci->load->helper('hlp_sancho_helper');
 	}
 
-
 	/**
 	 * Group Lektoren uniquely by Mitarbeiter UID, name, and Lehrfunktion within each Lehreinheit group.
 	 *
@@ -92,7 +91,7 @@ class InitiierungLib
 	 * @param $data
 	 * @return array
 	 */
-	public function groupByLehreinheit($data)
+	public function groupByLeAndAddData($data)
 	{
 		$grouped = [];
 
@@ -138,6 +137,9 @@ class InitiierungLib
 			// Add Stundenplantermine
 			$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
 			$g->stundenplan = hasData($result) ? getData($result) : [];
+
+			// Add flag if logged-in user should only read
+			$g->isReadonly = !in_array(getAuthUid(), array_column($g->lektoren, 'mitarbeiter_uid'));
 		}
 
 		return $grouped;
@@ -149,7 +151,7 @@ class InitiierungLib
 	 * @param $data
 	 * @return array
 	 */
-	public function groupByLv($data, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function groupByLvAndAddData($data, $lehrveranstaltung_id, $studiensemester_kurzbz)
 	{
 		$grouped = [];
 
@@ -216,6 +218,9 @@ class InitiierungLib
 		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
 		$result = $this->_ci->StundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
 		$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
+
+		// Add flag if logged-in user should only read
+		$grouped[$lehrveranstaltung_id]->isReadonly = false;
 
 		return $grouped;
 	}

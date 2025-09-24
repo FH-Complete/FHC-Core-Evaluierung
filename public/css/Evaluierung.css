@@ -10,6 +10,10 @@
     background-color: #72777A;
 }
 
+/* Align tooltip text left */
+.tooltip-left .tooltip-inner {
+    text-align: left;
+}
 
 /* Styles and animations on checked Antwort Smiley icons */
 /* -------------------------------------------------------------------------------------------------------------------*/
