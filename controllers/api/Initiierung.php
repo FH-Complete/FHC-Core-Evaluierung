@@ -176,6 +176,12 @@ class Initiierung extends FHCAPI_Controller
 
 		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
+		// If LV has LV-Leitung, user must be LV-Leitung
+		if ($this->config->item('lvLeitungRequired'))
+		{
+			$this->checkLvLeitungAccessOrExit($lvelv->lehrveranstaltung_id, $lvelv->studiensemester_kurzbz);
+		}
+
 		// Return if at least one Lvevaluierung exists for this Lehrveranstaltung
 		$result = $this->LvevaluierungModel->loadWhere([
 			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
@@ -220,11 +226,10 @@ class Initiierung extends FHCAPI_Controller
 		$lvelv = $this->getLvevaluierungLehrveranstaltungOrFail($data['lvevaluierung_lehrveranstaltung_id']);
 
 		// If Lvevaluierung is evaluated as Gesamt-Lv
-		if ($lvelv->lv_aufgeteilt === false)
+		if ($this->config->item('lvLeitungRequired') && $lvelv->lv_aufgeteilt === false)
 		{
-			$this->terminateWithError('No Evaluierung assigned to this Lehrveranstaltung');
+			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
-
 
 		// Get valid Fragebogen
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
@@ -277,6 +282,13 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get Lvevaluierung-Lehrveranstaltung
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// If Lvevaluierung is evaluated as Gesamt-Lv
+		if ($this->config->item('lvLeitungRequired') && $lveLv->lv_aufgeteilt === false)
+		{
+			// If LV has LV-Leitung, user must be LV-Leitung
+			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		}
 
 		// Get Students of LV or LE, depending on Evaluation type
 		$studenten = $lveLv->lv_aufgeteilt
@@ -547,5 +559,21 @@ class Initiierung extends FHCAPI_Controller
 		}
 
 		return hasData($result) ? getData($result) : [];
+	}
+
+	/**
+	 * Check if current user has LV-Leitung access for a given Lehrveranstaltung. Exit if not.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	private function checkLvLeitungAccessOrExit($lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		$result = $this->initiierunglib->checkLvLeitungAccess($lehrveranstaltung_id, $studiensemester_kurzbz);
+		if (isError($result))
+		{
+			$this->terminateWithError('Cannot save: '. getError($result));
+		}
 	}
 }
