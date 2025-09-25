@@ -8,6 +8,7 @@ import LveItem from "./LveItem.js";
 
 export default {
 	components: {
+		AutoComplete: primevue.autocomplete,
 		FormForm,
 		FormInput,
 		Switcher,
@@ -28,7 +29,7 @@ export default {
 			studiensemester: [],
 			selStudiensemester: '',
 			lveLvs: [],					// All Lvs to be evaluated, where user is assigned to at least one Le as a Lektor.
-			selLveLvId: '',				// Lve-Lv-ID of selected Lv
+			selLveLvId: null,			// Lve-Lv-ID of selected Lv
 			selLveLvDetails: [],		// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
 			groupedByLv: [],			// Basis data for selLveLvDetails, grouped for Gesamt-LV Evaluierung
 			groupedByLe: [],			// Basis data for selLveLvDetails, grouped for Gruppenbasis Evaluierung
@@ -36,15 +37,36 @@ export default {
 			lvLeitungen: null,
 			canSwitch: null,
 			mailedPrestudentenByLv: [],
+			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
+			selLv: null					// Autocomplete selected LV
 		}
 	},
 	computed: {
 		selLveLv() {
 			return this.lveLvs.find(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
 		},
+		visibleLveLvs() {
+			if (this.selLveLvId && this.selLv) {
+				return this.lveLvs.filter(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
+			}
+
+			return this.lveLvs;
+		}
 	},
 	watch: {
+		selLv(newVal){
+			const lveLvId = newVal?.lvevaluierung_lehrveranstaltung_id;
+			if (typeof lveLvId === 'number') {
+				this.selLveLvId = lveLvId;
+				this.openAccordionItem(lveLvId);
+			}
+			else {
+				this.selLveLvId = null;
+			}
+		},
 		selLveLvId(newId) {
+			if (!newId) return;
+
 			this.$api
 				.call(ApiInitiierung.getLveLvDataGroups(newId))
 				.then(result => {
@@ -90,11 +112,14 @@ export default {
 		onChangeStudiensemester(e) {
 			this.$api
 				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
-				.then(result => this.lveLvs = result.data)
+				.then(result => {
+					this.lveLvs = result.data;
+					this.selLv = null;	// Reset Autocomplete field
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		onChangeLv() {
-			const collapseEl = document.getElementById('flush-collapse' + this.selLveLvId);
+		openAccordionItem(selLveLvId) {
+			const collapseEl = document.getElementById('flush-collapse' + selLveLvId);
 			if (collapseEl) {
 				// Get Bootstrap Collapse-Instance oder erstelle neue (toggle: false = nicht automatisch umschalten)
 				const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, { toggle: false });
@@ -193,6 +218,14 @@ export default {
 
 			// Jetzt alle Details neu durchgehen
 			this.setMailedPrestudentenFoundInLv();
+		},
+		searchLv(event) {
+			const query = event.query.toLowerCase();
+			this.filteredLvs = this.lveLvs.filter(lv =>
+					lv.bezeichnung.toLowerCase().includes(query) ||
+					lv.kurzbzlang.toLowerCase().includes(query) ||
+					lv.lehrveranstaltung_id.toString().includes(query)
+			);
 		}
 	},
 	template: `
@@ -201,20 +234,26 @@ export default {
 		
 		<!-- Dropdowns -->
 		<div class="row">
-			<div class="col-sm-10 col-lg-3 offset-lg-7 mb-3">
+			<div class="col-sm-10 col-lg-4 offset-lg-6 mb-3">
 				<form-input
-					type="select"
-					v-model="selLveLvId"
-					name="lehrveranstaltung"
+					type="autocomplete"
+					v-model="selLv"
+					name="selLv"
 					:label="$p.t('lehre/lehrveranstaltung')"
-					@change="onChangeLv">
-					<option 
-						v-for="lveLv in lveLvs"
-						:key="lveLv.lvevaluierung_lehrveranstaltung_id" 
-						:value="lveLv.lvevaluierung_lehrveranstaltung_id"
-					>
-						{{ getLvInfoString(lveLv) }}
-					</option>
+					option-label="bezeichnung"
+					:suggestions="filteredLvs"
+					@complete="searchLv"
+					dropdown
+					forceSelection
+				>
+				<template #option="slotProps">
+					{{ getLvInfoString(slotProps.option) }}
+				</template>
+				<template #header>
+					<div class="d-grid">
+						<button type="button" class="btn btn-secondary btn-light" @click="this.selLv = null">Alle anzeigen</button>
+					</div>
+				</template>
 				</form-input>
 			</div>
 			<div class="col-sm-2 mb-3">
@@ -235,7 +274,7 @@ export default {
 		</div><!--.end row -->
 		<!-- LV Accordion List -->
 		<div class="accordion" id="accordionFlush">
-			<template v-for="lveLv in lveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
+			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
 						<button 
@@ -267,7 +306,7 @@ export default {
 					</h2>
 					<div 
 						:id="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
-						class="accordion-collapse collapse md-mx-3 px-3 pt-3" 
+						class="accordion-collapse collapse md-mx-3 px-3" 
 						:aria-labelledby="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						data-bs-parent="#accordionFlush"
 						:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"

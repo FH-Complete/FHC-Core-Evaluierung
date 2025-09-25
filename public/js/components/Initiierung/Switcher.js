@@ -28,7 +28,7 @@ export default {
 		}
 	},
 	template: `
-	<div class="switcher">
+	<div class="switcher mt-3">
 		<fieldset :disabled="!canSwitch">
 			<!-- Radio Buttons -->
 			<div class="card mb-3">
