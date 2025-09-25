@@ -118,7 +118,11 @@ export default {
 			const today =  new Date();
 			const startzeit = new Date(lveLvDetail.startzeit);
 
-			return today >= startzeit
+			// Only compare dates, not time
+			today.setHours(0, 0, 0, 0);
+			startzeit.setHours(0, 0, 0, 0);
+
+			return today > startzeit
 		},
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
