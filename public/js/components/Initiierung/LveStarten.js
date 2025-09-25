@@ -35,7 +35,7 @@ export default {
 			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
 			lvLeitungen: null,
 			canSwitch: null,
-			lveLvPrestudenten: []
+			mailedPrestudentenByLv: [],
 		}
 	},
 	computed: {
@@ -49,33 +49,24 @@ export default {
 				.call(ApiInitiierung.getLveLvDataGroups(newId))
 				.then(result => {
 					let data = result.data;
-
-					// Set can switch Evaluationart (Gesamt-LV or Gruppenbasis)
+					// Overall data
 					this.canSwitch = data.canSwitch;
-
-					// Set LV-Leitungen
 					this.lvLeitungen = data.lvLeitungen;
-
-					// Set basic data sets
+					this.mailedPrestudentenByLv = data.mailedPrestudentenByLv;
 					this.groupedByLv = data.groupedByLv;
 					this.groupedByLe = data.groupedByLe;
 
-					// Set data depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
+					// Lvevaluierung data, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
 					this.selLveLvDetails = this.selLveLv.lv_aufgeteilt
 						? this.groupedByLe
 						: this.groupedByLv;
-
 				})
 				.then(() => this.fetchAndSetLvevaluierungen(newId))
-				.then(() => this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails))
+				.then(() => {
+					this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails);
+					this.setMailedPrestudentenFoundInLv();
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
-
-			this.$api
-				.call(ApiInitiierung.getLveLvPrestudenten(newId))
-				.then(result => {
-					this.lveLvPrestudenten = result.data
-					console.log(this.lveLvPrestudenten);
-				});
 		},
 		'selLveLv.lv_aufgeteilt'(newVal) {
 			if (!this.selLveLvId) return;
@@ -85,6 +76,7 @@ export default {
 				: this.groupedByLv;
 
 			this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails);
+			this.setMailedPrestudentenFoundInLv();
 		}
 	},
 	mounted() {
@@ -163,8 +155,8 @@ export default {
 				}
 
 				// Merge also mailed Studenten
-				if (detail.lvevaluierung_prestudenten == null) {
-					detail.lvevaluierung_prestudenten = evalMatch?.lvevaluierung_prestudenten ?? [];
+				if (detail.mailedPrestudenten == null) {
+					detail.mailedPrestudenten = evalMatch?.mailedPrestudenten ?? [];
 				}
 			});
 
@@ -188,6 +180,20 @@ export default {
 			//return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
 			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz ;
 		},
+		setMailedPrestudentenFoundInLv() {
+			this.selLveLvDetails.forEach(detail => {
+				detail.mailedPrestudentenFoundInLv = this.mailedPrestudentenByLv.filter(lvelvpst =>
+						detail.studenten.some(sent => sent.prestudent_id === lvelvpst.prestudent_id)
+				);
+			});
+		},
+		updateMailedPrestudentenFoundInLv(newMailedPrestudentenByLv) {
+			// Parent-Property updaten
+			this.mailedPrestudentenByLv = newMailedPrestudentenByLv;
+
+			// Jetzt alle Details neu durchgehen
+			this.setMailedPrestudentenFoundInLv();
+		}
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
@@ -276,11 +282,13 @@ export default {
 						>
 						</Switcher>
 						<!-- LV-Evaluierungen -->
-						<template v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
+						<template 
+							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
+							v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 							<Lve-Item
 								:lve-lv-detail="lveLvDetail"
 								:lvevaluierungen="lvevaluierungen"
-								:lve-lv-prestudenten="lveLvPrestudenten"
+								@update-mailed-prestudenten="updateMailedPrestudentenFoundInLv"
 							>
 							</Lve-Item>
 						</template>

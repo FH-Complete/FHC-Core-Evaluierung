@@ -110,6 +110,9 @@ class Initiierung extends FHCAPI_Controller
 			$groupedByLe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLe);
 		}
 
+		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$lveLvPrestudentenByLv = hasData($result) ? getData($result) : [];
+
 		$lvLeitungen = null;
 		$canSwitch = true;
 
@@ -146,6 +149,7 @@ class Initiierung extends FHCAPI_Controller
 			'canSwitch' => $canSwitch,
 			'groupedByLv' => array_values($groupedByLv),
 			'groupedByLe' => array_values($groupedByLe),
+			'mailedPrestudentenByLv' => $lveLvPrestudentenByLv
 		]);
 	}
 
@@ -188,7 +192,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				$result = $this->LvevaluierungPrestudentModel->getByLve($item->lvevaluierung_id);
 			}
-			$item->lvevaluierung_prestudenten = hasData($result) ? getData($result) : [];
+			$item->mailedPrestudenten = hasData($result) ? getData($result) : [];
 		}
 
 		$this->terminateWithSuccess($data);
@@ -393,8 +397,8 @@ class Initiierung extends FHCAPI_Controller
 			[
 				'codes_gemailt' => $codes_ausgegeben > 0,
 				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
-				'lvevaluierung_prestudenten' => $lvePrestudenten,
-				'lveLvPrestudenten' => $lveLvPrestudenten,
+				'mailedPrestudenten' => $lvePrestudenten,
+				'mailedPrestudentenByLv' => $lveLvPrestudenten,
 				'failedMailStudenten' => $failedMailStudenten
 			]
 		);

@@ -251,6 +251,8 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				$params[]= $excludedLehrformen;
 			}
 
+			$params[]= $uid;
+
 			$qry .= '
 			-- End CTE (lve)
 			)
@@ -260,6 +262,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			FROM 
 				lve
 			ORDER BY
+			 	CASE WHEN mitarbeiter_uid = ? THEN 0 ELSE 1 END,
 				nachname
 			';
 

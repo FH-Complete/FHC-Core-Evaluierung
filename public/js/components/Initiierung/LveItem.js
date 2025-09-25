@@ -12,7 +12,6 @@ export default {
 	},
 	data() {
 		return {
-			lveLvPrestudenten: [],
 			infoGesamtLv:  `
 				Diese LV wird auf Gruppenbasis evaluiert.<br><br>
 				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
@@ -32,10 +31,6 @@ export default {
 			required: true
 		},
 		lvevaluierungen: {
-			type: Array,
-			default: () => []
-		},
-		lveLvPrestudenten: {
 			type: Array,
 			default: () => []
 		}
@@ -103,9 +98,9 @@ export default {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
-							lveDetail.lvevaluierung_prestudenten = result.data.lvevaluierung_prestudenten;
+							lveDetail.mailedPrestudenten = result.data.mailedPrestudenten;
 
-							this.lveLvPrestudenten = result.data.lveLvPrestudenten;
+							this.$emit('update-mailed-prestudenten', result.data.mailedPrestudentenByLv);
 
 							// Success info
 							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
@@ -197,7 +192,7 @@ export default {
 		emailStatus(lveLvDetail) {
 			return {
 				allSent: lveLvDetail.studenten.length > 0 &&
-						(lveLvDetail.studenten.length === lveLvDetail.codes_ausgegeben)
+						(lveLvDetail.studenten.length <= lveLvDetail.mailedPrestudentenFoundInLv.length)
 			}
 		}
 	},
@@ -284,27 +279,41 @@ export default {
 			<!-- Codes versenden -->
 			<div class="card-footer bg-white mb-3" v-if="lveLvDetail.lvevaluierung_id">
 				<div class="row gx-5">
-					<div class="col-6">
+					<div class="col-4">
 						<span><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
-					<div class="col-6 text-end">
+					<div class="col-8 text-end">
+						<!-- Cannot send: Save dates first  -->
 						<span 
-							v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt" 
+							v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.studenten.length > lveLvDetail.mailedPrestudentenFoundInLv.length" 
+							class="text-muted me-2">
+							<i class="fa fa-triangle-exclamation text-warning"></i>
+							Cannot send - Save dates first
+						</span>
+						<!-- Ready to send -->
+						<span 
+							v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt && !lveLvDetail.mailedPrestudentenFoundInLv.length > 0" 
 							class="text-muted">
 							<i class="fa fa-check text-success"></i>
 							Ready to send
 						</span>
+						<!-- Codes generated for -->
 						<span 
 							v-if="lveLvDetail.codes_gemailt"
+							class="text-muted me-2 d-none d-md-block">
+							{{lveLvDetail.codes_ausgegeben}} Codes generated - 
+						</span>	
+						<!-- Emails sent to -->
+						<span 
+							v-if="lveLvDetail.mailedPrestudentenFoundInLv.length > 0"
 							class="text-muted">
 							<i class="fa fa-envelope-circle-check text-success"></i>
-							{{lveLvDetail.codes_ausgegeben}} Emails sent to
-							<i class="fa fa-users text-muted mx-2" 
-								:title="lveLvDetail.lvevaluierung_prestudenten.map(s => s.vorname + ' ' + s.nachname).join(', ')"
+							 {{lveLvDetail.mailedPrestudentenFoundInLv.length}} Emails sent to
+							<i 
+								class="fa fa-users text-muted mx-2" 
+								:title="lveLvDetail.mailedPrestudentenFoundInLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 								data-bs-toggle="tooltip"
-								data-bs-html="true"
-								data-bs-custom-class="tooltip-left"
-							>
+								data-bs-html="true">
 							</i>
 						</span>								
 					</div>
