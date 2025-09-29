@@ -7,6 +7,7 @@ import Switcher from "./Switcher.js";
 import LveItem from "./LveItem.js";
 
 export default {
+	name: "LveStarten",
 	components: {
 		AutoComplete: primevue.autocomplete,
 		FormForm,
@@ -15,13 +16,23 @@ export default {
 		LveItem,
 	},
 	created() {
+		const lehrveranstaltung_id = this.$route.query?.lehrveranstaltung_id;
+
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
 			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
 			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
 			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
-			.then(result => this.lveLvs = result.data)
+			.then(result => {
+				this.lveLvs = result.data;
+
+				// Give Accordion time to build item DOMs first
+ 				setTimeout(() => {
+					 // Now look if $route.query LV-ID is found in lveLvs
+					this.lookupLv(lehrveranstaltung_id);
+			 	}, 10);
+			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
 	data() {
@@ -58,7 +69,8 @@ export default {
 			const lveLvId = newVal?.lvevaluierung_lehrveranstaltung_id;
 			if (typeof lveLvId === 'number') {
 				this.selLveLvId = lveLvId;
-				this.openAccordionItem(lveLvId);
+
+				this.openAccordionItem();
 			}
 			else {
 				this.selLveLvId = null;
@@ -109,6 +121,15 @@ export default {
 		}
 	},
 	methods: {
+		lookupLv(lehrveranstaltung_id)
+		{
+			if (!isNaN(lehrveranstaltung_id)) {
+				const foundLv = this.lveLvs.find(lv => lv.lehrveranstaltung_id == lehrveranstaltung_id);
+				if (foundLv) {
+					this.selLv = foundLv;  // Triggers selLv watcher
+				}
+			}
+		},
 		onChangeStudiensemester(e) {
 			this.$api
 				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
@@ -118,8 +139,8 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		openAccordionItem(selLveLvId) {
-			const collapseEl = document.getElementById('flush-collapse' + selLveLvId);
+		openAccordionItem() {
+			const collapseEl = document.getElementById('flush-collapse' + this.selLveLvId);
 			if (collapseEl) {
 				// Get Bootstrap Collapse-Instance oder erstelle neue (toggle: false = nicht automatisch umschalten)
 				const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, { toggle: false });
@@ -243,7 +264,9 @@ export default {
 					option-label="bezeichnung"
 					:suggestions="filteredLvs"
 					@complete="searchLv"
+					@item-select="openAccordionItem"
 					dropdown
+					dropdown-current
 					forceSelection
 				>
 				<template #option="slotProps">
