@@ -1,28 +1,18 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import DateHelper from "../../helpers/DateHelper";
-import Infobox from "../../widgets/Infobox";
 import ApiInitiierung from "../../api/initiierung";
 
 export default {
 	components: {
 		FormForm,
-		FormInput,
-		Infobox
+		FormInput
 	},
 	data() {
 		return {
-			infoGesamtLv:  `
-				Diese LV wird auf Gruppenbasis evaluiert.<br><br>
-				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
-				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
-			`,
 			infoStudierendenlink: `
 				Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.
 			`,
-			infoGruppenbasis: `
-				Infotext über Versand an Lektor*innen hier rein.
-			`
 		}
 	},
 	props: {
@@ -239,7 +229,7 @@ export default {
 								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
 								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									<i 
-										class="fa fa-ban fa-xl text-danger" 
+										class="fa fa-ban fa-lg text-danger" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
 										data-bs-toggle="tooltip"
 										data-bs-html="true">
@@ -249,16 +239,6 @@ export default {
 							</div>
 						</div><!--.d-flex -->
 					</div><!--.col -->
-					 <!--Infobox -->
-					<div class="col-12 order-2 mt-3">
-<!--					<div class="bg-light border rounded p-3 h-100">-->
-<!--						<Infobox -->
-<!--							collapseBreakpoint="all" -->
-<!--							:text="infoGesamtLv"-->
-<!--						>-->
-<!--						</Infobox>-->
-<!--					</div>-->
-				</div><!--.end Infobox cols -->
 				</form-form><!--.end form -->
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->
@@ -271,31 +251,36 @@ export default {
 					<div class="col-4">
 						<span><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
-					<div class="col-8 text-end small">
+					<div class="col-8 text-end">
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
-							class="text-muted me-2">
+							class="text-muted ms-2 small">
 							{{lveLvDetail.editableCheck.isDisabledSendMailInfo.join(', ')}}
 						</span>
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-							class="text-muted">
+							class="ms-2">
 							<i 
-								class="fa fa-users text-muted" 
+								class="fa fa-users" 
 								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 								data-bs-toggle="tooltip"
 								data-bs-html="true">
 							</i>
-						</span>								
+						</span>	
+						<span class="ms-2">
+							<i 
+								class="fa fa-info-circle text-primary fa-lg" 
+								:title="infoStudierendenlink"
+								data-bs-toggle="tooltip"
+								data-bs-html="true">
+							</i>
+						</span>							
 					</div>
 					<!-- Button -->
 					<div class="col-12 text-end">
 						<div class="d-grid d-md-block">
-							<button 
-								class="btn btn-success mt-3"
-								@click="onSendLinks(lveLvDetail)"
-							>
-							Studierendenlinks versenden
+							<button class="btn btn-success mt-3"@click="onSendLinks(lveLvDetail)">
+								Studierendenlinks versenden
 							</button>
 						</div>
 					</div>

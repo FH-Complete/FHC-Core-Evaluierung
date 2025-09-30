@@ -14,6 +14,20 @@ export default {
 		FormForm,
 		FormInput
 	},
+	data(){
+		return {
+			infoEvaluierungByLv:  `
+				Die gesamte LV wird evaluiert.<br><br>
+				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
+				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
+			`,
+			infoEvaluierungByLe:  `
+				Diese LV wird auf Gruppenbasis evaluiert.<br><br>
+				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
+				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
+			`
+		}
+	},
 	methods: {
 		updateLvAufgeteilt(newVal) {
 			if (!this.canSwitch) return;
@@ -67,13 +81,21 @@ export default {
 						<div class="flex-grow-1 flex-md-grow-0 ms-auto">
 							<span v-if="canSwitchInfo.length > 0">
 								<i 
-									class="fa fa-ban fa-xl text-danger" 
+									class="fa fa-ban fa-lg text-danger" 
 									:title="canSwitchInfo.join(', ')"
 									data-bs-toggle="tooltip"
 									data-bs-html="true">
 								</i>
 							</span>			
 						<!--	<span v-if="canSwitchInfo.length > 0">{{canSwitchInfo.join(', ')}}</span>-->
+							<span class="ms-2">
+								<i 
+									class="fa fa-info-circle text-primary fa-lg" 
+									:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+									data-bs-toggle="tooltip"
+									data-bs-html="true">
+								</i>
+							</span>	
 						</div>
 					</div><!--.div Switch Radio Buttons-->
 				</fieldset>
