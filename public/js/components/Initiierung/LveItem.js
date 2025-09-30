@@ -26,17 +26,14 @@ export default {
 		}
 	},
 	props: {
-		lveLvDetail: {
-			type: Object,
+		selLveLvId: {
+			type: Number,
 			required: true
 		},
-		lvevaluierungen: {
+		selLveLvDetails: {
 			type: Array,
-			default: () => []
+			required: true
 		}
-	},
-	computed: {
-		isDisabledLveItem() {return this.isDisabledLvevaluierung(this.lveLvDetail)}
 	},
 	updated(){
 		// Init Bootstrap tooltips
@@ -48,35 +45,25 @@ export default {
 	methods: {
 		saveOrUpdateLvevaluierung(lveLvDetail){
 			this.$api
-					.call(ApiInitiierung.saveOrUpdateLvevaluierung({
-						lvevaluierung_id: lveLvDetail.lvevaluierung_id,
-						lvevaluierung_lehrveranstaltung_id: lveLvDetail.lvevaluierung_lehrveranstaltung_id,
-						startzeit: lveLvDetail.startzeit,
-						endezeit: lveLvDetail.endezeit,
-						lehreinheit_id: lveLvDetail.lehreinheit_id
-					}))
-					.then(result => {
-						if (result.data?.lvevaluierung_id) {
-							lveLvDetail.lvevaluierung_id = result.data.lvevaluierung_id;
-							lveLvDetail.insertamum = DateHelper.formatDate(result.data.insertamum),
-							lveLvDetail.insertvon = result.data.insertvon
+				.call(ApiInitiierung.saveOrUpdateLvevaluierung({
+					lvevaluierung_id: lveLvDetail.lvevaluierung_id,
+					lvevaluierung_lehrveranstaltung_id: lveLvDetail.lvevaluierung_lehrveranstaltung_id,
+					startzeit: lveLvDetail.startzeit,
+					endezeit: lveLvDetail.endezeit,
+					lehreinheit_id: lveLvDetail.lehreinheit_id
+				}))
+				.then(result => {
+					if (result.data?.lvevaluierung_id) {
+						lveLvDetail.lvevaluierung_id = result.data.lvevaluierung_id;
+						lveLvDetail.insertamum = DateHelper.formatDate(result.data.insertamum);
+						lveLvDetail.insertvon = result.data.insertvon;
 
-							// Update in lvevaluierungen array (has gui effects like disable button)
-							const foundEvaluierung = this.lvevaluierungen.find(lve =>
-									lve.lvevaluierung_lehrveranstaltung_id === lveLvDetail.lvevaluierung_lehrveranstaltung_id &&
-									lve.lehreinheit_id === lveLvDetail.lehreinheit_id
-							);
+						this.$emit('update-editable-checks');
 
-							if (!foundEvaluierung) {
-								this.lvevaluierungen.push({
-									...lveLvDetail
-								});
-							}
-
-							this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'))
-						}
-					})
-					.catch(error => this.$fhcAlert.handleSystemError(error));
+						this.$fhcAlert.alertSuccess(this.$p.t('ui/gespeichert'))
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onSendLinks(lveDetail) {
 			this.$api
@@ -98,31 +85,15 @@ export default {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
-							lveDetail.mailedPrestudenten = result.data.mailedPrestudenten;
+							lveDetail.lvePrestudenten = result.data.lvePrestudenten;
 
-							this.$emit('update-mailed-prestudenten', result.data.mailedPrestudentenByLv);
+							this.$emit('update-editable-checks');
 
 							// Success info
 							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
 						}
 					})
 					.catch(error => this.$fhcAlert.handleSystemError(error));
-		},
-		isDisabledLvevaluierung(lveLvDetail) {
-			return lveLvDetail.isReadonly;
-		},
-		isDiabledLvevaluierungDates(lveLvDetail) {
-			if (!lveLvDetail?.lvevaluierung_id) return false;
-
-			// Disable if Evaluierungperiod already started
-			const today =  new Date();
-			const startzeit = new Date(lveLvDetail.startzeit);
-
-			// Only compare dates, not time
-			today.setHours(0, 0, 0, 0);
-			startzeit.setHours(0, 0, 0, 0);
-
-			return today > startzeit
 		},
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
@@ -193,17 +164,19 @@ export default {
 			}
 			return badge;
 		},
-		emailStatus(lveLvDetail) {
-			return {
-				allSent: lveLvDetail.studenten.length > 0 &&
-						(lveLvDetail.studenten.length <= lveLvDetail.mailedPrestudentenFoundInLv.length)
-			}
+		getSavedEvaluierungInfoString(lveLvDetail) {
+			const lektor = lveLvDetail.lektoren.filter(lektor => lektor.mitarbeiter_uid == lveLvDetail.insertvon);
+			const insertvon = lektor[0].vorname + ' ' + lektor[0].nachname;
+			return 'Saved on ' + DateHelper.formatDate(lveLvDetail.insertamum) + ' by ' + insertvon ?? lveLvDetail.insertvon;
 		}
 	},
 	template: `
-	<fieldset :disabled="isDisabledLveItem">
-		<div class="card mb-3">
-			<div class="card-header" :class="{'fhc-bgc-blue text-light': !isDisabledLveItem}">LV-Evaluierung</div>
+		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
+			<!-- Card title -->
+			<div class="card-header" 
+				:class="{'fhc-bgc-blue text-light': !lveLvDetail.editableCheck.isDisabledEvaluierung}">
+				LV-Evaluierung
+			</div><!--.end card-header -->
 			<!-- Gruppen -->
 			<div class="card-body pb-0">
 				<i class="fa fa-users me-2"></i>
@@ -219,56 +192,65 @@ export default {
 				<span v-html="getLektorenInfoString(lveLvDetail.lektoren)"></span>
 			</div><!--.end card body-->
 			<!-- LV-Evaluierungen -->
-			<fieldset :disabled="isDiabledLvevaluierungDates(lveLvDetail)" class="text-muted">
-				<div class="card-body mb-3">
+			<div class="card-body mb-3">
+				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung" class="text-muted">
 					<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
-						<div class="row gx-5">
-						<!-- Form Inputs + Button -->
-						<div class="col-12 order-1">
-							<div class="d-flex flex-wrap flex-md-nowrap gap-3">
-								<div class="flex-grow-1 flex-md-grow-0">
-									<form-input 
-										label="Startdatum" 
-										type="datepicker"
-										v-model="lveLvDetail.startzeit"
-										name="lveLvDetail.startzeit"
-										locale="de"
-										format="dd.MM.yyyy HH:mm"
-										model-type="yyyy-MM-dd HH:mm:ss"
-										:auto-apply="true"
-									>
-									</form-input>
-								</div>
-								<div class="flex-grow-1 flex-md-grow-0">
-									<form-input 
-										label="Endedatum" 
-										type="datepicker"
-										v-model="lveLvDetail.endezeit"
-										name="lveLvDetail.endezeit"
-										locale="de"
-										format="dd.MM.yyyy HH:mm"
-										model-type="yyyy-MM-dd HH:mm:ss"
-										:minutes-increment="5"
-										:auto-apply="true"
-										:start-time="{hours: 0, minutes: 0}"
-									>
-									</form-input>
-								</div>
-								<div class="flex-grow-1 flex-md-grow-0 align-self-end">
-									<button
-										type="submit"  
-										class="btn btn-primary w-100 w-md-auto"
-									>
-										Speichern
-									</button>
-								</div>
-								<div class="flex-grow-1 flex-md-grow-0 ms-auto text-muted" v-if="lveLvDetail.insertamum" >
-									Saved on {{lveLvDetail.insertamum}} by {{lveLvDetail.insertvon}}
-								</div>
-							</div><!--.d-flex -->
-						</div><!--.col -->
-						 <!--Infobox -->
-						<div class="col-12 order-2 mt-3">
+					<div class="row gx-5">
+					<!-- Form Inputs + Button -->
+					<div class="col-12 order-1">
+						<div class="d-flex flex-wrap flex-md-nowrap gap-3">
+							<div class="flex-grow-1 flex-md-grow-0">
+								<form-input 
+									label="Startdatum" 
+									type="datepicker"
+									v-model="lveLvDetail.startzeit"
+									name="lveLvDetail.startzeit"
+									locale="de"
+									format="dd.MM.yyyy HH:mm"
+									model-type="yyyy-MM-dd HH:mm:ss"
+									:auto-apply="true"
+								>
+								</form-input>
+							</div>
+							<div class="flex-grow-1 flex-md-grow-0">
+								<form-input 
+									label="Endedatum" 
+									type="datepicker"
+									v-model="lveLvDetail.endezeit"
+									name="lveLvDetail.endezeit"
+									locale="de"
+									format="dd.MM.yyyy HH:mm"
+									model-type="yyyy-MM-dd HH:mm:ss"
+									:minutes-increment="5"
+									:auto-apply="true"
+									:start-time="{hours: 0, minutes: 0}"
+								>
+								</form-input>
+							</div>
+							<div class="flex-grow-1 flex-md-grow-0 align-self-end">
+								<button
+									type="submit"  
+									class="btn btn-primary w-100 w-md-auto"
+								>
+									Speichern
+								</button>
+							</div>
+							<div class="flex-grow-1 flex-md-grow-0 ms-auto text-muted">	
+								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
+								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
+									<i 
+										class="fa fa-ban fa-xl text-danger" 
+										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+										data-bs-toggle="tooltip"
+										data-bs-html="true">
+									</i>
+								</span>
+								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
+							</div>
+						</div><!--.d-flex -->
+					</div><!--.col -->
+					 <!--Infobox -->
+					<div class="col-12 order-2 mt-3">
 <!--					<div class="bg-light border rounded p-3 h-100">-->
 <!--						<Infobox -->
 <!--							collapseBreakpoint="all" -->
@@ -276,46 +258,31 @@ export default {
 <!--						>-->
 <!--						</Infobox>-->
 <!--					</div>-->
-					</div><!--.end Infobox cols -->
-					</form-form><!--.end form -->
-				</div><!--.end card-body -->
-			</fieldset>
+				</div><!--.end Infobox cols -->
+				</form-form><!--.end form -->
+				</fieldset><!--.fieldset LV-Evaluierungen-->
+			</div><!--.end card-body -->
 			<!-- Codes versenden -->
-			<div class="card-footer bg-white mb-3" v-if="lveLvDetail.lvevaluierung_id">
+			<div class="card-footer bg-white mb-3" 
+				v-if="lveLvDetail.lvevaluierung_id || lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
+			>
+				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
 					<div class="col-4">
 						<span><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
-					<div class="col-8 text-end">
-						<!-- Cannot send: Save dates first  -->
+					<div class="col-8 text-end small">
 						<span 
-							v-if="!lveLvDetail.lvevaluierung_id && lveLvDetail.studenten.length > lveLvDetail.mailedPrestudentenFoundInLv.length" 
+							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
 							class="text-muted me-2">
-							<i class="fa fa-triangle-exclamation text-warning"></i>
-							Cannot send - Save dates first
+							{{lveLvDetail.editableCheck.isDisabledSendMailInfo.join(', ')}}
 						</span>
-						<!-- Ready to send -->
 						<span 
-							v-if="lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt && !lveLvDetail.mailedPrestudentenFoundInLv.length > 0" 
+							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
 							class="text-muted">
-							<i class="fa fa-check text-success"></i>
-							Ready to send
-						</span>
-						<!-- Codes generated for -->
-						<span 
-							v-if="lveLvDetail.codes_gemailt"
-							class="text-muted me-2 d-none d-md-block">
-							{{lveLvDetail.codes_ausgegeben}} Codes generated - 
-						</span>	
-						<!-- Emails sent to -->
-						<span 
-							v-if="lveLvDetail.mailedPrestudentenFoundInLv.length > 0"
-							class="text-muted">
-							<i class="fa fa-envelope-circle-check text-success"></i>
-							 {{lveLvDetail.mailedPrestudentenFoundInLv.length}} Emails sent to
 							<i 
-								class="fa fa-users text-muted mx-2" 
-								:title="lveLvDetail.mailedPrestudentenFoundInLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
+								class="fa fa-users text-muted" 
+								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 								data-bs-toggle="tooltip"
 								data-bs-html="true">
 							</i>
@@ -325,7 +292,6 @@ export default {
 					<div class="col-12 text-end">
 						<div class="d-grid d-md-block">
 							<button 
-								:disabled="!lveLvDetail.lvevaluierung_id && !lveLvDetail.codes_gemailt || emailStatus(lveLvDetail).allSent" 
 								class="btn btn-success mt-3"
 								@click="onSendLinks(lveLvDetail)"
 							>
@@ -334,8 +300,8 @@ export default {
 						</div>
 					</div>
 				</div><!--.end row -->
+				</fieldset>
 			</div><!--.end card-footer -->
 		</div><!--.end card-->
-	</fieldset>
 	`
 }

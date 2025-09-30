@@ -44,10 +44,9 @@ export default {
 			selLveLvDetails: [],		// Structured Lv (plus Les, if evaluation is done by LEs) data merged with lvevaluations
 			groupedByLv: [],			// Basis data for selLveLvDetails, grouped for Gesamt-LV Evaluierung
 			groupedByLe: [],			// Basis data for selLveLvDetails, grouped for Gruppenbasis Evaluierung
-			lvevaluierungen: [],		// All Lvevaluierungen of selected Lve-Lv-ID
 			lvLeitungen: null,
 			canSwitch: null,
-			mailedPrestudentenByLv: [],
+			canSwitchInfo: [],
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
 			selLv: null					// Autocomplete selected LV
 		}
@@ -60,7 +59,6 @@ export default {
 			if (this.selLveLvId && this.selLv) {
 				return this.lveLvs.filter(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
 			}
-
 			return this.lveLvs;
 		}
 	},
@@ -83,10 +81,9 @@ export default {
 				.call(ApiInitiierung.getLveLvDataGroups(newId))
 				.then(result => {
 					let data = result.data;
-					// Overall data
 					this.canSwitch = data.canSwitch;
+					this.canSwitchInfo = data.canSwitchInfo;
 					this.lvLeitungen = data.lvLeitungen;
-					this.mailedPrestudentenByLv = data.mailedPrestudentenByLv;
 					this.groupedByLv = data.groupedByLv;
 					this.groupedByLe = data.groupedByLe;
 
@@ -95,22 +92,15 @@ export default {
 						? this.groupedByLe
 						: this.groupedByLv;
 				})
-				.then(() => this.fetchAndSetLvevaluierungen(newId))
-				.then(() => {
-					this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails);
-					this.setMailedPrestudentenFoundInLv();
-				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		'selLveLv.lv_aufgeteilt'(newVal) {
 			if (!this.selLveLvId) return;
 
+			// Switch, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
 			this.selLveLvDetails = newVal === true
 				? this.groupedByLe
 				: this.groupedByLv;
-
-			this.selLveLvDetails = this.mergeLvevaluierungenIntoDetails(this.selLveLvDetails);
-			this.setMailedPrestudentenFoundInLv();
 		}
 	},
 	mounted() {
@@ -121,8 +111,7 @@ export default {
 		}
 	},
 	methods: {
-		lookupLv(lehrveranstaltung_id)
-		{
+		lookupLv(lehrveranstaltung_id) {
 			if (!isNaN(lehrveranstaltung_id)) {
 				const foundLv = this.lveLvs.find(lv => lv.lehrveranstaltung_id == lehrveranstaltung_id);
 				if (foundLv) {
@@ -155,90 +144,26 @@ export default {
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
 		},
-		fetchAndSetLvevaluierungen(lvevaluierung_lehrveranstaltung_id) {
-			return this.$api
-				.call(ApiInitiierung.getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id))
+		updateEditableChecks(){
+			this.$api
+				.call(ApiInitiierung.getLveLvDataGroups(this.selLveLvId))
 				.then(result => {
-					this.lvevaluierungen = result.data;
-				});
-		},
-		mergeLvevaluierungenIntoDetails(selLveLvDetails) {
-			// Helper: merges start/ende/dauer from lvevaluierungen into detail list
-			const isAufgeteilt = this.selLveLv?.lv_aufgeteilt;
-			let startzeit = new Date();
-			let endezeit = new Date();
-			endezeit.setDate(startzeit.getDate() + 3);
+					let data = result.data;
+					this.canSwitch = data.canSwitch;
+					this.canSwitchInfo = data.canSwitchInfo;
+					this.lvLeitungen = data.lvLeitungen;
+					this.groupedByLv = data.groupedByLv;
+					this.groupedByLe = data.groupedByLe;
 
-			startzeit = DateHelper.formatToSqlTimestamp(startzeit);
-			endezeit = DateHelper.formatToSqlTimestamp(endezeit);
-
-			selLveLvDetails.forEach(detail => {
-				const evalMatch = this.findMatchingEvaluierung(detail.lehreinheit_id, isAufgeteilt);
-
-				if (detail.lvevaluierung_id == null) {
-					detail.lvevaluierung_id = evalMatch?.lvevaluierung_id ?? '';
-				}
-				if (detail.startzeit == null) {
-					detail.startzeit = evalMatch?.startzeit ?? startzeit;
-				}
-				if (detail.endezeit == null) {
-					detail.endezeit = evalMatch?.endezeit ?? endezeit;
-				}
-				if (detail.dauer == null) {
-					detail.dauer = evalMatch?.dauer ?? '';
-				}
-				if (detail.codes_gemailt == null) {
-					detail.codes_gemailt = evalMatch?.codes_gemailt ?? false;
-				}
-				if (detail.codes_ausgegeben == null) {
-					detail.codes_ausgegeben = evalMatch?.codes_ausgegeben ?? 0;
-				}
-				if (detail.insertvon == null) {
-					detail.insertvon = evalMatch?.insertvon ?? '';
-				}
-				if (detail.insertamum == null) {
-					detail.insertamum = evalMatch?.insertamum ? DateHelper.formatDate(evalMatch.insertamum) : '';
-				}
-
-				// Merge also mailed Studenten
-				if (detail.mailedPrestudenten == null) {
-					detail.mailedPrestudenten = evalMatch?.mailedPrestudenten ?? [];
-				}
-			});
-
-			return selLveLvDetails;
-		},
-		findMatchingEvaluierung(lehreinheit_id, isAufgeteilt) {
-			// Helper: finds the correct evaluierung for a given Lehreinheit
-			if (isAufgeteilt) {
-				return this.lvevaluierungen.find(ev =>
-					ev.lehreinheit_id === lehreinheit_id &&
-					ev.lvevaluierung_lehrveranstaltung_id === this.selLveLvId
-				);
-			}
-			else {
-				return this.lvevaluierungen.find(ev =>
-					ev.lvevaluierung_lehrveranstaltung_id === this.selLveLvId
-				);
-			}
+					// Lvevaluierung data, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
+					this.selLveLvDetails = this.selLveLv.lv_aufgeteilt
+						? this.groupedByLe
+						: this.groupedByLv;
+				})
 		},
 		getLvInfoString(lv){
 			//return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
 			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz ;
-		},
-		setMailedPrestudentenFoundInLv() {
-			this.selLveLvDetails.forEach(detail => {
-				detail.mailedPrestudentenFoundInLv = this.mailedPrestudentenByLv.filter(lvelvpst =>
-						detail.studenten.some(sent => sent.prestudent_id === lvelvpst.prestudent_id)
-				);
-			});
-		},
-		updateMailedPrestudentenFoundInLv(newMailedPrestudentenByLv) {
-			// Parent-Property updaten
-			this.mailedPrestudentenByLv = newMailedPrestudentenByLv;
-
-			// Jetzt alle Details neu durchgehen
-			this.setMailedPrestudentenFoundInLv();
 		},
 		searchLv(event) {
 			const query = event.query.toLowerCase();
@@ -337,21 +262,18 @@ export default {
 						<Switcher 
   							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
   							:can-switch="canSwitch"
-  							:lve-lv="selLveLv"
-							:lvevaluierungen="lvevaluierungen"
+  							:can-switch-info="canSwitchInfo"
+  							:sel-lve-lv="selLveLv"
 							:lv-leitungen="lvLeitungen"
-							:sel-Lve-Lv-Data-Grouped-By-Le-Unique="groupedByLe"
 						>
 						</Switcher>
 						<!-- LV-Evaluierungen -->
-						<template 
-							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
-							v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
-							<Lve-Item
-								:lve-lv-detail="lveLvDetail"
-								:lvevaluierungen="lvevaluierungen"
-								@update-mailed-prestudenten="updateMailedPrestudentenFoundInLv"
-							>
+						<template v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId">
+							<Lve-Item 
+								:sel-lve-lv-id="lveLv.selLveLvId"
+								:sel-lve-lv-details="selLveLvDetails"
+								@update-editable-checks="updateEditableChecks"
+							>								
 							</Lve-Item>
 						</template>
 					</div><!--.end accordion-collapse -->

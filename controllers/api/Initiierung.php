@@ -16,6 +16,7 @@ class Initiierung extends FHCAPI_Controller
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
 				'saveOrUpdateLvevaluierung' => 'extension/lvevaluierung_init:rw',
 				'generateCodesAndSendLinksToStudents' => 'extension/lvevaluierung_init:rw',
+				'updateEvalStatusAndChecks' => 'extension/lvevaluierung_init:rw',
 			)
 		);
 
@@ -85,17 +86,20 @@ class Initiierung extends FHCAPI_Controller
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
+		$canSwitch = true;
+		$canSwitchInfo = [];
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		// Get Lvs with Lehreinheiten and Gruppen
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		// Get all Evaluierungen of that LV
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		// Base Data (raw rows with Lektoren + Gruppen info)
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group Lektoren and Gruppen by Lehreinheit
-		$groupedByLe = $this->initiierunglib->groupByLeAndAddData($data);
+		$groupedByLe = $this->initiierunglib->groupByLeAndAddData($data, $lvevaluierung_lehrveranstaltung_id);
 
 		// Grouped data for Evaluierung by Gesamt-Lv
 		$groupedByLv = $this->initiierunglib->groupByLvAndAddData(
@@ -108,13 +112,29 @@ class Initiierung extends FHCAPI_Controller
 		{
 			// Filter only Lehreinheiten with unique Lector
 			$groupedByLe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLe);
+
+			if (count($groupedByLe) === 0)
+			{
+				$canSwitch = false;
+				$canSwitchInfo []= 'Gruppenbasis nur verfügbar, wenn Gruppen eindeutig Lehrenden zugeordnet sind';
+			}
 		}
 
-		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-		$lveLvPrestudentenByLv = hasData($result) ? getData($result) : [];
+		// Merge Evaluierungen in groupedByLe / groupedByLv
+		$groupedByLe = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLe, $lves, $lveLv->lv_aufgeteilt);
+		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $lveLv->lv_aufgeteilt);
+
+		// Add Evaluierung Editable Checks
+		$groupedByLv = $this->addEvaluierungEditableChecks($groupedByLv);
+		$groupedByLe = $this->addEvaluierungEditableChecks($groupedByLe);
 
 		$lvLeitungen = null;
-		$canSwitch = true;
+
+		if (count($lves) > 0)
+		{
+			$canSwitch = false;
+			$canSwitchInfo []= 'At least one Evaluierung in LV started';
+		}
 
 		// If LV-Leitung is required
 		if ($lvLeitungRequired)
@@ -123,23 +143,21 @@ class Initiierung extends FHCAPI_Controller
 			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 			$lvLeitungen = hasData($result) ? getData($result) : [];
-			if (empty($lvLeitungen))
-			{
-				$canSwitch = false;
-			}
 
 			// If user is not LV-Leitung
 			if (!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')))
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
+				$canSwitchInfo = ['Editable by LV-Leitung'];
 
 				// User cannot start Lvevaluierung
-				array_values($groupedByLv)[0]->isReadonly = true;
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Editable by LV-Leitung'];
 
 				// User should only see own Lehreinheiten
 				$groupedByLe = array_filter($groupedByLe, function ($item) {
-					return empty($item->isReadonly) || $item->isReadonly === false;
+					return empty($item->editableCheck['isDisabledEvaluierung']) || $item->editableCheck['isDisabledEvaluierung'] === false;
 				});
 			}
 		}
@@ -147,9 +165,9 @@ class Initiierung extends FHCAPI_Controller
 		$this->terminateWithSuccess([
 			'lvLeitungen' => $lvLeitungen,
 			'canSwitch' => $canSwitch,
-			'groupedByLv' => array_values($groupedByLv),
-			'groupedByLe' => array_values($groupedByLe),
-			'mailedPrestudentenByLv' => $lveLvPrestudentenByLv
+			'canSwitchInfo' => $canSwitchInfo,
+			'groupedByLv' => $groupedByLv,
+			'groupedByLe' => $groupedByLe
 		]);
 	}
 
@@ -192,7 +210,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				$result = $this->LvevaluierungPrestudentModel->getByLve($item->lvevaluierung_id);
 			}
-			$item->mailedPrestudenten = hasData($result) ? getData($result) : [];
+			$item->lvePrestudenten = hasData($result) ? getData($result) : [];
 		}
 
 		$this->terminateWithSuccess($data);
@@ -391,14 +409,14 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 		}
 
-		$lveLvPrestudenten = getData($result);
+		$lvePrestudentenByLv = getData($result);
 
 		$result = success(
 			[
 				'codes_gemailt' => $codes_ausgegeben > 0,
 				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
-				'mailedPrestudenten' => $lvePrestudenten,
-				'mailedPrestudentenByLv' => $lveLvPrestudenten,
+				'lvePrestudenten' => $lvePrestudenten,
+				'lvePrestudentenByLv' => $lvePrestudentenByLv,
 				'failedMailStudenten' => $failedMailStudenten
 			]
 		);
@@ -407,7 +425,6 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->terminateWithSuccess($data);
 	}
-
 	// Checks and Validations
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
@@ -450,6 +467,99 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithValidationErrors($this->form_validation->error_array());
 		}
 
+	}
+
+	/**
+	 * Add evaluation status and button checks to grouped items (LV oder LE)
+	 *
+	 * @param array $grouped  array of grouped items (LV or LE)
+	 * @param array $lvePrestudentenByLv  all students who got mails in this LV (any evaluation)
+	 * @param array $lvePrestudenten      students who got mails in THIS evaluation
+	 * @param bool $codes_gemailt
+	 * @param int|null $lvevaluierung_id
+	 * @return array
+	 */
+	public function addEvaluierungEditableChecks($grouped)
+	{
+		foreach ($grouped as &$item) {
+			$lvevaluierung_id = isset($item->lvevaluierung_id) ? $item->lvevaluierung_id : null;
+			$studenten = isset($item->studenten) ? $item->studenten : [];
+			$sentByAnyEvaluierungOfLv = isset($item->sentByAnyEvaluierungOfLv) ? $item->sentByAnyEvaluierungOfLv : [];
+
+			$isDisabledEvaluierungInfo = [];
+			$isDisabledEvaluierung = false;
+
+			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
+			if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) < count($studenten))
+			{
+				$isDisabledSendMailInfo[]= 'Cannot send. Save dates first';	// todo besser zu isDisabledEvaluierungInfo?
+			}
+
+			// Case: All students were already mailed
+			if (count($sentByAnyEvaluierungOfLv) >= count($studenten))
+			{
+				$isDisabledEvaluierung = true;
+			}
+
+			// Case: LV aufgeteilt: nur Lektor darf bearbeiten
+			if ($item->lv_aufgeteilt)
+			{
+				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
+					$isDisabledEvaluierung = true;
+					$isDisabledEvaluierungInfo = ['Editable by Lector of LV'];
+				}
+			}
+
+			// Case: Evaluierung bereits gestartet: Update nicht mehr möglich
+			if ($lvevaluierung_id && !empty($item->startzeit)) {
+				$today = new DateTime('today');
+				$startzeit = new DateTime(date('Y-m-d', strtotime($item->startzeit)));
+
+				if ($today > $startzeit) {
+					$isDisabledEvaluierung = true;
+					$isDisabledEvaluierungInfo = ['Cannot change. Evaluierungperiod already started'];
+				}
+			}
+
+			// Case: Evaluierung was not started, but all students were mailed by other Evaluierung
+			//if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
+			if (count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
+			{
+				$isDisabledEvaluierung = true;
+				$isDisabledEvaluierungInfo []= 'Students were mailed by other Evaluierung of this LV';
+			}
+
+
+			// Status für Mailversand
+			$isDisabledSendMailInfo = [];
+			if ($lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
+			{
+				$isDisabledSendMailInfo[]= 'Ready to send';
+			}
+
+//			if ($lvevaluierung_id && $item->codes_gemailt)
+//			{
+//				$isDisabledSendMailInfo[]= $item->codes_ausgegeben. ' Codes generated';
+//			}
+
+			if (count($sentByAnyEvaluierungOfLv))
+			{
+				$isDisabledSendMailInfo[]= count($sentByAnyEvaluierungOfLv). ' Emails sent to';
+			}
+
+			// Button disable logic
+			$isDisabledSendMail = (!$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+
+			// Add infos
+			$item->editableCheck = [
+				'isDisabledEvaluierung' => $isDisabledEvaluierung,
+				'isDisabledEvaluierungInfo' => $isDisabledEvaluierungInfo,
+				'isDisabledSendMail' => $isDisabledSendMail,
+				'isDisabledSendMailInfo' => $isDisabledSendMailInfo
+			];
+		}
+
+		return $grouped;
 	}
 
 	/**
@@ -496,7 +606,7 @@ class Initiierung extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$nowDate   = (new DateTime())->format('Y-m-d');
 		$startDate = (new DateTime($lve->startzeit))->format('Y-m-d');
-		if ($nowDate >= $startDate)
+		if ($nowDate > $startDate)
 		{
 			$this->terminateWithError('Cannot update after LV-Evaluierung has already startet.');
 		}
@@ -548,6 +658,27 @@ class Initiierung extends FHCAPI_Controller
 		}
 
 		return getData($result)[0];
+	}
+
+	/**
+	 * Get Lvevaluierung by Lvevaluierung Lehrveranstaltung ID.
+	 * Terminate with error on fail.
+	 *
+	 * @param $lvevaluierung_id
+	 * @return mixed
+	 */
+	public function getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id)
+	{
+		$result = $this->LvevaluierungModel->loadWhere([
+			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
+		]);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		}
+
+		return hasData($result) ? getData($result) : [];
 	}
 
 	/**

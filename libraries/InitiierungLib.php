@@ -91,12 +91,14 @@ class InitiierungLib
 	 * @param $data
 	 * @return array
 	 */
-	public function groupByLeAndAddData($data)
+	public function groupByLeAndAddData($data, $lvevaluierung_lehrveranstaltung_id)
 	{
 		$grouped = [];
 
 		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
 
 		foreach ($data as $item)
 		{
@@ -138,11 +140,18 @@ class InitiierungLib
 			$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
 			$g->stundenplan = hasData($result) ? getData($result) : [];
 
-			// Add flag if logged-in user should only read
-			$g->isReadonly = !in_array(getAuthUid(), array_column($g->lektoren, 'mitarbeiter_uid'));
+			// Studierende dieser LE/LV, die schon in dieser oder anderen Evaluierungen angemailt wurden
+			$g->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($g) {
+				foreach ($g->studenten as $s) {
+					if ($s->prestudent_id === $pre->prestudent_id) {
+						return $pre;
+					}
+				}
+				return false;
+			}));
 		}
 
-		return $grouped;
+		return array_values($grouped);
 	}
 
 	/**
@@ -212,6 +221,20 @@ class InitiierungLib
 					$grouped[$lehrveranstaltung_id]->studenten[] = $student;
 				}
 			}
+
+			// Merge sentByAnyEvaluierungOfLv
+			foreach ($item->sentByAnyEvaluierungOfLv as $pre) {
+				$exists = false;
+				foreach ($grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv as $existing) {
+					if ($existing->prestudent_id === $pre->prestudent_id) {
+						$exists = true;
+						break;
+					}
+				}
+				if (!$exists) {
+					$grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv[] = $pre;
+				}
+			}
 		}
 
 		// Override Stundenplantermine for LV
@@ -219,10 +242,7 @@ class InitiierungLib
 		$result = $this->_ci->StundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
 		$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
 
-		// Add flag if logged-in user should only read
-		$grouped[$lehrveranstaltung_id]->isReadonly = false;
-
-		return $grouped;
+		return array_values($grouped);
 	}
 
 	/**
@@ -239,6 +259,59 @@ class InitiierungLib
 
 		if ($this->hasHierarchicalDuplicateGruppen($data)) {
 			return [];
+		}
+
+		return $data;
+	}
+
+	public function mergeEvaluierungenIntoData($data, $evaluierungen, $isAufgeteilt)
+	{
+		foreach ($data as &$item) {
+			$evalMatch = null;
+
+			if ($isAufgeteilt) {
+				foreach ($evaluierungen as $ev) {
+					if ($ev->lehreinheit_id == $item->lehreinheit_id) {
+						$evalMatch = $ev;
+						break;
+					}
+				}
+			}
+			else
+			{
+				foreach ($evaluierungen as $ev) {
+					if ($ev->lvevaluierung_lehrveranstaltung_id == $item->lvevaluierung_lehrveranstaltung_id) {
+						$evalMatch = $ev;
+						break;
+					}
+				}
+			}
+
+			if ($evalMatch) {
+				$item->lvevaluierung_id = $evalMatch->lvevaluierung_id;
+				$item->startzeit        = $evalMatch->startzeit;
+				$item->endezeit         = $evalMatch->endezeit;
+				$item->dauer            = $evalMatch->dauer;
+				$item->codes_gemailt    = $evalMatch->codes_gemailt;
+				$item->codes_ausgegeben = $evalMatch->codes_ausgegeben;
+				$item->insertvon        = $evalMatch->insertvon;
+				$item->insertamum       = $evalMatch->insertamum;
+			}
+			else
+			{
+				// Fallback Defaults
+				$now = new DateTime();
+				$ende = (clone $now)->modify('+3 days');
+
+				$item->lvevaluierung_id = null;
+				$item->startzeit        = $now->format('Y-m-d H:i:s');
+				$item->endezeit         = $ende->format('Y-m-d H:i:s');
+				$item->dauer            = null;
+				$item->codes_gemailt    = false;
+				$item->codes_ausgegeben = 0;
+				$item->insertvon        = '';
+				$item->insertamum       = '';
+			}
 		}
 
 		return $data;
