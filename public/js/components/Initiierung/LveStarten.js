@@ -143,7 +143,7 @@ export default {
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
 		},
-		updateEditableChecks(){
+		updateEditableChecks(isAllSent){
 			this.$api
 				.call(ApiInitiierung.getLveLvDataGroups(this.selLveLvId))
 				.then(result => {
@@ -159,6 +159,9 @@ export default {
 						? this.groupedByLe
 						: this.groupedByLv;
 				})
+
+			// Update icon displaying if all students received mail
+			this.selLveLv.isAllSent = isAllSent;
 		},
 		getLvInfoString(lv){
 			//return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
@@ -232,21 +235,28 @@ export default {
 							aria-expanded="false" 
 							aria-controls="flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<span class="gap-2">
+							<span>
 								<i
-									class="fa-solid text-dark" 
+									class="fa-solid text-dark me-2" 
 									:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
 									:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
 									data-bs-toggle="tooltip"
 								>								
-								</i> |
+								</i>
 								<i 
 									class="fa-solid me-2"
-									:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
+									:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
 									:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
 									data-bs-toggle="tooltip"
 								>
 								</i>
+								<i 
+									class="fa-solid me-2"
+									:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
+									:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
+									data-bs-toggle="tooltip"
+								>
+								</i> 
 							  	{{ getLvInfoString(lveLv)}}
 							</span>
 						</button>

@@ -52,6 +52,13 @@ class Initiierung extends FHCAPI_Controller
 
 		$data = $this->getDataOrTerminateWithError($result);
 
+		// Add info if all students of LV received Mail with codes
+		foreach ($data as &$item)
+		{
+			$isAllSent = $this->isAllSentLvEvaluierung($item->lvevaluierung_lehrveranstaltung_id);
+			$item->isAllSent = $isAllSent;
+		}
+
 		$this->terminateWithSuccess($data);
 	}
 	/**
@@ -411,13 +418,16 @@ class Initiierung extends FHCAPI_Controller
 
 		$lvePrestudentenByLv = getData($result);
 
+		$isAllSent = $this->isAllSentLvEvaluierung($lveLv->lvevaluierung_lehrveranstaltung_id);
+
 		$result = success(
 			[
 				'codes_gemailt' => $codes_ausgegeben > 0,
 				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
 				'lvePrestudenten' => $lvePrestudenten,
 				'lvePrestudentenByLv' => $lvePrestudentenByLv,
-				'failedMailStudenten' => $failedMailStudenten
+				'failedMailStudenten' => $failedMailStudenten,
+				'isAllSent' => $isAllSent
 			]
 		);
 
@@ -679,6 +689,42 @@ class Initiierung extends FHCAPI_Controller
 		}
 
 		return hasData($result) ? getData($result) : [];
+	}
+
+	public function getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id)
+	{
+		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		}
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+
+	/**
+	 * Checks if all students of LV got mail with codes.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return bool True if all students got mail.
+	 */
+	private function isAllSentLvEvaluierung($lvevaluierung_lehrveranstaltung_id)
+	{
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		$lvStudents = $this->getStudentsForLv($lveLv);
+		$lvStudentsPrestudentIds = array_column($lvStudents, 'prestudent_id');
+
+		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLvPrestudentenIds = array_column($lveLvPrestudenten, 'prestudent_id');
+
+		// Get mailed students by strongly checking against prestudent_ids
+		// (Es könnten Studierende dazukommen und/oder ausfallen -> deshalb ist ein reines count auf beide nicht genug)
+		$intersect = array_intersect($lvStudentsPrestudentIds, $lveLvPrestudentenIds);
+
+		return count($intersect) >= count($lvStudents);	// True if all students got mail
 	}
 
 	/**

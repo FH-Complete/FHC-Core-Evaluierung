@@ -77,7 +77,7 @@ export default {
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
 							lveDetail.lvePrestudenten = result.data.lvePrestudenten;
 
-							this.$emit('update-editable-checks');
+							this.$emit('update-editable-checks', result.data.isAllSent);
 
 							// Success info
 							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
