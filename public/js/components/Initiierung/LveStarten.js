@@ -1,6 +1,5 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
-import DateHelper from "../../helpers/DateHelper";
 import ApiFhc from "../../api/fhc.js";
 import ApiInitiierung from "../../api/initiierung.js";
 import Switcher from "./Switcher.js";
