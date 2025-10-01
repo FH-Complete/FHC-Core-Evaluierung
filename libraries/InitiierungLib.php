@@ -371,8 +371,15 @@ class InitiierungLib
 	/**
 	 * Generates code and sends mail to single student: transaction safe
 	 */
-	public function generateAndSendCodeForStudent($lvevaluierung_id, $student)
+	public function generateAndSendCodeForStudent($lve, $student, $lehrveranstaltung_id)
 	{
+		$lvevaluierung_id = $lve->lvevaluierung_id;
+
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addSelect('bezeichnung');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$lvBezeichnung = hasData($result) ? getData($result)[0]->bezeichnung : '';
+
 		$this->_ci->db->trans_begin();
 
 		$code = $this->_ci->LvevaluierungCodeModel->getUniqueCode();
@@ -381,6 +388,9 @@ class InitiierungLib
 		$mailData = [
 			'vorname'         => $student->vorname,
 			'nachname'        => $student->nachname,
+			'startzeit'        => (new DateTime($lve->startzeit))->format('d.m.Y, H:i'),
+			'endezeit'         => (new DateTime($lve->endezeit))->format('d.m.Y, H:i'),
+			'lvbezeichnung' => $lvBezeichnung,
 			'evaluierunglink' => $url,
 		];
 
@@ -388,7 +398,7 @@ class InitiierungLib
 			'Lvevaluierung_Mail_Codeversand',
 			$mailData,
 			$student->uid . '@' . DOMAIN,
-			'Evaluieren Sie jetzt Ihre Lehrveranstaltung'
+			'Evaluieren Sie jetzt Ihre LV '. $lvBezeichnung
 		);
 
 		if ($mailSent)

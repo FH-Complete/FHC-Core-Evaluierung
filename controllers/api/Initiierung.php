@@ -372,7 +372,7 @@ class Initiierung extends FHCAPI_Controller
 
 		foreach ($unmailedStudenten as $student)
 		{
-			if ($this->initiierunglib->generateAndSendCodeForStudent($lvevaluierung_id, $student))
+			if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $student, $lveLv->lehrveranstaltung_id))
 			{
 				$codes_ausgegeben++;
 			}
