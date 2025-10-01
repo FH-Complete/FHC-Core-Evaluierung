@@ -243,6 +243,8 @@ export default {
 									data-bs-toggle="tooltip"
 								>								
 								</i>
+							</span>
+							<span>
 								<i 
 									class="fa-solid me-2"
 									:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
@@ -250,13 +252,17 @@ export default {
 									data-bs-toggle="tooltip"
 								>
 								</i>
+							</span>
+							<span>
 								<i 
 									class="fa-solid me-2"
 									:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
 									:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
 									data-bs-toggle="tooltip"
 								>
-								</i> 
+								</i>
+							</span>
+							<span> 
 							  	{{ getLvInfoString(lveLv)}}
 							</span>
 						</button>
