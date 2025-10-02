@@ -240,7 +240,7 @@ export default {
 							data-bs-toggle="collapse" 
 							:data-bs-target="'#flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							aria-expanded="false" 
-							aria-controls="flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
+							:aria-controls="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
 							<!-- left icons -->
 							<div class="flex-grow-1">
@@ -250,6 +250,7 @@ export default {
 										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
 										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
 										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
 									>								
 									</i>
 								</span>
@@ -259,6 +260,7 @@ export default {
 										:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
 										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
 										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
 									>
 									</i>
 								</span>
@@ -268,6 +270,7 @@ export default {
 										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
 										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
 										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
 									>
 									</i>
 								</span>
@@ -277,13 +280,11 @@ export default {
 							</div>
 							<!-- right side icon -->
 							<div>
-								<span class="badge bg-secondary me-2">
-									<i 
-									class="fa-regular fa-comment me-1"
-										:title="'Submitted Evaluations/Students of LV'"
+								<span class="badge rounded-pill border border-secondary text-secondary me-2"
+									:title="'Submitted / Total Students'"
 										data-bs-toggle="tooltip"
-									>
-									</i>
+								>
+									<i class="fa-regular fa-comment me-1"></i>
 									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
 								</span>
 							</div>

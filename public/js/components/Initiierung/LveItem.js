@@ -229,10 +229,11 @@ export default {
 								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
 								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									<i 
-										class="fa fa-ban fa-lg text-danger" 
+										class="fa fa-ban fa-lg text-muted" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
 										data-bs-toggle="tooltip"
-										data-bs-html="true">
+										data-bs-html="true"
+										data-bs-custom-class="tooltip-left">
 									</i>
 								</span>
 								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
@@ -264,7 +265,8 @@ export default {
 								class="fa fa-users" 
 								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 								data-bs-toggle="tooltip"
-								data-bs-html="true">
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
 							</i>
 						</span>	
 						<span class="ms-2">
@@ -272,7 +274,8 @@ export default {
 								class="fa fa-info-circle text-primary fa-lg" 
 								:title="infoStudierendenlink"
 								data-bs-toggle="tooltip"
-								data-bs-html="true">
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
 							</i>
 						</span>							
 					</div>

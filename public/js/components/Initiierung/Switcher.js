@@ -84,7 +84,8 @@ export default {
 									class="fa fa-ban fa-lg text-muted" 
 									:title="canSwitchInfo.join(', ')"
 									data-bs-toggle="tooltip"
-									data-bs-html="true">
+									data-bs-html="true"
+									data-bs-custom-class="tooltip-left">
 								</i>
 							</span>			
 						<!--	<span v-if="canSwitchInfo.length > 0">{{canSwitchInfo.join(', ')}}</span>-->
@@ -93,7 +94,8 @@ export default {
 									class="fa fa-info-circle text-primary fa-lg" 
 									:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
 									data-bs-toggle="tooltip"
-									data-bs-html="true">
+									data-bs-html="true"
+									data-bs-custom-class="tooltip-left">
 								</i>
 							</span>	
 						</div>
