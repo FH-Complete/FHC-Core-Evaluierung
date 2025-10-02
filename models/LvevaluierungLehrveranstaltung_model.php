@@ -268,4 +268,71 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		return $this->execQuery($qry, $params);
 	}
+
+	/**
+	 *  Insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
+	 *  Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function insertLehrveranstaltungenFor($studiensemester_kurzbz)
+	{
+		$qry = "
+			SELECT
+				DISTINCT 
+			    	lv.lehrveranstaltung_id, 
+					le.studiensemester_kurzbz,
+					TRUE AS verpflichtend,
+					FALSE AS lv_aufgeteilt
+			FROM
+				lehre.tbl_lehrveranstaltung lv
+				join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
+			WHERE
+				-- filter by Studiensemester
+				le.studiensemester_kurzbz = ?
+			  	-- filter only to be evaluated
+				AND lv.evaluierung = TRUE
+			  	-- filter only not already inserted
+				AND lv.lehrveranstaltung_id NOT IN (
+				  SELECT
+					lehrveranstaltung_id
+				  FROM
+					extension.tbl_lvevaluierung_lehrveranstaltung
+				  WHERE
+					studiensemester_kurzbz = ?
+				)
+		  	ORDER BY
+				lehrveranstaltung_id
+		";
+		$result = $this->execQuery($qry, [$studiensemester_kurzbz, $studiensemester_kurzbz]);
+		if (isError($result)) return (getError($result));
+
+		$insertBatch = hasData($result) ? getData($result) : [];
+
+		if (empty($insertBatch))
+		{
+			return success('No new Lehrveranstaltungen to add for this Studiensemester');
+		}
+
+		return $this->insertBatch($insertBatch);
+	}
+
+	public function insertBatch($batch)
+	{
+		// Check class properties
+		if (is_null($this->dbTable)) return error('The given database table name is not valid', EXIT_MODEL);
+
+		// Insert data
+		$insert = $this->db->insert_batch($this->dbTable, $batch);
+
+		if ($insert)
+		{
+			return success('Lehrveranstaltungen inserted successfully');
+		}
+		else
+		{
+			return error($this->db->error(), EXIT_DATABASE);
+		}
+	}
 }
