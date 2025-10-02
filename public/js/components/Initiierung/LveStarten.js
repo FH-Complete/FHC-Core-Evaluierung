@@ -172,7 +172,10 @@ export default {
 		},
 		getLvInfoString(lv){
 			//return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
-			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz ;
+			return (lv.kurzbzlang ? lv.kurzbzlang : '') +
+					(lv.semester ? ' - ' + lv.semester + ':' : '') +
+					(lv.bezeichnung ? ' ' + lv.bezeichnung : '') +
+					(lv.orgform_kurzbz ? ' - ' + lv.orgform_kurzbz : '');
 		},
 		searchLv(event) {
 			const query = event.query.toLowerCase();
