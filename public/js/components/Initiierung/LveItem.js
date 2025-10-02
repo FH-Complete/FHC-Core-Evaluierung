@@ -229,7 +229,7 @@ export default {
 								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
 								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									<i 
-										class="fa fa-ban fa-lg text-danger" 
+										class="fa fa-ban fa-lg text-muted" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
 										data-bs-toggle="tooltip"
 										data-bs-html="true">
@@ -261,7 +261,7 @@ export default {
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
 							class="ms-2">
 							<i 
-								class="fa fa-users" 
+								class="fa fa-users text-muted" 
 								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
 								data-bs-toggle="tooltip"
 								data-bs-html="true">

@@ -52,4 +52,31 @@ class LvevaluierungCode_model extends DB_Model
 
 		return hasData($result) ? getData($result)[0] : false;
 	}
+
+	/**
+	 * Get submitted Evaluierungen (=Student submitted Evaluierung).
+	 * If Endezeit is set, the Evaluierung was submitted.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed
+	 */
+	public function getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id)
+	{
+		$qry = "
+			SELECT 
+			    *
+			FROM 
+			    extension.tbl_lvevaluierung_code lvec
+			WHERE 
+			     lvec.lvevaluierung_id IN (
+					SELECT lvevaluierung_id
+					FROM extension.tbl_lvevaluierung
+					JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lvevaluierung_lehrveranstaltung_id)
+					WHERE lvelv.lvevaluierung_lehrveranstaltung_id = ?
+				) 
+				AND lvec.endezeit IS NOT NULL	
+		";
+
+		return $this->execQuery($qry, [$lvevaluierung_lehrveranstaltung_id]);
+	}
 }

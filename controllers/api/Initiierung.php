@@ -52,11 +52,20 @@ class Initiierung extends FHCAPI_Controller
 
 		$data = $this->getDataOrTerminateWithError($result);
 
-		// Add info if all students of LV received Mail with codes
+		// Add info
 		foreach ($data as &$item)
 		{
+			// if all students of LV received Mail with codes
 			$isAllSent = $this->isAllSentLvEvaluierung($item->lvevaluierung_lehrveranstaltung_id);
 			$item->isAllSent = $isAllSent;
+
+			// count students of LV
+			$students = $this->getStudentsForLv($item);
+			$item->countStudents = count($students);
+
+			// count submitted Evaluierungen of LV
+			$submittedEvaluierungen = $this->getSubmittedEvaluierungen($item->lvevaluierung_lehrveranstaltung_id);
+			$item->countSubmitted = count($submittedEvaluierungen);
 		}
 
 		$this->terminateWithSuccess($data);
@@ -742,6 +751,24 @@ class Initiierung extends FHCAPI_Controller
 			$lveLv->lehrveranstaltung_id,
 			true	// true = only active students
 		);
+
+		if(isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+
+	/**
+	 * Get submitted Evaluierungen of given LV. (= Student submitted Evaluierung)
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return array
+	 */
+	private function getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id)
+	{
+		$result = $this->LvevaluierungCodeModel->getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id);
 
 		if(isError($result))
 		{

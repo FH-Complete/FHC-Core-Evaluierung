@@ -228,43 +228,58 @@ export default {
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
 						<button 
-							class="accordion-button collapsed" 
+							class="accordion-button collapsed d-flex" 
 							type="button" 
 							data-bs-toggle="collapse" 
 							:data-bs-target="'#flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							aria-expanded="false" 
 							aria-controls="flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<span>
-								<i
-									class="fa-solid text-dark me-2" 
-									:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-									:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
-									data-bs-toggle="tooltip"
-								>								
-								</i>
-							</span>
-							<span>
-								<i 
-									class="fa-solid me-2"
-									:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
-									:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
-									data-bs-toggle="tooltip"
-								>
-								</i>
-							</span>
-							<span>
-								<i 
-									class="fa-solid me-2"
-									:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
-									:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
-									data-bs-toggle="tooltip"
-								>
-								</i>
-							</span>
-							<span> 
-							  	{{ getLvInfoString(lveLv)}}
-							</span>
+							<!-- left icons -->
+							<div class="flex-grow-1">
+								<span>
+									<i
+										class="fa-solid text-dark me-2" 
+										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
+										data-bs-toggle="tooltip"
+									>								
+									</i>
+								</span>
+								<span>
+									<i 
+										class="fa-solid me-2"
+										:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
+										data-bs-toggle="tooltip"
+									>
+									</i>
+								</span>
+								<span>
+									<i 
+										class="fa-solid me-2"
+										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
+										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
+										data-bs-toggle="tooltip"
+									>
+									</i>
+								</span>
+								<span> 
+									{{ getLvInfoString(lveLv)}}
+								</span>
+							</div>
+							<!-- right side icon -->
+							<div>
+								<span class="badge bg-secondary me-2">
+									<i 
+									class="fa-regular fa-comment me-1"
+										:title="'Submitted Evaluations/Students of LV'"
+										data-bs-toggle="tooltip"
+									>
+									</i>
+									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
+								</span>
+							</div>
 						</button>
 					</h2>
 					<div 
