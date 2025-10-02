@@ -81,7 +81,7 @@ export default {
 						<div class="flex-grow-1 flex-md-grow-0 ms-auto">
 							<span v-if="canSwitchInfo.length > 0">
 								<i 
-									class="fa fa-ban fa-lg text-danger" 
+									class="fa fa-ban fa-lg text-muted" 
 									:title="canSwitchInfo.join(', ')"
 									data-bs-toggle="tooltip"
 									data-bs-html="true">
