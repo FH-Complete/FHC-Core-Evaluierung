@@ -18,9 +18,32 @@ $includesArray = array(
 	)
 );
 
-$this->load->view('templates/FHC-Header', $includesArray);
+if (defined("CIS4")) {
+	$this->load->view(
+		'templates/CISVUE-Header',
+		$includesArray
+	);
+} else {
+	$this->load->view(
+		'templates/FHC-Header',
+		$includesArray
+	);
+}
 ?>
 
 <div id="lve-initiierung-main"></div>
 
-<?php $this->load->view('templates/FHC-Footer', $includesArray); ?>
+<?php
+if (defined("CIS4")) {
+	$this->load->view(
+		'templates/CISVUE-Footer',
+		$includesArray
+	);
+} else {
+	$this->load->view(
+		'templates/FHC-Footer',
+		$includesArray
+	);
+}
+?>
+
