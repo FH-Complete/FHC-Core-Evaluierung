@@ -155,9 +155,11 @@ export default {
 			return badge;
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
-			const lektor = lveLvDetail.lektoren.filter(lektor => lektor.mitarbeiter_uid == lveLvDetail.insertvon);
-			const insertvon = lektor[0].vorname + ' ' + lektor[0].nachname;
-			return 'Saved on ' + DateHelper.formatDate(lveLvDetail.insertamum) + ' by ' + insertvon ?? lveLvDetail.insertvon;
+			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
+			return `
+				Saved on ${DateHelper.formatDate(lveLvDetail.insertamum)} 
+				by ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
+			`;
 		}
 	},
 	template: `
