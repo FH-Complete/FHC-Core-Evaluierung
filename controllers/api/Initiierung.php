@@ -9,8 +9,9 @@ class Initiierung extends FHCAPI_Controller
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
 				'getLveLvs' => 'extension/lvevaluierung_init:r',
+				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
+				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
 				'getLveLvsWithLes' => 'extension/lvevaluierung_init:r',
-				'getLveLvDataGroups' => 'extension/lvevaluierung_init:r',
 				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
 				'getLvEvaluierungenByID' => 'extension/lvevaluierung_init:r',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
@@ -88,71 +89,118 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->terminateWithSuccess($data);
 	}
-
-	/**
-	 * Get grouped Data for Evaluierung by Gesamt-LV and for Evaluierung by Gruppenbasis.
-	 * Returns LV data of given LVE-LV-ID, including its associated Gruppen and Lektoren and Studierenden.
-	 *
-	 * @return:
-	 * lveLvDataGroupedByLv: returns data grouped by Lehrveranstaltung
-	 * lveLvDataGroupedByLeUnique: returns data grouped by Lehreinheiten, but ONLY if each LE within the LV has UNIQUE
-	 * lector+Gruppenzusammensetzung (purpose is: Students MUST be unique for each lector)
-	 */
-	public function getLveLvDataGroups()
+	public function getDataForEvaluierungByLe()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
 		$canSwitch = true;
 		$canSwitchInfo = [];
 
+		// Get base data
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
-
-		// Get all Evaluierungen of that LV
-		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-
-		// Base Data (raw rows with Lektoren + Gruppen info)
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
 
-		// Group Lektoren and Gruppen by Lehreinheit
+		// Group data by LE and add data
 		$groupedByLe = $this->initiierunglib->groupByLeAndAddData($data, $lvevaluierung_lehrveranstaltung_id);
-
-		// Grouped data for Evaluierung by Gesamt-Lv
-		$groupedByLv = $this->initiierunglib->groupByLvAndAddData(
-			$groupedByLe,
-			$lveLv->lehrveranstaltung_id,
-			$lveLv->studiensemester_kurzbz
-		);
 
 		if ($this->config->item('filterLehreinheitenByUniqueLectorAndGruppen'))
 		{
-			// Filter only Lehreinheiten with unique Lector
-			$groupedByLe = $this->initiierunglib->filterWhereUniqueLectorAndGruppe($groupedByLe);
-
-			if (count($groupedByLe) === 0)
+			// Keep grouped Lehreinheiten only if LEs have unique Lector and unique Gruppen combinations
+			if (!$this->initiierunglib->hasUniqueLectorPerLehreinheit($data) ||
+				$this->initiierunglib->hasHierarchicalDuplicateGruppen($data))
 			{
+				$groupedByLe = [];
 				$canSwitch = false;
 				$canSwitchInfo []= 'Gruppenbasis nur verfügbar, wenn Gruppen eindeutig Lehrenden zugeordnet sind';
 			}
 		}
 
-		// Merge Evaluierungen in groupedByLe / groupedByLv
+		// Get and merge all Evaluierungen of that LV
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$groupedByLe = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLe, $lves, $lveLv->lv_aufgeteilt);
-		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $lveLv->lv_aufgeteilt);
-
-		// Add Evaluierung Editable Checks
-		$groupedByLv = $this->addEvaluierungEditableChecks($groupedByLv);
-		$groupedByLe = $this->addEvaluierungEditableChecks($groupedByLe);
-
-		$lvLeitungen = null;
-
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
 			$canSwitchInfo []= 'At least one Evaluierung in LV started';
 		}
 
-		// If LV-Leitung is required
+		// Add Editable Checks
+		$groupedByLe = $this->addEvaluierungEditableChecks($groupedByLe);
+
+		$lvLeitungen = null;
+		if ($lvLeitungRequired)
+		{
+			// Get LV-Leitungen
+			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+			$lvLeitungen = hasData($result) ? getData($result) : [];
+
+			// If user is not LV-Leitung
+			if (!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')))
+			{
+				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
+				$canSwitch = false;
+				$canSwitchInfo = ['Editable by LV-Leitung'];
+
+				// User should only see own Lehreinheiten
+				$groupedByLe = array_filter($groupedByLe, function ($item) {
+					return empty($item->editableCheck['isDisabledEvaluierung']) || $item->editableCheck['isDisabledEvaluierung'] === false;
+				});
+			}
+		}
+
+		$this->terminateWithSuccess([
+			'lvLeitungen' => $lvLeitungen,
+			'canSwitch' => $canSwitch,
+			'canSwitchInfo' => $canSwitchInfo,
+			'groupedByLe' => $groupedByLe
+		]);
+	}
+	public function getDataForEvaluierungByLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
+		$canSwitch = true;
+		$canSwitchInfo = [];
+
+		// Get base data
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Group data by LV and add data
+		$groupedByLv = $this->initiierunglib->groupByLvAndAddData(
+			$data,
+			$lvevaluierung_lehrveranstaltung_id,
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
+		);
+
+		if ($this->config->item('filterLehreinheitenByUniqueLectorAndGruppen'))
+		{
+			if (!$this->initiierunglib->hasUniqueLectorPerLehreinheit($data) ||
+				$this->initiierunglib->hasHierarchicalDuplicateGruppen($data)
+			)
+			{
+				$canSwitch = false;
+				$canSwitchInfo []= 'Gruppenbasis nur verfügbar, wenn Gruppen eindeutig Lehrenden zugeordnet sind';
+			}
+		}
+
+		// Get and merge all Evaluierungen of that LV
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $lveLv->lv_aufgeteilt);
+		if (count($lves) > 0)
+		{
+			$canSwitch = false;
+			$canSwitchInfo []= 'At least one Evaluierung in LV started';
+		}
+
+		// Add Editable Checks
+		$groupedByLv = $this->addEvaluierungEditableChecks($groupedByLv);
+
+		$lvLeitungen = null;
 		if ($lvLeitungRequired)
 		{
 			// Get LV-Leitungen
@@ -181,8 +229,7 @@ class Initiierung extends FHCAPI_Controller
 			'lvLeitungen' => $lvLeitungen,
 			'canSwitch' => $canSwitch,
 			'canSwitchInfo' => $canSwitchInfo,
-			'groupedByLv' => $groupedByLv,
-			'groupedByLe' => $groupedByLe
+			'groupedByLv' => $groupedByLv
 		]);
 	}
 
