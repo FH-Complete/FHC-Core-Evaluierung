@@ -171,10 +171,9 @@ class Initiierung extends FHCAPI_Controller
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Editable by LV-Leitung'];
 
-				// User should only see own Lehreinheiten
-				$groupedByLe = array_filter($groupedByLe, function ($item) {
-					return empty($item->editableCheck['isDisabledEvaluierung']) || $item->editableCheck['isDisabledEvaluierung'] === false;
-				});
+				// User cannot send mails for Lvevaluierung
+				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
+				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Sending by LV-Leitung'];
 			}
 		}
 
