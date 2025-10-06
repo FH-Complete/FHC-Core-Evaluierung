@@ -457,30 +457,12 @@ class Initiierung extends FHCAPI_Controller
 			);
 		}
 
-		$result = $this->LvevaluierungPrestudentModel->getByLve($lvevaluierung_id);
-		if (isError($result))
-		{
-			$this->terminateWithError(getError($result));
-		}
-
-		$lvePrestudenten = getData($result);
-
-		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
-		if (isError($result))
-		{
-			$this->terminateWithError(getError($result));
-		}
-
-		$lvePrestudentenByLv = getData($result);
-
 		$isAllSent = $this->isAllSentLvEvaluierung($lveLv->lvevaluierung_lehrveranstaltung_id);
 
 		$result = success(
 			[
 				'codes_gemailt' => $codes_ausgegeben > 0,
 				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
-				'lvePrestudenten' => $lvePrestudenten,
-				'lvePrestudentenByLv' => $lvePrestudentenByLv,
 				'failedMailStudenten' => $failedMailStudenten,
 				'isAllSent' => $isAllSent
 			]
@@ -538,8 +520,8 @@ class Initiierung extends FHCAPI_Controller
 	 * Add evaluation status and button checks to grouped items (LV oder LE)
 	 *
 	 * @param array $grouped  array of grouped items (LV or LE)
-	 * @param array $lvePrestudentenByLv  all students who got mails in this LV (any evaluation)
-	 * @param array $lvePrestudenten      students who got mails in THIS evaluation
+//	 * @param array $lvePrestudentenByLv  all students who got mails in this LV (any evaluation)
+//	 * @param array $lvePrestudenten      students who got mails in THIS evaluation
 	 * @param bool $codes_gemailt
 	 * @param int|null $lvevaluierung_id
 	 * @return array

@@ -75,7 +75,6 @@ export default {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
-							lveDetail.lvePrestudenten = result.data.lvePrestudenten;
 
 							this.$emit('update-editable-checks', result.data.isAllSent);
 
