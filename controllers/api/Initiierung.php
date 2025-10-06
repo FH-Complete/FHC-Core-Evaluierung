@@ -609,7 +609,7 @@ class Initiierung extends FHCAPI_Controller
 
 			if (count($sentByAnyEvaluierungOfLv))
 			{
-				$isDisabledSendMailInfo[]= count($sentByAnyEvaluierungOfLv). ' Emails sent to';
+				$isDisabledSendMailInfo[]= count($sentByAnyEvaluierungOfLv). ' Emails sent';
 			}
 
 			// Button disable logic

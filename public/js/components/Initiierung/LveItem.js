@@ -262,14 +262,15 @@ export default {
 						</span>
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-							class="ms-2">
-							<i 
-								class="fa fa-users" 
-								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
-								data-bs-toggle="tooltip"
-								data-bs-html="true"
-								data-bs-custom-class="tooltip-left">
-							</i>
+							class="ms-2 badge rounded-pill border border-secondary text-secondary"
+							:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join('<br>')"
+							data-bs-toggle="tooltip"
+							data-bs-html="true"
+							data-bs-custom-class="tooltip-left"
+						>
+							<i class="fa fa-users"></i>
+							Mail erhalten
+							<i class="fa-solid fa-eye ms-1"></i> 
 						</span>	
 						<span class="ms-2">
 							<i 
