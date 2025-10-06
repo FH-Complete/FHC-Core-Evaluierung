@@ -41,67 +41,64 @@ export default {
 		}
 	},
 	template: `
-	<div class="switcher mt-3">
-		<!-- Radio Buttons -->
-		<div class="card mb-3">
-			<div class="card-body">
-				<!-- LV-Leitungen -->
-				<div class="mb-3 pb-3 border-bottom" v-if="this.lvLeitungen">
-					<i class="fa fa-star me-2"></i>
-					<span class="d-none d-md-inline me-2">LV-Leitung:</span>
-					<span v-html="getLektorenInfoString(lvLeitungen)"></span>
-				</div>
-				<!-- Switch Radio Buttons -->	
-				<fieldset :disabled="!canSwitch">
-					<div class="d-flex flex-wrap justify-content-md-between align-items-center">
-						<div class="flex-grow-1 flex-md-grow-0">
-							<div class="form-check form-check-inline ps-0">
-								<form-input
-									label="Gesamt-LV evaluieren"
-									class="form-check-input"
-									type="radio"
-									:value="false"
-									v-model="selLveLv.lv_aufgeteilt"
-									 @update:modelValue="updateLvAufgeteilt"
-								>
-								</form-input>
-							</div>
-							<div class="form-check form-check-inline ps-0">
-								<form-input
-									label="LV auf Gruppenbasis evaluieren"
-									class="form-check-input"
-									type="radio"
-									:value="true"
-									v-model="selLveLv.lv_aufgeteilt"
-									@update:modelValue="updateLvAufgeteilt"
-								>
-								</form-input>
-							</div>
+	<div class="switcher mt-4">
+		<div class="mb-3">
+			<!-- LV-Leitungen -->
+			<div class="mb-3 pb-3 border-bottom" v-if="this.lvLeitungen">
+				<i class="fa fa-star me-2"></i>
+				<span class="d-none d-md-inline me-2">LV-Leitung:</span>
+				<span v-html="getLektorenInfoString(lvLeitungen)"></span>
+			</div>
+			<!-- Switch Radio Buttons -->	
+			<fieldset :disabled="!canSwitch">
+				<div class="d-flex flex-wrap justify-content-md-between align-items-center">
+					<div class="flex-grow-1 flex-md-grow-0">
+						<div class="form-check form-check-inline ps-0">
+							<form-input
+								label="Gesamt-LV evaluieren"
+								class="form-check-input"
+								type="radio"
+								:value="false"
+								v-model="selLveLv.lv_aufgeteilt"
+								 @update:modelValue="updateLvAufgeteilt"
+							>
+							</form-input>
 						</div>
-						<div class="flex-md-grow-0 ms-auto">
-							<span v-if="canSwitchInfo.length > 0">
-								<i 
-									class="fa fa-ban fa-lg text-muted" 
-									:title="canSwitchInfo.join(', ')"
-									data-bs-toggle="tooltip"
-									data-bs-html="true"
-									data-bs-custom-class="tooltip-left">
-								</i>
-							</span>			
-						<!--	<span v-if="canSwitchInfo.length > 0">{{canSwitchInfo.join(', ')}}</span>-->
-							<span class="ms-2">
-								<i 
-									class="fa fa-info-circle text-primary fa-lg" 
-									:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-									data-bs-toggle="tooltip"
-									data-bs-html="true"
-									data-bs-custom-class="tooltip-left">
-								</i>
-							</span>	
+						<div class="form-check form-check-inline ps-0">
+							<form-input
+								label="LV auf Gruppenbasis evaluieren"
+								class="form-check-input"
+								type="radio"
+								:value="true"
+								v-model="selLveLv.lv_aufgeteilt"
+								@update:modelValue="updateLvAufgeteilt"
+							>
+							</form-input>
 						</div>
-					</div><!--.div Switch Radio Buttons-->
-				</fieldset>
-			</div><!--.card-body -->
+					</div>
+					<div class="flex-md-grow-0 ms-auto">
+						<span v-if="canSwitchInfo.length > 0">
+							<i 
+								class="fa fa-ban fa-lg text-muted" 
+								:title="canSwitchInfo.join(', ')"
+								data-bs-toggle="tooltip"
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
+							</i>
+						</span>			
+					<!--	<span v-if="canSwitchInfo.length > 0">{{canSwitchInfo.join(', ')}}</span>-->
+						<span class="ms-2">
+							<i 
+								class="fa fa-info-circle text-primary fa-lg" 
+								:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+								data-bs-toggle="tooltip"
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
+							</i>
+						</span>	
+					</div>
+				</div><!--.div Switch Radio Buttons-->
+			</fieldset>
 		</div><!--.card -->
 	</div>
 	`
