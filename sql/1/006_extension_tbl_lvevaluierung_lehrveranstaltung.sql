@@ -24,5 +24,6 @@ ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
     ALTER COLUMN lvevaluierung_lehrveranstaltung_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id');
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_lehrveranstaltung TO vilesci;
-GRANT SELECT ON TABLE extension.tbl_lvevaluierung_lehrveranstaltung TO web;
-GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id TO vilesci;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_lehrveranstaltung TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id TO vilesci;
+GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id TO web;
