@@ -180,7 +180,7 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1 class="mb-5 h2">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evalueriungskriterien festlegen und Codes an Studierende mailen</small></h1>
+		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evalueriungskriterien festlegen und Codes an Studierende mailen</small></h1>
 		
 		<!-- Dropdowns -->
 		<div class="row">
@@ -252,7 +252,7 @@ export default {
 								<span>
 									<i 
 										class="fa-solid me-2"
-										:class="lveLv.verpflichtend ? 'fa-asterisk text-dark' : 'fa-asterisk text-light'"
+										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
 										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
 										data-bs-toggle="tooltip"
 										data-bs-custom-class="tooltip-left"

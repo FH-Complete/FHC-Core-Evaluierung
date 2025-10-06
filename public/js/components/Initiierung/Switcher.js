@@ -78,7 +78,7 @@ export default {
 								</form-input>
 							</div>
 						</div>
-						<div class="flex-grow-1 flex-md-grow-0 ms-auto">
+						<div class="flex-md-grow-0 ms-auto">
 							<span v-if="canSwitchInfo.length > 0">
 								<i 
 									class="fa fa-ban fa-lg text-muted" 

@@ -227,9 +227,9 @@ export default {
 									Speichern
 								</button>
 							</div>
-							<div class="flex-grow-1 flex-md-grow-0 ms-auto text-muted">	
-								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
-								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
+							<div class="ms-md-auto text-muted">	
+								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>
+								<div v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									<i 
 										class="fa fa-ban fa-lg text-muted" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
@@ -237,7 +237,7 @@ export default {
 										data-bs-html="true"
 										data-bs-custom-class="tooltip-left">
 									</i>
-								</span>
+								</div>
 								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
 							</div>
 						</div><!--.d-flex -->
@@ -251,10 +251,11 @@ export default {
 			>
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
-					<div class="col-4">
-						<span><i class="fa fa-envelope me-2"></i>Email Status</span>
+					<div class="col-5 col-md-4">
+						<span class="d-md-none"><i class="fa fa-envelope me-2"></i>Email</span>
+						<span class="d-none d-md-inline"><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
-					<div class="col-8 text-end">
+					<div class="col-7 col-md-8 text-end">
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
 							class="text-muted ms-2 small">
