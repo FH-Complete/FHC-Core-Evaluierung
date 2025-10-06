@@ -67,6 +67,7 @@ class EvaluierungLib
 		$result = $this->_ci->LvevaluierungCodeModel->load($lvevaluierung_code_id);
 		$startzeit = hasData($result) ? getData($result)[0]->startzeit : null;
 		$dauer = hasData($result) ? getData($result)[0]->dauer : null;
+		if (is_null($dauer)) return false;
 
 		// Extra time to be added for request retry handling
 		$bufferMinutes = 10;
@@ -302,6 +303,16 @@ class EvaluierungLib
 	 */
 	public function checkIfEvaluierungTimeExceeded($lvevaluierung_code_id)
 	{
+		// Get LV Evaluierung Dauer
+		$this->_ci->LvevaluierungModel->addJoin('extension.tbl_lvevaluierung_code', 'lvevaluierung_id');
+		$result = $this->_ci->LvevaluierungModel->loadWhere(['lvevaluierung_code_id' => $lvevaluierung_code_id]);
+		$lve = hasData($result) ? getData($result)[0] : null;
+
+		if (is_null($lve->dauer))
+		{
+			return success(true);	// No need to check if Evaluierung Time has exceeded
+		}
+
 		// Calculate maximale Endezeit (Startzeit + Dauer + Buffer for request retry handling)
 		$maxEndezeit = $this->getMaxEndezeit($lvevaluierung_code_id);
 		$now = (new DateTime())->format("Y-m-d H:i:s");

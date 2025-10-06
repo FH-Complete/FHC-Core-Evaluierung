@@ -77,7 +77,7 @@ export default {
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
 							lveDetail.lvePrestudenten = result.data.lvePrestudenten;
 
-							this.$emit('update-editable-checks');
+							this.$emit('update-editable-checks', result.data.isAllSent);
 
 							// Success info
 							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
@@ -155,9 +155,11 @@ export default {
 			return badge;
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
-			const lektor = lveLvDetail.lektoren.filter(lektor => lektor.mitarbeiter_uid == lveLvDetail.insertvon);
-			const insertvon = lektor[0].vorname + ' ' + lektor[0].nachname;
-			return 'Saved on ' + DateHelper.formatDate(lveLvDetail.insertamum) + ' by ' + insertvon ?? lveLvDetail.insertvon;
+			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
+			return `
+				Saved on ${DateHelper.formatDate(lveLvDetail.insertamum)} 
+				by ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
+			`;
 		}
 	},
 	template: `
@@ -225,16 +227,17 @@ export default {
 									Speichern
 								</button>
 							</div>
-							<div class="flex-grow-1 flex-md-grow-0 ms-auto text-muted">	
-								<span v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
-								<span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
+							<div class="ms-md-auto text-muted">	
+								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>
+								<div v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									<i 
-										class="fa fa-ban fa-lg text-danger" 
+										class="fa fa-ban fa-lg text-muted" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
 										data-bs-toggle="tooltip"
-										data-bs-html="true">
+										data-bs-html="true"
+										data-bs-custom-class="tooltip-left">
 									</i>
-								</span>
+								</div>
 								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
 							</div>
 						</div><!--.d-flex -->
@@ -248,10 +251,11 @@ export default {
 			>
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
-					<div class="col-4">
-						<span><i class="fa fa-envelope me-2"></i>Email Status</span>
+					<div class="col-5 col-md-4">
+						<span class="d-md-none"><i class="fa fa-envelope me-2"></i>Email</span>
+						<span class="d-none d-md-inline"><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
-					<div class="col-8 text-end">
+					<div class="col-7 col-md-8 text-end">
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
 							class="text-muted ms-2 small">
@@ -259,20 +263,23 @@ export default {
 						</span>
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-							class="ms-2">
-							<i 
-								class="fa fa-users" 
-								:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join(', ')"
-								data-bs-toggle="tooltip"
-								data-bs-html="true">
-							</i>
+							class="ms-2 badge rounded-pill border border-secondary text-secondary"
+							:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join('<br>')"
+							data-bs-toggle="tooltip"
+							data-bs-html="true"
+							data-bs-custom-class="tooltip-left"
+						>
+							<i class="fa fa-users"></i>
+							Mail erhalten
+							<i class="fa-solid fa-eye ms-1"></i> 
 						</span>	
 						<span class="ms-2">
 							<i 
 								class="fa fa-info-circle text-primary fa-lg" 
 								:title="infoStudierendenlink"
 								data-bs-toggle="tooltip"
-								data-bs-html="true">
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
 							</i>
 						</span>							
 					</div>

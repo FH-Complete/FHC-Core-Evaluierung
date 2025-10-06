@@ -26,59 +26,46 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		$qry = '
 			-- Alle LVs eines bestimmten Studiensemesters, wo eingeloggter user Lektor ist
-			-- mit Anzeige ob LV-Leitung ist oder Lektor
-			WITH lvs_lvLevel AS (
+			WITH lvs AS (
 				SELECT
-				  *
-				FROM (
-					SELECT
-						DISTINCT ON (lehrveranstaltung_id) 
-						lv.lehrveranstaltung_id,
-						lv.bezeichnung,
-						lv.orgform_kurzbz,
-						lv.semester,
-						lv.studiengang_kz,
-						lema.mitarbeiter_uid,
-						lema.lehrfunktion_kurzbz,
-						stg.kurzbzlang
-					FROM
-						lehre.tbl_lehrveranstaltung lv
-						join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
-						join lehre.tbl_lehreinheitmitarbeiter lema using (lehreinheit_id)
-						join public.tbl_studiengang stg USING (studiengang_kz)
-					WHERE
-						-- filter studiensemester
-						le.studiensemester_kurzbz = ?
-						-- filter lvs, wo eingeloggter user unterrichtet (und behalte auch eventuelle andere lektoren dieser LV)
-						AND EXISTS (
-							SELECT
-								1
-							FROM
-								lehre.tbl_lehreinheit le2
-							JOIN lehre.tbl_lehreinheitmitarbeiter lema2 USING (lehreinheit_id)
-							WHERE
-								le2.lehrveranstaltung_id = lv.lehrveranstaltung_id
-								AND lema2.mitarbeiter_uid = ?
-					)
-					ORDER BY
-						lv.lehrveranstaltung_id,
-						-- order by uid, damit distinct die row mit dem eingeloggten user behält
-						(lema.mitarbeiter_uid = ?) DESC
-					) as subQuery
+					DISTINCT ON (lv.lehrveranstaltung_id) 
+					lv.lehrveranstaltung_id,
+					lv.bezeichnung,
+					lv.orgform_kurzbz,
+					lv.semester,
+					lv.studiengang_kz,
+					lema.mitarbeiter_uid,
+					lema.lehrfunktion_kurzbz,
+					lema.lehreinheit_id,
+					stg.kurzbzlang,
+					le.studiensemester_kurzbz
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN lehre.tbl_lehreinheit le USING (lehrveranstaltung_id)
+					JOIN lehre.tbl_lehreinheitmitarbeiter lema USING (lehreinheit_id)
+					JOIN public.tbl_studiengang stg USING (studiengang_kz)
+				WHERE
+					le.studiensemester_kurzbz = ?
+					AND lema.mitarbeiter_uid = ?
+				ORDER BY
+					lv.lehrveranstaltung_id,
+					(lema.mitarbeiter_uid = ?) DESC
 			)
 	
 			-- Final join
 			SELECT
 				*
 			FROM		  	
-				extension.tbl_lvevaluierung_lehrveranstaltung	
-				JOIN lvs_lvLevel USING (lehrveranstaltung_id)
+				lvs	
+				JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv 
+					ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
+					AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
 			WHERE TRUE
 		';
 
 		if (!is_null($lehrveranstaltung_id))
 		{
-			$qry .= ' AND lehrveranstaltung_id = ?';
+			$qry .= ' AND lvelv.lehrveranstaltung_id = ?';
 			$params[]= $lehrveranstaltung_id;
 		}
 
@@ -267,5 +254,72 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			';
 
 		return $this->execQuery($qry, $params);
+	}
+
+	/**
+	 *  Insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
+	 *  Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function insertLehrveranstaltungenFor($studiensemester_kurzbz)
+	{
+		$qry = "
+			SELECT
+				DISTINCT 
+			    	lv.lehrveranstaltung_id, 
+					le.studiensemester_kurzbz,
+					TRUE AS verpflichtend,
+					FALSE AS lv_aufgeteilt
+			FROM
+				lehre.tbl_lehrveranstaltung lv
+				join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
+			WHERE
+				-- filter by Studiensemester
+				le.studiensemester_kurzbz = ?
+			  	-- filter only to be evaluated
+				AND lv.evaluierung = TRUE
+			  	-- filter only not already inserted
+				AND lv.lehrveranstaltung_id NOT IN (
+				  SELECT
+					lehrveranstaltung_id
+				  FROM
+					extension.tbl_lvevaluierung_lehrveranstaltung
+				  WHERE
+					studiensemester_kurzbz = ?
+				)
+		  	ORDER BY
+				lehrveranstaltung_id
+		";
+		$result = $this->execQuery($qry, [$studiensemester_kurzbz, $studiensemester_kurzbz]);
+		if (isError($result)) return (getError($result));
+
+		$insertBatch = hasData($result) ? getData($result) : [];
+
+		if (empty($insertBatch))
+		{
+			return success('No new Lehrveranstaltungen to add for this Studiensemester');
+		}
+
+		return $this->insertBatch($insertBatch);
+	}
+
+	public function insertBatch($batch)
+	{
+		// Check class properties
+		if (is_null($this->dbTable)) return error('The given database table name is not valid', EXIT_MODEL);
+
+		// Insert data
+		$insert = $this->db->insert_batch($this->dbTable, $batch);
+
+		if ($insert)
+		{
+			return success('Lehrveranstaltungen inserted successfully');
+		}
+		else
+		{
+			return error($this->db->error(), EXIT_DATABASE);
+		}
 	}
 }

@@ -76,30 +76,16 @@ export default {
 		selLveLvId(newId) {
 			if (!newId) return;
 
-			this.$api
-				.call(ApiInitiierung.getLveLvDataGroups(newId))
-				.then(result => {
-					let data = result.data;
-					this.canSwitch = data.canSwitch;
-					this.canSwitchInfo = data.canSwitchInfo;
-					this.lvLeitungen = data.lvLeitungen;
-					this.groupedByLv = data.groupedByLv;
-					this.groupedByLe = data.groupedByLe;
-
-					// Lvevaluierung data, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
-					this.selLveLvDetails = this.selLveLv.lv_aufgeteilt
-						? this.groupedByLe
-						: this.groupedByLv;
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt)
+				.then(data => this.assignEvaluierungData(data, this.selLveLv.lv_aufgeteilt))
+				.catch(error => this.$fhcAlert.handleSystemError(error))
 		},
 		'selLveLv.lv_aufgeteilt'(newVal) {
 			if (!this.selLveLvId) return;
 
-			// Switch, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
-			this.selLveLvDetails = newVal === true
-				? this.groupedByLe
-				: this.groupedByLv;
+			this.loadEvaluierungData(this.selLveLvId, newVal)
+				.then(data => this.assignEvaluierungData(data, newVal))
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
 	mounted() {
@@ -109,7 +95,32 @@ export default {
 			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
 		}
 	},
+	updated(){
+		// Init Bootstrap tooltips
+		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+		let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+			return new bootstrap.Tooltip(tooltipTriggerEl)
+		})
+	},
 	methods: {
+		loadEvaluierungData(lveLvId, lv_aufgeteilt) {
+			if (!lveLvId) return Promise.reject("No LveLvID provided");
+
+			const apiCall = lv_aufgeteilt
+				? ApiInitiierung.getDataForEvaluierungByLe(lveLvId)
+				: ApiInitiierung.getDataForEvaluierungByLv(lveLvId);
+
+			// Return basic data
+			return this.$api.call(apiCall).then(result => result.data);
+		},
+		assignEvaluierungData(data, byGroup) {
+			this.canSwitch = data.canSwitch;
+			this.canSwitchInfo = data.canSwitchInfo;
+			this.lvLeitungen = data.lvLeitungen;
+			this.selLveLvDetails = byGroup
+				? data.groupedByLe
+				: data.groupedByLv;
+		},
 		lookupLv(lehrveranstaltung_id) {
 			if (!isNaN(lehrveranstaltung_id)) {
 				const foundLv = this.lveLvs.find(lv => lv.lehrveranstaltung_id == lehrveranstaltung_id);
@@ -143,26 +154,20 @@ export default {
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
 		},
-		updateEditableChecks(){
-			this.$api
-				.call(ApiInitiierung.getLveLvDataGroups(this.selLveLvId))
-				.then(result => {
-					let data = result.data;
-					this.canSwitch = data.canSwitch;
-					this.canSwitchInfo = data.canSwitchInfo;
-					this.lvLeitungen = data.lvLeitungen;
-					this.groupedByLv = data.groupedByLv;
-					this.groupedByLe = data.groupedByLe;
+		updateEditableChecks(isAllSent){
+			this.loadEvaluierungData(this.selLveLvId, this.selLveLv.lv_aufgeteilt)
+				.then(data => this.assignEvaluierungData(data, this.selLveLv.lv_aufgeteilt))
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 
-					// Lvevaluierung data, depending on selected Evaluierungsart (Gesamt-LV or Gruppenbasis)
-					this.selLveLvDetails = this.selLveLv.lv_aufgeteilt
-						? this.groupedByLe
-						: this.groupedByLv;
-				})
+			// Update icon displaying if all students received mail
+			this.selLveLv.isAllSent = isAllSent;
 		},
 		getLvInfoString(lv){
 			//return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz + '  | LV-ID: ' + lv.lehrveranstaltung_id + ' LVE-LV-ID: ' + lv.lvevaluierung_lehrveranstaltung_id; // todo delete after testing.
-			return lv.kurzbzlang + ' - ' + lv.semester + ': '+ lv.bezeichnung + ' - ' + lv.orgform_kurzbz ;
+			return (lv.kurzbzlang ? lv.kurzbzlang : '') +
+					(lv.semester ? ' - ' + lv.semester + ':' : '') +
+					(lv.bezeichnung ? ' ' + lv.bezeichnung : '') +
+					(lv.orgform_kurzbz ? ' - ' + lv.orgform_kurzbz : '');
 		},
 		searchLv(event) {
 			const query = event.query.toLowerCase();
@@ -225,30 +230,59 @@ export default {
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
 						<button 
-							class="accordion-button collapsed" 
+							class="accordion-button collapsed d-flex" 
 							type="button" 
 							data-bs-toggle="collapse" 
 							:data-bs-target="'#flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							aria-expanded="false" 
-							aria-controls="flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
+							:aria-controls="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<span class="gap-2">
-								<i
-									class="fa-solid text-dark" 
-									:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-									:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
-									data-bs-toggle="tooltip"
-								>								
-								</i> |
-								<i 
-									class="fa-solid me-2"
-									:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-									:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
-									data-bs-toggle="tooltip"
+							<!-- left icons -->
+							<div class="flex-grow-1">
+								<span>
+									<i
+										class="fa-solid text-dark me-2" 
+										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
+										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
+									>								
+									</i>
+								</span>
+								<span>
+									<i 
+										class="fa-solid me-2"
+										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
+										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
+									>
+									</i>
+								</span>
+								<span>
+									<i 
+										class="fa-solid me-2"
+										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
+										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
+										data-bs-toggle="tooltip"
+										data-bs-custom-class="tooltip-left"
+									>
+									</i>
+								</span>
+								<span> 
+									{{ getLvInfoString(lveLv)}}
+								</span>
+							</div>
+							<!-- right side icon -->
+							<div>
+								<span class="badge rounded-pill border border-secondary text-secondary me-2"
+									:title="'Submitted / Total Students'"
+										data-bs-toggle="tooltip"
 								>
-								</i>
-							  	{{ getLvInfoString(lveLv)}}
-							</span>
+									<i class="fa-regular fa-comment me-1"></i>
+									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
+								</span>
+							</div>
 						</button>
 					</h2>
 					<div 
