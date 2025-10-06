@@ -779,7 +779,7 @@ class Initiierung extends FHCAPI_Controller
 		// (Es könnten Studierende dazukommen und/oder ausfallen -> deshalb ist ein reines count auf beide nicht genug)
 		$intersect = array_intersect($lvStudentsPrestudentIds, $lveLvPrestudentenIds);
 
-		return count($intersect) >= count($lvStudents);	// True if all students got mail
+		return count($lvStudents) > 0 && count($intersect) >= count($lvStudents);	// True if all students got mail
 	}
 
 	/**
