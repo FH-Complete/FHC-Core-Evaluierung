@@ -29,16 +29,6 @@ export default {
 			}
 		}
 	},
-	getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id)
-	{
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLvEvaluierungenByID',
-			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
-			}
-		}
-	},
 	updateLvAufgeteilt(lvevaluierung_lehrveranstaltung_id, lv_aufgeteilt) {
 		return {
 			method: 'post',

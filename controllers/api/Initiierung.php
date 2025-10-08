@@ -12,7 +12,6 @@ class Initiierung extends FHCAPI_Controller
 				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
 				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
-				'getLvEvaluierungenByID' => 'extension/lvevaluierung_init:r',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
 				'saveOrUpdateLvevaluierung' => 'extension/lvevaluierung_init:rw',
 				'generateCodesAndSendLinksToStudents' => 'extension/lvevaluierung_init:rw',
@@ -226,35 +225,6 @@ class Initiierung extends FHCAPI_Controller
 		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
 
 		$data = $this->getDataOrTerminateWithError($result);
-
-		$this->terminateWithSuccess($data);
-	}
-
-	/**
-	 * Get all Lvevaluierungen of given Lvevaluierung-Lehrveranstaltung-ID.
-	 *
-	 * @return void
-	 */
-	public function getLvEvaluierungenByID()
-	{
-		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
-
-		// Get Lv Evaluierungen
-		$result = $this->LvevaluierungModel->loadWhere([
-			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
-		]);
-
-		$data = $this->getDataOrTerminateWithError($result);
-
-		foreach ($data as &$item) {
-
-			// Add Lvevaluierung-Prestudenten (mailed students)
-			if ($item->lvevaluierung_id && !empty($item->lvevaluierung_id))
-			{
-				$result = $this->LvevaluierungPrestudentModel->getByLve($item->lvevaluierung_id);
-			}
-			$item->lvePrestudenten = hasData($result) ? getData($result) : [];
-		}
 
 		$this->terminateWithSuccess($data);
 	}
