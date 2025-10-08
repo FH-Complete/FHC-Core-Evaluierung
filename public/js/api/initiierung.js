@@ -9,16 +9,6 @@ export default {
 			}
 		}
 	},
-	getLveLvsWithLes(studiensemester_kurzbz, lehrveranstaltung_id = null) {
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvsWithLes',
-			params: {
-				studiensemester_kurzbz: studiensemester_kurzbz,
-				lehrveranstaltung_id: lehrveranstaltung_id
-			}
-		}
-	},
 	getDataForEvaluierungByLe(lvevaluierung_lehrveranstaltung_id)
 	{
 		return {

@@ -11,7 +11,6 @@ class Initiierung extends FHCAPI_Controller
 				'getLveLvs' => 'extension/lvevaluierung_init:r',
 				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
-				'getLveLvsWithLes' => 'extension/lvevaluierung_init:r',
 				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
 				'getLvEvaluierungenByID' => 'extension/lvevaluierung_init:r',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
@@ -68,24 +67,6 @@ class Initiierung extends FHCAPI_Controller
 			$submittedEvaluierungen = $this->getSubmittedEvaluierungen($item->lvevaluierung_lehrveranstaltung_id);
 			$item->countSubmitted = count($submittedEvaluierungen);
 		}
-
-		$this->terminateWithSuccess($data);
-	}
-	/**
-	 * Get Lvs, that are scheduled for evaluation, with their associated Lehreinheiten for the given Studiensemester,
-	 * where the logged-in user is assigned to at least one Lehreinheit as a Lektor.
-	 */
-	public function getLveLvsWithLes()
-	{
-		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
-		$lehrveranstaltung_id = $this->input->get('lehrveranstaltung_id'); // can be null
-
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsWithLes(
-			$studiensemester_kurzbz,
-			$lehrveranstaltung_id
-		);
-
-		$data = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($data);
 	}
