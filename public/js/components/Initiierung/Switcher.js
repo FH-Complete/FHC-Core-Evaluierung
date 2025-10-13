@@ -10,6 +10,7 @@ export default {
 		selLveLv: { type: Object, required: true },
 		lvLeitungen: { type: Array, default: () => [] }
 	},
+	emits: ['onUpdateLvAufgeteilt'],
 	components: {
 		FormForm,
 		FormInput
@@ -34,6 +35,7 @@ export default {
 
 			this.$api
 				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, newVal))
+				.then(() => this.$emit('onUpdateLvAufgeteilt', newVal))
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		getLektorenInfoString(lektoren) {
