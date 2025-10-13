@@ -33,62 +33,65 @@ class InitiierungLib
 
 		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-		$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
 
 		foreach ($data as $item)
 		{
 			$lehreinheitId = $item->lehreinheit_id;
 
-			if (!isset($grouped[$lehreinheitId])) {
-				$grouped[$lehreinheitId] = clone $item;
-				$grouped[$lehreinheitId]->lektoren = [];
-				$grouped[$lehreinheitId]->gruppen = [];
-			}
-
-			// Uniquely group Lektoren
-			$grouped = $this->groupLektorenByLe($grouped, $item);
-
-			// Uniquely group Gruppen
-			$grouped = $this->groupGruppenByLe($grouped, $item);
-
-			// Cleanup duplicates
-			foreach ($grouped as $g)
+			// If new Lehreinheit found
+			if (!isset($grouped[$lehreinheitId]))
 			{
-				unset(
-					$g->mitarbeiter_uid,
-					$g->fullname,
-					$g->lehrfunktion_kurzbz,
-					$g->semester,
-					$g->verband,
-					$g->gruppe
-				);
+				$grouped[$lehreinheitId] = clone $item;
 
-				$g->lektoren = array_values($g->lektoren);
-				$g->gruppen  = array_values($g->gruppen);
-			}
+				// Uniquely group Gruppen
+				$grouped[$lehreinheitId]->gruppen = $this->groupGruppenByLe($data, $lehreinheitId);
 
-			// Add Studenten
-			$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
-			$g->studenten = hasData($result) ? getData($result) : [];
+				// Uniquely group Lehrende
+				$grouped[$lehreinheitId]->lektoren = $this->groupLektorenByLe($data, $lehreinheitId);
 
-			// Add Stundenplantermine
-			$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
-			$g->stundenplan = hasData($result) ? getData($result) : [];
+				// Add Studenten
+				$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
+				$grouped[$lehreinheitId]->studenten = hasData($result) ? getData($result) : [];
 
-			// Add Studierende, that got mail by this or any other LE
-			// Checks if Studierende of this LE are in lvePrestudenten table
-			$g->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($g) {
-				foreach ($g->studenten as $s) {
-					if ($s->prestudent_id === $pre->prestudent_id) {
-						return $pre;
+				// Add Stundenplantermine
+				$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
+				$grouped[$lehreinheitId]->stundenplan = hasData($result) ? getData($result) : [];
+
+				// Add Studierende, that got mail by this or any other LE
+				$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+				$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
+				$grouped[$lehreinheitId]->sentByAnyEvaluierungOfLv = array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehreinheitId) {
+					foreach ($grouped[$lehreinheitId]->studenten as $s) {
+						if ($s->prestudent_id === $pre->prestudent_id) {
+							return $pre;
+						}
 					}
-				}
-				return false;
-			}));
+					return false;
+				});
+			}
 		}
 
-		return array_values($grouped);
+		$grouped = array_values($grouped);
+
+		// Remove properties that were grouped in gruppen and lektoren
+		foreach ($grouped as $g)
+		{
+			unset(
+				$g->mitarbeiter_uid,
+				$g->vorname,
+				$g->nachname,
+				$g->fullname,
+				$g->lehrfunktion_kurzbz,
+				$g->semester,
+				$g->verband,
+				$g->gruppe,
+				$g->gruppe_kurzbz,
+				$g->gruppe_bezeichnung,
+				$g->direktinskription
+			);
+		}
+
+		return $grouped;
 	}
 
 	/**
@@ -102,71 +105,71 @@ class InitiierungLib
 	public function groupByLvAndAddData($data, $lvevaluierung_lehrveranstaltung_id, $lehrveranstaltung_id, $studiensemester_kurzbz)
 	{
 		$grouped = [];
-		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-		$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
 
 		foreach ($data as $item)
 		{
-			if (!isset($grouped[$lehrveranstaltung_id])) {
+			if (!isset($grouped[$lehrveranstaltung_id]))
+			{
 				$clone = clone $item;
 				$clone->lehreinheit_id = null;
-				$clone->lektoren = [];
-				$clone->gruppen  = [];
-				$clone->studenten = [];
-				$clone->sentByAnyEvaluierungOfLv = [];
+
 				$grouped[$lehrveranstaltung_id] = $clone;
-			}
 
-			// Uniquely group Gruppen
-			$grouped = $this->groupGruppenByLv($grouped, $item);
+				// Group unique Gruppen
+				$grouped[$lehrveranstaltung_id]->gruppen = $this->groupGruppenByLv($data);
 
-			// Uniquely group Lektoren
-			$grouped = $this->groupLektorenByLv($grouped, $item);
+				// Group unique Lehrende
+				$grouped[$lehrveranstaltung_id]->lektoren = $this->groupLektorenByLv($data);
 
-
-			// Cleanup duplicates
-			foreach ($grouped as $g)
-			{
-				unset(
-					$g->mitarbeiter_uid,
-					$g->fullname,
-					$g->lehrfunktion_kurzbz,
-					$g->semester,
-					$g->verband,
-					$g->gruppe
+				// Add Students of LV
+				$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+				$result = $this->_ci->LehrveranstaltungModel->getStudentsByLv(
+					$studiensemester_kurzbz,
+					$lehrveranstaltung_id,
+					true	// true = only active students
 				);
+				$grouped[$lehrveranstaltung_id]->studenten = hasData($result) ? getData($result) : [];
 
-				$g->lektoren = array_values($g->lektoren);
-				$g->gruppen  = array_values($g->gruppen);
+				// Add Stundenplantermine for LV
+				$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+				$result = $this->_ci->StundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
+				$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
+
+				// Add Studierende, that got mail by this or any other LE
+				$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+				$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
+				$grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehrveranstaltung_id) {
+					foreach ($grouped[$lehrveranstaltung_id]->studenten as $s) {
+						if ($s->prestudent_id === $pre->prestudent_id) {
+							return $pre;
+						}
+					}
+					return false;
+				}));
 			}
 		}
 
-		// Add Students of LV
-		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-		$result = $this->_ci->LehrveranstaltungModel->getStudentsByLv(
-			$studiensemester_kurzbz,
-			$lehrveranstaltung_id,
-			true	// true = only active students
-		);
-		$grouped[$lehrveranstaltung_id]->studenten = hasData($result) ? getData($result) : [];
+		$grouped = array_values($grouped);
 
-		// Add Stundenplantermine for LV
-		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
-		$result = $this->_ci->StundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
-		$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
+		// Remove properties that were grouped in gruppen and lektoren
+		foreach ($grouped as $g)
+		{
+			unset(
+				$g->mitarbeiter_uid,
+				$g->vorname,
+				$g->nachname,
+				$g->fullname,
+				$g->lehrfunktion_kurzbz,
+				$g->semester,
+				$g->verband,
+				$g->gruppe,
+				$g->gruppe_kurzbz,
+				$g->gruppe_bezeichnung,
+				$g->direktinskription
+			);
+		}
 
-//		// Add Studierende, that got mail by this or any other LE
-		// Checks if Studierende of this LE are in lvePrestudenten table
-		$grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($g) {
-			foreach ($g->studenten as $s) {
-				if ($s->prestudent_id === $pre->prestudent_id) {
-					return $pre;
-				}
-			}
-			return false;
-		}));
-
-		return array_values($grouped);
+		return $grouped;
 	}
 
 	public function mergeEvaluierungenIntoData($data, $evaluierungen, $isAufgeteilt)
@@ -417,122 +420,114 @@ class InitiierungLib
 	/**
 	 * Group Lektoren uniquely by Mitarbeiter UID, name, and Lehrfunktion within each Lehreinheit group.
 	 *
-	 * @param array $grouped	Array of data grouped by Lehreinheit ID
-	 * @param object $item		Current data item containing lektor information
+	 * @param $data
+	 * @param $lehreinheit_id
 	 * @return mixed
 	 */
-	public function groupLektorenByLe($grouped, $item)
+	public function groupLektorenByLe($data, $lehreinheit_id)
 	{
-		$lehreinheit_id = $item->lehreinheit_id;
+		$lektoren = [];
 
-		foreach ($grouped[$lehreinheit_id]->lektoren as $lektor) {
-			if ($lektor->mitarbeiter_uid === $item->mitarbeiter_uid)
+		foreach ($data as $item) {
+			if ($item->lehreinheit_id === $lehreinheit_id)
 			{
-				return $grouped;
+				// Avoid duplicates
+				if (!in_array($item->mitarbeiter_uid, array_column($lektoren, 'mitarbeiter_uid'))) {
+					$lektoren[] = [
+						'mitarbeiter_uid' => $item->mitarbeiter_uid,
+						'vorname' => $item->vorname,
+						'nachname' => $item->nachname,
+						'fullname' => $item->fullname,
+						'lehrfunktion_kurzbz' => $item->lehrfunktion_kurzbz,
+					];
+				}
 			}
 		}
 
-		$grouped[$lehreinheit_id]->lektoren[] = (object)[
-			'mitarbeiter_uid' => $item->mitarbeiter_uid,
-			'vorname' => $item->vorname,
-			'nachname' => $item->nachname,
-			'fullname' => $item->fullname,
-			'lehrfunktion_kurzbz' => $item->lehrfunktion_kurzbz
-		];
-
-		return $grouped;
+		return $lektoren;
 	}
 
 	/**
 	 * Group Lektoren uniquely by Mitarbeiter UID, name, and Lehrfunktion within each LV group.
 	 *
-	 * @param $grouped
-	 * @param $item
+	 * @param $data
 	 * @return mixed
 	 */
-	public function groupLektorenByLv($grouped, $item)
+	public function groupLektorenByLv($data)
 	{
-		$lehrveranstaltung_id = $item->lehrveranstaltung_id;
+		$lektoren = [];
 
-		foreach ($grouped[$lehrveranstaltung_id]->lektoren as $lektor) {
-			if ($lektor->mitarbeiter_uid === $item->mitarbeiter_uid)
-			{
-				return $grouped;
+		foreach ($data as $item) {
+
+			// Avoid duplicates
+			if (!in_array($item->mitarbeiter_uid, array_column($lektoren, 'mitarbeiter_uid'))) {
+				$lektoren[] = [
+					'mitarbeiter_uid' => $item->mitarbeiter_uid,
+					'vorname' => $item->vorname,
+					'nachname' => $item->nachname,
+					'fullname' => $item->fullname,
+					'lehrfunktion_kurzbz' => $item->lehrfunktion_kurzbz,
+				];
 			}
 		}
 
-		$grouped[$lehrveranstaltung_id]->lektoren[] = (object)[
-			'mitarbeiter_uid' => $item->mitarbeiter_uid,
-			'vorname' => $item->vorname,
-			'nachname' => $item->nachname,
-			'fullname' => $item->fullname,
-			'lehrfunktion_kurzbz' => $item->lehrfunktion_kurzbz
-		];
-
-		return $grouped;
+		return $lektoren;
 	}
 
 	/**
 	 * Group Gruppen uniquely by Kurzbzlang, Semester, Verband, and Gruppe within each Lehreinheit group.
 	 *
-	 * @param array $grouped	Array of data grouped by Lehreinheit ID
-	 * @param object $item		Current data item containing gruppen information
+	 * @param $data
+	 * @param $lehreinheit_id
 	 * @return mixed
 	 */
-	public function groupGruppenByLe($grouped, $item)
+	public function groupGruppenByLe($data, $lehreinheit_id)
 	{
-		$lehreinheit_id = $item->lehreinheit_id;
+		$gruppen = [];
 
-		foreach ($grouped[$lehreinheit_id]->gruppen as $gruppe) {
-			if (
-				$gruppe->kurzbzlang === $item->kurzbzlang &&
-				$gruppe->semester === $item->semester &&
-				$gruppe->verband === $item->verband &&
-				$gruppe->gruppe === $item->gruppe
-			) {
-				return $grouped;
+		foreach ($data as $item) {
+			if ($item->lehreinheit_id === $lehreinheit_id) {
+
+				// Skip if is Spezialgruppe with Direktinskription
+				if (!empty($item->gruppe_kurzbz) && $item->direktinskription === true) {
+					continue;
+				}
+
+				// Avoid duplicates
+				if (!in_array($item->gruppe_bezeichnung, array_column($gruppen, 'gruppe_bezeichnung'))) {
+					$gruppen[] = [
+						'gruppe_bezeichnung' => $item->gruppe_bezeichnung
+					];
+				}
 			}
 		}
-
-		$grouped[$lehreinheit_id]->gruppen[] = (object)[
-			'kurzbzlang' => $item->kurzbzlang,
-			'semester' => $item->semester,
-			'verband' => $item->verband,
-			'gruppe' => $item->gruppe
-		];
-
-		return $grouped;
+		return $gruppen;
 	}
 
 	/**
 	 * Group Gruppen uniquely by Kurzbzlang, Semester, Verband, and Gruppe within each LV group.
 	 *
-	 * @param $grouped
-	 * @param $item
+	 * @param $data
 	 * @return mixed
 	 */
-	public function groupGruppenByLv($grouped, $item)
+	public function groupGruppenByLv($data)
 	{
-		$lehrveranstaltung_id = $item->lehrveranstaltung_id;
+		$gruppen = [];
 
-		foreach ($grouped[$lehrveranstaltung_id]->gruppen as $gruppe) {
-			if (
-				$gruppe->kurzbzlang === $item->kurzbzlang &&
-				$gruppe->semester === $item->semester &&
-				$gruppe->verband === $item->verband &&
-				$gruppe->gruppe === $item->gruppe
-			) {
-				return $grouped;
+		foreach ($data as $item) {
+
+			// Skip if is Spezialgruppe with Direktinskription
+			if (!empty($item->gruppe_kurzbz) && $item->direktinskription === true) {
+				continue;
+			}
+
+			// Avoid duplicates
+			if (!in_array($item->gruppe_bezeichnung, array_column($gruppen, 'gruppe_bezeichnung'))) {
+				$gruppen[] = [
+					'gruppe_bezeichnung' => $item->gruppe_bezeichnung
+				];
 			}
 		}
-
-		$grouped[$lehrveranstaltung_id]->gruppen[] = (object)[
-			'kurzbzlang' => $item->kurzbzlang,
-			'semester' => $item->semester,
-			'verband' => $item->verband,
-			'gruppe' => $item->gruppe
-		];
-
-		return $grouped;
+		return array_values($gruppen);
 	}
 }

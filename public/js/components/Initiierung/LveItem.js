@@ -87,18 +87,7 @@ export default {
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
 			infoString = lveLvDetail.kurzbz + ' - ' + lveLvDetail.lehrform_kurzbz + ' - ';
-
-			if (lveLvDetail.gruppen && lveLvDetail.gruppen.length > 0) {
-				infoString += lveLvDetail.gruppen.map(g => {
-					let str = '';
-					if (g.kurzbzlang) str += g.kurzbzlang;
-					if (g.semester || g.verband || g.gruppe) {
-						str += '-';
-						str += (g.semester ?? '') + (g.verband ?? '') + (g.gruppe ?? '');
-					}
-					return str;
-				}).join(', ');
-			}
+			infoString+= lveLvDetail.gruppen.map(g => g.gruppe_bezeichnung).join(', ');
 
 			if (lveLvDetail.studenten && lveLvDetail.studenten.length > 0) {
 				infoString += ` | <i class="fa-solid fa-user"></i> ${lveLvDetail.studenten.length}`;

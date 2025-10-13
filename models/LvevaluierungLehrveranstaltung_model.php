@@ -119,6 +119,22 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					legr.verband,
 					legr.gruppe,
 					legr.gruppe_kurzbz,
+					gr.direktinskription,
+					CASE
+						-- normale Gruppe
+						WHEN legr.gruppe_kurzbz IS NULL THEN
+							COALESCE(
+								CONCAT(
+									UPPER(CONCAT(stg.typ, stg.kurzbz, \'-\')),
+									COALESCE(legr.semester::varchar, \'\'),
+									COALESCE(legr.verband::varchar, \'\'),
+									COALESCE(legr.gruppe, \'\')
+								),
+							 \'\'
+						)
+						-- Spezialgruppe
+						ELSE legr.gruppe_kurzbz
+					END AS gruppe_bezeichnung,
 					lv.kurzbz,
 					stg.kurzbzlang
 				FROM 
@@ -128,6 +144,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					JOIN public.tbl_benutzer b ON b.uid = lema.mitarbeiter_uid
 					JOIN public.tbl_person p USING (person_id)
 					LEFT JOIN lehre.tbl_lehreinheitgruppe legr USING (lehreinheit_id)
+					LEFT JOIN public.tbl_gruppe gr USING (gruppe_kurzbz)
 					LEFT JOIN public.tbl_studiengang stg ON (legr.studiengang_kz = stg.studiengang_kz)
 					JOIN lvevaluierung_lehrveranstaltung 
 						ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
