@@ -48,15 +48,6 @@ export default {
 			}
 		}
 	},
-	getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id){
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvPrestudenten',
-			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
-			}
-		}
-	},
 	generateCodesAndSendLinksToStudents(lvevaluierung_id){
 		return {
 			method: 'post',

@@ -11,7 +11,6 @@ class Initiierung extends FHCAPI_Controller
 				'getLveLvs' => 'extension/lvevaluierung_init:r',
 				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
-				'getLveLvPrestudenten' => 'extension/lvevaluierung_init:r',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
 				'saveOrUpdateLvevaluierung' => 'extension/lvevaluierung_init:rw',
 				'generateCodesAndSendLinksToStudents' => 'extension/lvevaluierung_init:rw',
@@ -214,23 +213,7 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Get all Prestudenten of given Lvevaluierung Lehrveranstaltung ID, that were already mailed.
-	 *
-	 * @return void
-	 */
-	public function getLveLvPrestudenten()
-	{
-		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
-
-		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-
-		$data = $this->getDataOrTerminateWithError($result);
-
-		$this->terminateWithSuccess($data);
-	}
-
-	/**
-	 * Update the lectors selection for type of Evaluation (Gesamt-Lv or Lehreinheiten/Gruppenbasis).
+	 * Update Evaluation type: Gesamt-LV or Gruppenbasis.
 	 *
 	 * @return void
 	 */
@@ -270,7 +253,8 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Insert or update Lvevaluierung. Update if Lvevaluierung ID is provided, otherwise insert new Lvevaluierung.
+	 * Insert or update Evaluation.
+	 * Update if Lvevaluierung ID is provided, otherwise insert new Lvevaluierung.
 	 *
 	 * Checks:
 	 * - Studienplan of Lv and Studiensemester is retrieved by given Lvevaluierung-Lehrveranstaltung-ID.
@@ -331,7 +315,7 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Generate Codes and mail to students that are adressed by the given Lvevaluierung ID.
+	 * Generate Evaluation Codes and mail to students.
 	 * This could be students of LV or students of LE, depending on evaluation type (Gesamt-LV or LV auf Gruppenbasis).
 	 * Codes are only generated/mailed, if not done earlier (e.g.by sending via other Lehreinheit of the same LV)
 	 *
@@ -471,8 +455,6 @@ class Initiierung extends FHCAPI_Controller
 	 * Add evaluation status and button checks to grouped items (LV oder LE)
 	 *
 	 * @param array $grouped  array of grouped items (LV or LE)
-//	 * @param array $lvePrestudentenByLv  all students who got mails in this LV (any evaluation)
-//	 * @param array $lvePrestudenten      students who got mails in THIS evaluation
 	 * @param bool $codes_gemailt
 	 * @param int|null $lvevaluierung_id
 	 * @return array
