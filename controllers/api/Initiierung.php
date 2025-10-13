@@ -125,7 +125,7 @@ class Initiierung extends FHCAPI_Controller
 
 				// User should only see own Lehreinheiten
 				$groupedByLe = array_filter($groupedByLe, function ($item) {
-					return empty($item->editableCheck['isDisabledEvaluierung']) || $item->editableCheck['isDisabledEvaluierung'] === false;
+					return in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'));
 				});
 			}
 		}
