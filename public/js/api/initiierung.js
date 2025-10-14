@@ -48,10 +48,10 @@ export default {
 			}
 		}
 	},
-	generateCodesAndSendLinksToStudents(lvevaluierung_id){
+	generateCodesAndSendLinksToStudent(lvevaluierung_id){
 		return {
 			method: 'post',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/generateCodesAndSendLinksToStudents',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/generateCodesAndSendLinksToStudent',
 			params: {
 				lvevaluierung_id: lvevaluierung_id
 			}

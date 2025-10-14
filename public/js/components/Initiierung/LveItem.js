@@ -13,6 +13,7 @@ export default {
 			infoStudierendenlink: `
 				Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.
 			`,
+			isSendingMail: false
 		}
 	},
 	props: {
@@ -56,33 +57,35 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onSendLinks(lveDetail) {
-			this.$api
-					.call(ApiInitiierung.generateCodesAndSendLinksToStudents(lveDetail.lvevaluierung_id))
+			if (this.isSendingMail) { return };
+
+			let completed = 0;
+			let isAllSent = null;
+
+			lveDetail.studenten.forEach(student => {
+				this.isSendingMail = true;
+				this.$api
+					.call(ApiInitiierung.generateCodesAndSendLinksToStudent(lveDetail.lvevaluierung_id))
 					.then(result => {
-						if (result.data)
-						{
-							// Tell user about students, that did not get mail (and code was not generated)
-							if (result.data.failedMailStudenten.length > 0)
-							{
-								let msg = 'Could not mail to students: ';
-								result.data.failedMailStudenten.forEach(student => {
-									msg += student.vorname + ' ' + student.nachname + ' ';
-								})
-
-								this.$fhcAlert.alertWarning(msg);
-							}
-
+						if (result.data !== null) {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
-
-							this.$emit('update-editable-checks', result.data.isAllSent);
-
-							// Success info
-							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
+							lveDetail.sentByAnyEvaluierungOfLv = result.data.sentByAnyEvaluierungOfLv;
+							lveDetail.editableCheck.isDisabledSendMailInfo = result.data.editableCheck.isDisabledSendMailInfo;
+							isAllSent = result.data.isAllSent;
 						}
 					})
-					.catch(error => this.$fhcAlert.handleSystemError(error));
+					.catch(error => this.$fhcAlert.handleSystemError(error))
+					.finally(() => {
+						completed++;
+						if (completed == lveDetail.studenten.length) {
+							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
+							this.$emit('update-editable-checks', isAllSent);
+							this.isSendingMail = false;
+						}
+					})
+			});
 		},
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
@@ -244,6 +247,7 @@ export default {
 						<span class="d-none d-md-inline"><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
 					<div class="col-7 col-md-8 text-end">
+						<span v-if="isSendingMail"><i class="fa-solid fa-spinner fa-pulse"></i></span>
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
 							class="text-muted ms-2 small">
@@ -274,7 +278,7 @@ export default {
 					<!-- Button -->
 					<div class="col-12 text-end">
 						<div class="d-grid d-md-block">
-							<button class="btn btn-success mt-3"@click="onSendLinks(lveLvDetail)">
+							<button class="btn btn-success mt-3" @click="onSendLinks(lveLvDetail)">
 								Studierendenlinks versenden
 							</button>
 						</div>

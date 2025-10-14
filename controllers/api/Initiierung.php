@@ -13,7 +13,7 @@ class Initiierung extends FHCAPI_Controller
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
 				'saveOrUpdateLvevaluierung' => 'extension/lvevaluierung_init:rw',
-				'generateCodesAndSendLinksToStudents' => 'extension/lvevaluierung_init:rw',
+				'generateCodesAndSendLinksToStudent' => 'extension/lvevaluierung_init:rw',
 				'updateEvalStatusAndChecks' => 'extension/lvevaluierung_init:rw',
 			)
 		);
@@ -315,13 +315,12 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
-	 * Generate Evaluation Codes and mail to students.
-	 * This could be students of LV or students of LE, depending on evaluation type (Gesamt-LV or LV auf Gruppenbasis).
-	 * Codes are only generated/mailed, if not done earlier (e.g.by sending via other Lehreinheit of the same LV)
+	 *  Generate Evaluation Codes and mail to student.
+	 *  Codes are only generated/mailed, if not done earlier (e.g.by sending via other Lehreinheit of the same LV)
 	 *
 	 * @return void
 	 */
-	public function generateCodesAndSendLinksToStudents()
+	public function generateCodesAndSendLinksToStudent()
 	{
 		$lvevaluierung_id = $this->input->post('lvevaluierung_id');
 
@@ -340,17 +339,11 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get Students of LV or LE, depending on Evaluation type
 		$studenten = $lveLv->lv_aufgeteilt
-			? $this->getStudentsForLe($lve)
-			: $this->getStudentsForLv($lveLv);
+			? $this->getStudentsForLeOrExit($lve)
+			: $this->getStudentsForLvOrExit($lveLv);
 
-		if (empty($studenten))
-		{
-			$this->terminateWithError('No Students assigned to this course');
-		}
-
-		// Get all students of LV that already got a code
-		$result = $this->LvevaluierungPrestudentModel->getByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
-		$mailedPrestudentIds = hasData($result) ? array_column(getData($result), 'prestudent_id') : [];
+		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
+		$mailedPrestudentIds =array_column($lveLvPrestudenten, 'prestudent_id');
 
 		// Filter studenten to keep only unmailed
 		$unmailedStudenten = array_values(array_filter($studenten, function ($s) use ($mailedPrestudentIds) {
@@ -358,54 +351,35 @@ class Initiierung extends FHCAPI_Controller
 		}));
 
 		// Return if all Students of LV or LE already got mail
-		if (empty($unmailedStudenten))
+		if (count($unmailedStudenten) === 0)
 		{
-			$this->terminateWithError('Cannot send. All Students of this LV already received emails. Reset if necessary.');
+			$this->terminateWithSuccess();
 		}
 
-		// Mail codes to Students
-		$codes_ausgegeben = 0;
-		$failedMailStudenten = [];
-
-		foreach ($unmailedStudenten as $student)
-		{
-			if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $student, $lveLv->lehrveranstaltung_id))
-			{
-				$codes_ausgegeben++;
-			}
-			else
-			{
-				// Collect students that did not get mail
-				$failedMailStudenten[]= $student;
-			}
-		}
-
-		// Update codes_ausgegeben and codes_gemailt values
-		if ($codes_ausgegeben > 0)
+		if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $unmailedStudenten[0], $lveLv->lehrveranstaltung_id))
 		{
 			$this->LvevaluierungModel->update(
 				$lvevaluierung_id,
 				[
 					'codes_gemailt' => true,
-					'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben // Sum up already ausgegebene
+					'codes_ausgegeben' => $lve->codes_ausgegeben + 1
 				]
 			);
+
+			$isAllSent = $this->isAllSentLvEvaluierung($lveLv->lvevaluierung_lehrveranstaltung_id);
+			$sentByAnyEvaluierungOfLv = $this->sentByAnyEvaluierungOfLv($lveLv->lvevaluierung_lehrveranstaltung_id, $studenten);
+			$editableCheck = [
+				'isDisabledSendMailInfo' => [count($sentByAnyEvaluierungOfLv) . ' Emails sent']
+			];
+
+			$this->terminateWithSuccess([
+				'codes_gemailt' => true,
+				'codes_ausgegeben' => $lve->codes_ausgegeben + 1,
+				'isAllSent' => $isAllSent,
+				'sentByAnyEvaluierungOfLv' => $sentByAnyEvaluierungOfLv,
+				'editableCheck' => $editableCheck
+			]);
 		}
-
-		$isAllSent = $this->isAllSentLvEvaluierung($lveLv->lvevaluierung_lehrveranstaltung_id);
-
-		$result = success(
-			[
-				'codes_gemailt' => $codes_ausgegeben > 0,
-				'codes_ausgegeben' => $lve->codes_ausgegeben + $codes_ausgegeben,
-				'failedMailStudenten' => $failedMailStudenten,
-				'isAllSent' => $isAllSent
-			]
-		);
-
-		$data = $this->getDataOrTerminateWithError($result);
-
-		$this->terminateWithSuccess($data);
 	}
 
 	// Checks and Validations
@@ -594,6 +568,30 @@ class Initiierung extends FHCAPI_Controller
 	}
 
 	/**
+	 * Get students, that got mail by this or any other LE.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @param $studenten
+	 * @return array
+	 */
+	public function sentByAnyEvaluierungOfLv($lvevaluierung_lehrveranstaltung_id, $studenten)
+	{
+		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id);
+		$matchedStudents = [];
+
+		foreach ($studenten as $student) {
+			foreach ($lveLvPrestudenten as $lveLvPrestudent) {
+				if ($student->prestudent_id === $lveLvPrestudent->prestudent_id) {
+					$matchedStudents[] = $student; // return the student
+					break;
+				}
+			}
+		}
+
+		return $matchedStudents;
+	}
+
+	/**
 	 * Get Lvevaluierung.
 	 * Terminate with error on fail.
 	 *
@@ -725,7 +723,6 @@ class Initiierung extends FHCAPI_Controller
 
 		return getData($result);
 	}
-
 
 	/**
 	 * Get submitted Evaluierungen of given LV. (= Student submitted Evaluierung)
