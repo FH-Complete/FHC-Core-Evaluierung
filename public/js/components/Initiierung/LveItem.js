@@ -209,7 +209,6 @@ export default {
 									locale="de"
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
-									:minutes-increment="5"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
 								>
