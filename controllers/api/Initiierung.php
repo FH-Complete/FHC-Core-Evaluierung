@@ -58,7 +58,7 @@ class Initiierung extends FHCAPI_Controller
 			$item->isAllSent = $isAllSent;
 
 			// count students of LV
-			$students = $this->getStudentsForLv($item);
+			$students = $this->getStudentsForLvOrExit($item);
 			$item->countStudents = count($students);
 
 			// count submitted Evaluierungen of LV
@@ -407,6 +407,7 @@ class Initiierung extends FHCAPI_Controller
 
 		$this->terminateWithSuccess($data);
 	}
+
 	// Checks and Validations
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
@@ -673,7 +674,6 @@ class Initiierung extends FHCAPI_Controller
 		return hasData($result) ? getData($result) : [];
 	}
 
-
 	/**
 	 * Checks if all students of LV got mail with codes.
 	 *
@@ -684,7 +684,7 @@ class Initiierung extends FHCAPI_Controller
 	{
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		$lvStudents = $this->getStudentsForLv($lveLv);
+		$lvStudents = $this->getStudentsForLvOrExit($lveLv);
 		$lvStudentsPrestudentIds = array_column($lvStudents, 'prestudent_id');
 
 		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id);
@@ -704,7 +704,7 @@ class Initiierung extends FHCAPI_Controller
 	 * @param $lveLv
 	 * @return array
 	 */
-	private function getStudentsForLv($lveLv)
+	private function getStudentsForLvOrExit($lveLv)
 	{
 		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$result = $this->LehrveranstaltungModel->getStudentsByLv(
@@ -718,7 +718,12 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 		}
 
-		return hasData($result) ? getData($result) : [];
+		if (!hasData($result))
+		{
+			$this->terminateWithError('No Students assigned to this course');
+		}
+
+		return getData($result);
 	}
 
 
@@ -746,7 +751,7 @@ class Initiierung extends FHCAPI_Controller
 	 * @param $lve
 	 * @return array
 	 */
-	private function getStudentsForLe($lve)
+	private function getStudentsForLeOrExit($lve)
 	{
 		$this->load->model('education/Lehreinheit_model', 'LehreinheitModel');
 		$result = $this->LehreinheitModel->getStudenten($lve->lehreinheit_id);
@@ -756,7 +761,12 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 		}
 
-		return hasData($result) ? getData($result) : [];
+		if (!hasData($result))
+		{
+			$this->terminateWithError('No Students assigned to this course');
+		}
+
+		return getData($result);
 	}
 
 	/**
