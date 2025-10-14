@@ -16,8 +16,7 @@ export default {
 			}
 			else {
 				const text = this.$p.t('fragebogen/logoutText');
-				const link = `<a href="" target="_blank">Whitepaper</a>`;
-				return `${text} ${link}`;	// default
+				return `${text}`;	// default
 			}
 		}
 	},
