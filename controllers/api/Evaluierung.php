@@ -180,12 +180,12 @@ class Evaluierung extends FHCAPI_Controller
 	public function setEndezeit(){
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 
-		// Check if Evaluierung time has exceeded // NOTE: No need without dauer
-//		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
-//		if (isError($result))
-//		{
-//			$this->terminateWithError(getError($result));
-//		}
+		// Check if Evaluierung time has exceeded // NOTE: returns success if no dauer is set
+		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
 
 		// Validate Evaluation
 		$this->_validateEvaluationBeforeSaving($lvevaluierung_code_id);
@@ -214,12 +214,12 @@ class Evaluierung extends FHCAPI_Controller
 		$lvevaluierung_code_id = $this->input->post('lvevaluierung_code_id');
 		$data = $this->input->post('data');
 
-		// Check if Evaluierung time has exceeded -- NOTE: no need without dauer
-//		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
-//		if (isError($result))
-//		{
-//			$this->terminateWithError(getError($result));
-//		}
+		// Check if Evaluierung time has exceeded -- NOTE: returns success if no dauer is set
+		$result = $this->evaluierunglib->checkIfEvaluierungTimeExceeded($lvevaluierung_code_id);
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
 
 		// Validate Evaluation
 		$this->_validateEvaluationBeforeSaving($lvevaluierung_code_id);

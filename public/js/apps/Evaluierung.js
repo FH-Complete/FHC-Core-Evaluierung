@@ -64,8 +64,8 @@ const app = Vue.createApp({
 app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
-	.use(FhcAlert)
 	.use(FhcApi)
+	.use(FhcAlert)
 	.use(Phrasen)
 	.use(DateHelper)
 	.mount('#lve-evaluierung-main')

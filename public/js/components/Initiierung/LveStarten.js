@@ -80,13 +80,6 @@ export default {
 				.then(data => this.assignEvaluierungData(data, this.selLveLv.lv_aufgeteilt))
 				.catch(error => this.$fhcAlert.handleSystemError(error))
 		},
-		'selLveLv.lv_aufgeteilt'(newVal) {
-			if (!this.selLveLvId) return;
-
-			this.loadEvaluierungData(this.selLveLvId, newVal)
-				.then(data => this.assignEvaluierungData(data, newVal))
-				.catch(error => this.$fhcAlert.handleSystemError(error));
-		}
 	},
 	mounted() {
 		// Add Event Listener to load evaluation data only when an accordion item is expanded
@@ -153,6 +146,11 @@ export default {
 			if (accBtn){
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
+		},
+		onUpdateLvAufgeteilt(newVal){
+			this.loadEvaluierungData(this.selLveLvId, newVal)
+				.then(data => this.assignEvaluierungData(data, newVal))
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		updateEditableChecks(isAllSent){
 			this.loadEvaluierungData(this.selLveLvId, this.selLveLv.lv_aufgeteilt)
@@ -298,6 +296,7 @@ export default {
   							:can-switch-info="canSwitchInfo"
   							:sel-lve-lv="selLveLv"
 							:lv-leitungen="lvLeitungen"
+							@on-update-lv-aufgeteilt="onUpdateLvAufgeteilt"
 						>
 						</Switcher>
 						<!-- LV-Evaluierungen -->

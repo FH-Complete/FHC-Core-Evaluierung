@@ -13,6 +13,7 @@ export default {
 			infoStudierendenlink: `
 				Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.
 			`,
+			isSendingMail: false
 		}
 	},
 	props: {
@@ -56,50 +57,45 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onSendLinks(lveDetail) {
-			this.$api
-					.call(ApiInitiierung.generateCodesAndSendLinksToStudents(lveDetail.lvevaluierung_id))
+			if (this.isSendingMail) { return };
+
+			let completed = 0;
+			let isAllSent = null;
+
+			// Limit to max 2 students
+			const testStudents = lveDetail.studenten.slice(0, 1); // todo remove after testing!!!
+			testStudents.forEach(student => {
+			//lveDetail.studenten.forEach(student => { // todo add after testing!!!
+				this.isSendingMail = true;
+				this.$api
+					.call(ApiInitiierung.generateCodesAndSendLinksToStudent(lveDetail.lvevaluierung_id))
 					.then(result => {
-						if (result.data)
-						{
-							// Tell user about students, that did not get mail (and code was not generated)
-							if (result.data.failedMailStudenten.length > 0)
-							{
-								let msg = 'Could not mail to students: ';
-								result.data.failedMailStudenten.forEach(student => {
-									msg += student.vorname + ' ' + student.nachname + ' ';
-								})
-
-								this.$fhcAlert.alertWarning(msg);
-							}
-
+						if (result.data !== null) {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
-							lveDetail.lvePrestudenten = result.data.lvePrestudenten;
-
-							this.$emit('update-editable-checks', result.data.isAllSent);
-
-							// Success info
-							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
+							lveDetail.sentByAnyEvaluierungOfLv = result.data.sentByAnyEvaluierungOfLv;
+							lveDetail.editableCheck.isDisabledSendMailInfo = result.data.editableCheck.isDisabledSendMailInfo;
+							isAllSent = result.data.isAllSent;
 						}
 					})
-					.catch(error => this.$fhcAlert.handleSystemError(error));
+					.catch(error => this.$fhcAlert.handleSystemError(error))
+					.finally(() => {
+						completed++;
+						//if (completed == lveDetail.studenten.length) {		// todo add after testing!!!
+						if (completed == testStudents.length) {
+							this.$fhcAlert.alertDefault('info', 'TEST Mailversand', 'Testversand: max 1 Mail pro Buttonclick', true); // todo remove after testing!!!
+							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
+							this.$emit('update-editable-checks', isAllSent);
+							this.isSendingMail = false;
+						}
+					})
+			});
 		},
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
 			infoString = lveLvDetail.kurzbz + ' - ' + lveLvDetail.lehrform_kurzbz + ' - ';
-
-			if (lveLvDetail.gruppen && lveLvDetail.gruppen.length > 0) {
-				infoString += lveLvDetail.gruppen.map(g => {
-					let str = '';
-					if (g.kurzbzlang) str += g.kurzbzlang;
-					if (g.semester || g.verband || g.gruppe) {
-						str += '-';
-						str += (g.semester ?? '') + (g.verband ?? '') + (g.gruppe ?? '');
-					}
-					return str;
-				}).join(', ');
-			}
+			infoString+= lveLvDetail.gruppen.map(g => g.gruppe_bezeichnung).join(', ');
 
 			if (lveLvDetail.studenten && lveLvDetail.studenten.length > 0) {
 				infoString += ` | <i class="fa-solid fa-user"></i> ${lveLvDetail.studenten.length}`;
@@ -213,7 +209,6 @@ export default {
 									locale="de"
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
-									:minutes-increment="5"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
 								>
@@ -256,6 +251,7 @@ export default {
 						<span class="d-none d-md-inline"><i class="fa fa-envelope me-2"></i>Email Status</span>
 					</div>
 					<div class="col-7 col-md-8 text-end">
+						<span v-if="isSendingMail"><i class="fa-solid fa-spinner fa-pulse"></i></span>
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
 							class="text-muted ms-2 small">
@@ -286,7 +282,7 @@ export default {
 					<!-- Button -->
 					<div class="col-12 text-end">
 						<div class="d-grid d-md-block">
-							<button class="btn btn-success mt-3"@click="onSendLinks(lveLvDetail)">
+							<button class="btn btn-success mt-3" @click="onSendLinks(lveLvDetail)">
 								Studierendenlinks versenden
 							</button>
 						</div>

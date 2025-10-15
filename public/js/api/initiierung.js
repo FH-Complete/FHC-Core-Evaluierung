@@ -9,16 +9,6 @@ export default {
 			}
 		}
 	},
-	getLveLvsWithLes(studiensemester_kurzbz, lehrveranstaltung_id = null) {
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvsWithLes',
-			params: {
-				studiensemester_kurzbz: studiensemester_kurzbz,
-				lehrveranstaltung_id: lehrveranstaltung_id
-			}
-		}
-	},
 	getDataForEvaluierungByLe(lvevaluierung_lehrveranstaltung_id)
 	{
 		return {
@@ -34,16 +24,6 @@ export default {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getDataForEvaluierungByLv',
-			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
-			}
-		}
-	},
-	getLvEvaluierungenByID(lvevaluierung_lehrveranstaltung_id)
-	{
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLvEvaluierungenByID',
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
 			}
@@ -68,19 +48,10 @@ export default {
 			}
 		}
 	},
-	getLveLvPrestudenten(lvevaluierung_lehrveranstaltung_id){
-		return {
-			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvPrestudenten',
-			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
-			}
-		}
-	},
-	generateCodesAndSendLinksToStudents(lvevaluierung_id){
+	generateCodesAndSendLinksToStudent(lvevaluierung_id){
 		return {
 			method: 'post',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/generateCodesAndSendLinksToStudents',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/generateCodesAndSendLinksToStudent',
 			params: {
 				lvevaluierung_id: lvevaluierung_id
 			}
