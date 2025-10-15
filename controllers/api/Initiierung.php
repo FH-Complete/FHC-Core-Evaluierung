@@ -342,6 +342,11 @@ class Initiierung extends FHCAPI_Controller
 			? $this->getStudentsForLeOrExit($lve)
 			: $this->getStudentsForLvOrExit($lveLv);
 
+		if (!hasData($studenten))
+		{
+			$this->terminateWithError('Cannot send. No Students assigned to this course');
+		}
+
 		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
 		$mailedPrestudentIds =array_column($lveLvPrestudenten, 'prestudent_id');
 
@@ -716,11 +721,6 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError(getError($result));
 		}
 
-		if (!hasData($result))
-		{
-			$this->terminateWithError('No Students assigned to this course');
-		}
-
 		return getData($result);
 	}
 
@@ -756,11 +756,6 @@ class Initiierung extends FHCAPI_Controller
 		if(isError($result))
 		{
 			$this->terminateWithError(getError($result));
-		}
-
-		if (!hasData($result))
-		{
-			$this->terminateWithError('No Students assigned to this course');
 		}
 
 		return getData($result);
