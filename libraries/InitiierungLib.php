@@ -376,8 +376,14 @@ class InitiierungLib
 	{
 		$gruppenPerLe = [];
 
+		// Skip row check if...
 		foreach ($data as $row) {
+			//...is not Lehreinheit
 			if (empty($row->lehreinheit_id)) {
+				continue;
+			}
+			//...is Spezialgruppe
+			if (!empty($row->gruppe_kurzbz)) {
 				continue;
 			}
 

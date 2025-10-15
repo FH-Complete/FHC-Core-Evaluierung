@@ -342,6 +342,11 @@ class Initiierung extends FHCAPI_Controller
 			? $this->getStudentsForLeOrExit($lve)
 			: $this->getStudentsForLvOrExit($lveLv);
 
+		if (!hasData($studenten))
+		{
+			$this->terminateWithError('Cannot send. No Students assigned to this course');
+		}
+
 		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
 		$mailedPrestudentIds =array_column($lveLvPrestudenten, 'prestudent_id');
 
@@ -453,6 +458,13 @@ class Initiierung extends FHCAPI_Controller
 			// Case: All students were already mailed
 			if (count($sentByAnyEvaluierungOfLv) >= count($studenten))
 			{
+				$isDisabledEvaluierung = true;
+			}
+
+			// Case: No students are assigned to course
+			if (count($studenten) == 0)
+			{
+				$isDisabledEvaluierungInfo = ['No students assigned to course'];
 				$isDisabledEvaluierung = true;
 			}
 
@@ -683,7 +695,7 @@ class Initiierung extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		$lvStudents = $this->getStudentsForLvOrExit($lveLv);
-		$lvStudentsPrestudentIds = array_column($lvStudents, 'prestudent_id');
+		$lvStudentsPrestudentIds = array_column((array)$lvStudents, 'prestudent_id');
 
 		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLvPrestudentenIds = array_column($lveLvPrestudenten, 'prestudent_id');
@@ -714,11 +726,6 @@ class Initiierung extends FHCAPI_Controller
 		if(isError($result))
 		{
 			$this->terminateWithError(getError($result));
-		}
-
-		if (!hasData($result))
-		{
-			$this->terminateWithError('No Students assigned to this course');
 		}
 
 		return getData($result);
@@ -756,11 +763,6 @@ class Initiierung extends FHCAPI_Controller
 		if(isError($result))
 		{
 			$this->terminateWithError(getError($result));
-		}
-
-		if (!hasData($result))
-		{
-			$this->terminateWithError('No Students assigned to this course');
 		}
 
 		return getData($result);
