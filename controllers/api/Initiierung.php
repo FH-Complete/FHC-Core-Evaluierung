@@ -461,6 +461,13 @@ class Initiierung extends FHCAPI_Controller
 				$isDisabledEvaluierung = true;
 			}
 
+			// Case: No students are assigned to course
+			if (count($studenten) == 0)
+			{
+				$isDisabledEvaluierungInfo = ['No students assigned to course'];
+				$isDisabledEvaluierung = true;
+			}
+
 			// Case: LV aufgeteilt: nur Lektor darf bearbeiten
 			if ($item->lv_aufgeteilt)
 			{
