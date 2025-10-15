@@ -688,7 +688,7 @@ class Initiierung extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		$lvStudents = $this->getStudentsForLvOrExit($lveLv);
-		$lvStudentsPrestudentIds = array_column($lvStudents, 'prestudent_id');
+		$lvStudentsPrestudentIds = array_column((array)$lvStudents, 'prestudent_id');
 
 		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLvPrestudentenIds = array_column($lveLvPrestudenten, 'prestudent_id');
