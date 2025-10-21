@@ -61,9 +61,9 @@ export default {
 	<div class="lve-logout overflow-hidden">
 		<div class="row justify-content-center vh-100">
 			<div class="col-10 col-md-8 col-lg-6 text-center align-content-center">
-				<h1 class="h3 mb-3" v-html="computedTitle"></h1>
+				<h1 class="h3 mb-3" v-html="computedTitle" tabindex="0"></h1>
 				
-				<div class="text-center mb-5" v-html="computedContent"></div>
+				<div class="text-center mb-5" v-html="computedContent" tabindex="0"></div>
 				
 			  	<div class="text-center">
 			  		<button class="btn btn-primary" type="button" @click="onClickBackToStart">{{ $p.t('global/zurueckZumStart')}}</button>

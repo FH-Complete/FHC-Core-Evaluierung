@@ -42,31 +42,39 @@ export default {
 		<!-- Fragenbogenfrage SingleResponse -->	
 		<div v-if="frage.typ === 'singleresponse'">
 			<div class="card mb-4 text-center border-0">											
-				<div class="card-title fw-bold">
-					{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}
-				</div>
-				<div class="card-body">
-					<div 
-					class="d-flex justify-content-evenly justify-content-sm-center" 
-					role="group" 
-					aria-label="Evaluierung Antwort Option"
-					>
-					<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
+				<div 
+					class="card-body" 
+					role="radiogroup" 
+					:aria-labelledby="'frage-label-' + frage.lvevaluierung_frage_id"
+				>
+					<!-- Frage Title -->
+					<div class="card-title fw-bold mb-3" :id="'frage-label-' + frage.lvevaluierung_frage_id">
+						{{ frage.bezeichnung_by_language }}
+						<span v-if="frage.verpflichtend" aria-hidden="true"> *</span>
+						<span v-if="frage.verpflichtend" class="visually-hidden">(Pflichtfrage)</span>
+				    </div>
+				    
+				     <!-- Answer Options -->
+					<div class="d-flex justify-content-evenly justify-content-sm-center">
+						<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
 						<div class="px-md-2">
 						  	<div class="mb-auto">
 								<input
-								type="radio"				
+								type="radio"
+								:name="'frage-' + frage.lvevaluierung_frage_id"				
 								:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
 								:value="antwort.wert"
 								:checked="lvevaluierung_frage_antwort_id == antwort.wert"
-								 @click="$emit('update:lvevaluierung_frage_antwort_id',
+						 		@click="$emit('update:lvevaluierung_frage_antwort_id',
 								  	lvevaluierung_frage_antwort_id == antwort.wert 
 										? null 
 										: antwort.wert
 									)"
 								container-class="btn px-md-4"
 								class="btn-check antwort-radio-btn"
-							></div>
+								:aria-describedby="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
+							>
+							</div>
 						  	<div class="px-1">
 								<label
 									class="antwort-label d-flex flex-column mx-2 mx-sm-3 mx-md-4"
@@ -81,18 +89,26 @@ export default {
 											'wert-' + antwort.wert,
 											lvevaluierung_frage_antwort_id == antwort.wert ? 'antwort-checked' : ''
 										  ]"
-										  aria-hidden="true"
 									></i>
-									<span class="visually-hidden">{{ antwort.wert }}</span><!-- screen-reader-accessible label-->
+									<!-- Hidden accessible label -->
+								  	<span class="visually-hidden">
+										{{ antwort.bezeichnung_by_language }}
+								  	</span>
 								</label>
 							</div>
+							<!-- Visible Answer Text -->
 						  	<div class="antwort-text-wrapper mt-1">
-						  		<span class="small text-muted text-wrap">{{antwort.bezeichnung_by_language}}</span>
+						  		<span 
+						  			:id="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
+						  			class="small text-muted text-wrap"
+								>
+									{{antwort.bezeichnung_by_language}}
+								</span>
 							</div>
 						</div>
 				  	</template>
-				</div>
-			</div>
+					</div>
+				</div><!-- .card-body -->
 			</div><!-- .card Fragebogenfrage SingleResponse -->
 		</div><!-- .endif Fragebogenfrage SingleResponse-->
 	

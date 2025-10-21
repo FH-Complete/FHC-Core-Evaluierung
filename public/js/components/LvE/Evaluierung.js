@@ -240,7 +240,7 @@ export default {
 	template: `
 	<div class="lve-evaluierung d-lg-flex flex-column min-vh-100 py-5 ps-lg-2 overflow-auto">
 	
-		<h1 class="visually-hidden">{{ $p.t('fragebogen/fragebogen') }}</h1>
+		<h1 class="visually-hidden" tabindex="0">{{ $p.t('fragebogen/fragebogen') }}</h1>
 		
 		<form-form ref="form" class="lve-evaluierung" @submit.prevent="onSubmit">
 			<!-- LV-Evaluierung-Body -->
@@ -343,6 +343,7 @@ export default {
 									data-bs-target="#collapseLvinfo" 
 									:aria-expanded="isScreenXl" 
 									aria-controls="collapseLvinfo"
+									:aria-label="'Lehrveranstaltung: ' + lvInfo.bezeichnung_by_language"
 								>
 									{{lvInfo.bezeichnung_by_language}}
 								</button>
@@ -380,11 +381,11 @@ export default {
 							class="card-body d-flex flex-column align-items-center justify-content-center">
 						</div>
 					</div>
-				</aside><!-- .col LV Infos + Countdown (lg only) -->
+				</div><!-- .col LV Infos + Countdown (lg only) -->
 			</div><!-- .row lv-evaluierung-body -->
 			
 			<!-- LV-Evaluierung-Footer -->
-			<footer class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
+			<footer class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light" role="contentinfo">
 		
 				<!-- Countdown DOM container for sm/md only 
 					The Countdown Component is teleported here when showCountdown is true and isScreenLg is false -->
@@ -392,7 +393,7 @@ export default {
 				
 				<!-- Submit button -->
 				<div class="col-8 col-lg-12 text-end">
-				<button class="btn btn-primary" type="submit"> {{ $p.t('global/abschicken') }}</button>
+				<button class="btn btn-primary" @keyup.enter="onSubmit" type="submit"> {{ $p.t('global/abschicken') }}</button>
 			</div>	
 			</footer><!-- .row lv-evaluierung-footer-->
 		</form-form>
