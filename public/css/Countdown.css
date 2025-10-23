@@ -1,3 +1,10 @@
+:root{
+    --fhc-evaluierung-countdown-green: #00C853;
+    --fhc-evaluierung-countdown-orange: #FF9800;
+    --fhc-evaluierung-countdown-red: #F44336;
+    --fhc-evaluierung-countdown-path-elapsed: #E6E6E6;
+}
+
 .countdown__label {
     text-anchor: middle;
     dominant-baseline: central;
@@ -12,7 +19,7 @@
     stroke-width: 7px;
 }
 .countdown__path-elapsed {
-    stroke: #e6e6e6;
+    stroke: var(--fhc-evaluierung-countdown-path-elapsed);
 }
 .countdown__path-remaining {
     stroke-linecap: round;
@@ -20,13 +27,13 @@
 }
 
 .green {
-    stroke: #00c853;
+    stroke: var(--fhc-evaluierung-countdown-green);
 }
 
 .orange {
-    stroke: #ff9800;
+    stroke: var(--fhc-evaluierung-countdown-orange);
 }
 
 .red {
-    stroke: #f44336;
+    stroke: var(--fhc-evaluierung-countdown-red);
 }
