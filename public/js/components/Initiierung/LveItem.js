@@ -64,9 +64,9 @@ export default {
 
 			// todo remove after testing!!!
 			// TESTING MODE: Limit to max 2 students
-			// const testStudents = lveDetail.studenten.slice(0, 1);
-			// testStudents.forEach(student => {
-			lveDetail.studenten.forEach(student => {
+			const testStudents = lveDetail.studenten.slice(0, 1);
+			testStudents.forEach(student => {
+			// lveDetail.studenten.forEach(student => {
 				this.isSendingMail = true;
 				this.$api
 					.call(ApiInitiierung.generateCodesAndSendLinksToStudent(lveDetail.lvevaluierung_id))
@@ -83,10 +83,10 @@ export default {
 					.catch(error => this.$fhcAlert.handleSystemError(error))
 					.finally(() => {
 						completed++;
-						if (completed == lveDetail.studenten.length) {
+						// if (completed == lveDetail.studenten.length) {
 						// todo remove after testing!!!
-						// if (completed == testStudents.length) {
-							//this.$fhcAlert.alertDefault('info', 'TEST Mailversand', 'Testversand: max 1 Mail pro Buttonclick', true);
+						if (completed == testStudents.length) {
+							this.$fhcAlert.alertDefault('info', 'TEST Mailversand', 'Testversand: max 1 Mail pro Buttonclick', true);
 							this.$fhcAlert.alertSuccess('Erfolgreich gesendet!');
 							this.$emit('update-editable-checks', isAllSent);
 							this.isSendingMail = false;
