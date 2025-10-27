@@ -79,13 +79,6 @@ export default {
 			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt);
 		},
 	},
-	mounted() {
-		// Add Event Listener to load evaluation data only when an accordion item is expanded
-		const accordion = document.getElementById('accordionFlush');
-		if (accordion) {
-			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
-		}
-	},
 	updated(){
 		// Init Bootstrap tooltips
 		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -133,8 +126,9 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		openAccordionItem() {
-			const collapseEl = document.getElementById('flush-collapse' + this.selLveLvId);
-			if (collapseEl) {
+			const ref = this.$refs['flush-collapse' + this.selLveLvId];
+			if (Array.isArray(ref) && ref.length > 0) {
+				const collapseEl = ref[0];
 				// Get Bootstrap Collapse-Instance oder erstelle neue (toggle: false = nicht automatisch umschalten)
 				const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, { toggle: false });
 				bsCollapse.show();
@@ -220,7 +214,7 @@ export default {
 			</div>
 		</div><!--.end row -->
 		<!-- LV Accordion List -->
-		<div class="accordion" id="accordionFlush">
+		<div class="accordion" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
 			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
@@ -281,6 +275,7 @@ export default {
 						</button>
 					</h2>
 					<div 
+						:ref="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						:id="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						class="accordion-collapse collapse md-mx-3 px-3" 
 						:aria-labelledby="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id" 
@@ -296,7 +291,7 @@ export default {
 							:lv-leitungen="lvLeitungen"
 							@on-update-lv-aufgeteilt="onUpdateLvAufgeteilt"
 						>
-						</Switcher>
+						</Switcher>						
 						<!-- LV-Evaluierungen -->
 						<Lve-Item 
 							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
