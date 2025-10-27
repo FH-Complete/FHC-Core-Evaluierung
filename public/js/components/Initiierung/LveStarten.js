@@ -287,6 +287,7 @@ export default {
 						data-bs-parent="#accordionFlush"
 						:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 					>
+						<!-- Switcher -->
 						<Switcher 
   							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
   							:can-switch="canSwitch"
@@ -297,14 +298,13 @@ export default {
 						>
 						</Switcher>
 						<!-- LV-Evaluierungen -->
-						<template v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId">
-							<Lve-Item 
-								:sel-lve-lv-id="lveLv.selLveLvId"
-								:sel-lve-lv-details="selLveLvDetails"
-								@update-editable-checks="updateEditableChecks"
-							>								
-							</Lve-Item>
-						</template>
+						<Lve-Item 
+							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
+							:sel-lve-lv-id="lveLv.selLveLvId"
+							:sel-lve-lv-details="selLveLvDetails"
+							@update-editable-checks="updateEditableChecks"
+						>								
+						</Lve-Item>
 					</div><!--.end accordion-collapse -->
 				  </div><!--.end accordion-item -->
 			</template><!--.end template v-for -->
