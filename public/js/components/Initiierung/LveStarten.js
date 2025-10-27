@@ -175,7 +175,7 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evalueriungskriterien festlegen und Codes an Studierende mailen</small></h1>
+		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evaluierungskriterien festlegen und Codes an Studierende mailen</small></h1>
 		
 		<!-- Dropdowns -->
 		<div class="row">
