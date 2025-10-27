@@ -47,7 +47,7 @@ const app = Vue.createApp({
 		}
 	},
 	template: `
-		<header id="lve-evaluierung-header" class="fixed-top">
+		<header id="lve-evaluierung-header" class="fixed-top" role="banner">
 			<div class="row fhc-bgc-blue py-2 px-3 align-items-center">
 				<div class="col text-start text-light">{{ $p.t('global/lvevaluierung') }}</div>
 				<div class="col text-end">
@@ -55,7 +55,7 @@ const app = Vue.createApp({
 				</div>
 			</div>
 		</header>
-		<main id="lve-evaluierung-body" class="container-fluid">
+		<main id="lve-evaluierung-body" class="container-fluid" role="main">
 			<router-view></router-view>
 		</main>
 	`

@@ -12,9 +12,9 @@ $includesArray = array(
         'public/extensions/FHC-Core-Evaluierung/js/apps/Initiierung.js'
     ),
 	'customCSSs' => array(
-		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css',
         'public/css/components/primevue.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
+		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css'
 	)
 );
 

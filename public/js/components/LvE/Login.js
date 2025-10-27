@@ -22,32 +22,41 @@ export default {
 	template: `
 	<div class="lve-login overflow-hidden">
 		<div class="row justify-content-center vh-100 mt-5">
-			<div class="col-10 col-md-8 col-lg-4 text-center align-content-center">
-				<img :src="logo" :alt="$p.t('fragebogen/fhtwLogo')" class="img-fluid mb-4 mb-lg-5" style="max-height: 80px;">
-				
-				<h1 class="text-start mb-3 fw-normal fs-6">
-					<p>{{ $p.t('fragebogen/loginTextCodeEingeben') }}</p>
+			<div class="col-10 col-md-8 col-lg-4 text-center d-flex flex-column justify-content-center">
+				<!-- Image Logo -->
+				<h1 class="mb-4 mb-lg-5 order-1 align-self-center" tabindex="0">
+					<img :src="logo" :alt="$p.t('fragebogen/fhtwLogo')" class="img-fluid" style="max-height: 80px;">
+					<span class="visually-hidden">
+						Startseite der Lehrveranstaltungsevaluierung
+					</span>
 			  	</h1>
-				<div class="input-group mb-3 mb-lg-5">
-					<label for="evaluation-code-input" class="visually-hidden">
-						{{ $p.t('fragebogen/evaluierungscodeEingeben')}}
-					</label>
+				<!-- Text Code eingeben -->
+				<div class="text-start mb-3 fw-normal fs-6 order-2">
+					<p>{{ $p.t('fragebogen/loginTextCodeEingeben') }}</p>
+			  	</div>
+			  	<!-- Text Evaluierung Info -->
+			  	<div v-html="$p.t('fragebogen/loginTextLvevaluierung')" tabindex="0" class="order-4"></div>
+				<!-- Text Antwortoptionen-->
+				<div v-html="$p.t('fragebogen/loginTextAntwortoptionen')" tabindex="0" class="order-5"></div>
+				<!-- Input Codeeingabe und Submit button -->
+				<div class="input-group mb-3 mb-lg-5 order-3">
+					<label for="evaluation-code-input" class="visually-hidden">Code-Input</label>
 				  	<input 
 						id="evaluation-code-input"
 						type="text" 
 						v-model="code"
 						class="form-control" 
 						:placeholder="$p.t('fragebogen/loginCodeEingeben')" 
-						@keyup.enter="onClickStart"
 				  	>
-				  <button class="btn btn-primary" type="button" @click="onClickStart">Start</button>
-				</div>
-				
-				<div v-html="$p.t('fragebogen/loginTextLvevaluierung')"></div>
-				
-				<div v-html="$p.t('fragebogen/loginTextAntwortoptionen')"></div>
-			
-				
+				  	<button 
+				  		class="btn btn-primary" 
+				  		type="button" 
+				  		@click="onClickStart" 
+				  		:aria-label="'Evaluierung starten'"
+					>
+						Start
+					</button>
+				</div>	
 			</div>
 		</div>
 	</div>`

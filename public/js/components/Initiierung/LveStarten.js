@@ -76,9 +76,7 @@ export default {
 		selLveLvId(newId) {
 			if (!newId) return;
 
-			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt)
-				.then(data => this.assignEvaluierungData(data, this.selLveLv.lv_aufgeteilt))
-				.catch(error => this.$fhcAlert.handleSystemError(error))
+			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt);
 		},
 	},
 	mounted() {
@@ -104,15 +102,18 @@ export default {
 				: ApiInitiierung.getDataForEvaluierungByLv(lveLvId);
 
 			// Return basic data
-			return this.$api.call(apiCall).then(result => result.data);
-		},
-		assignEvaluierungData(data, byGroup) {
-			this.canSwitch = data.canSwitch;
-			this.canSwitchInfo = data.canSwitchInfo;
-			this.lvLeitungen = data.lvLeitungen;
-			this.selLveLvDetails = byGroup
-				? data.groupedByLe
-				: data.groupedByLv;
+			return this.$api
+				.call(apiCall)
+				.then(result => {
+					const data = result.data;
+					this.canSwitch = data.canSwitch;
+					this.canSwitchInfo = data.canSwitchInfo;
+					this.lvLeitungen = data.lvLeitungen;
+					this.selLveLvDetails = lv_aufgeteilt
+							? data.groupedByLe
+							: data.groupedByLv;
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		lookupLv(lehrveranstaltung_id) {
 			if (!isNaN(lehrveranstaltung_id)) {
@@ -148,14 +149,10 @@ export default {
 			}
 		},
 		onUpdateLvAufgeteilt(newVal){
-			this.loadEvaluierungData(this.selLveLvId, newVal)
-				.then(data => this.assignEvaluierungData(data, newVal))
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+			this.loadEvaluierungData(this.selLveLvId, newVal);
 		},
 		updateEditableChecks(isAllSent){
-			this.loadEvaluierungData(this.selLveLvId, this.selLveLv.lv_aufgeteilt)
-				.then(data => this.assignEvaluierungData(data, this.selLveLv.lv_aufgeteilt))
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+			this.loadEvaluierungData(this.selLveLvId, this.selLveLv.lv_aufgeteilt);
 
 			// Update icon displaying if all students received mail
 			this.selLveLv.isAllSent = isAllSent;
@@ -178,7 +175,7 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evalueriungskriterien festlegen und Codes an Studierende mailen</small></h1>
+		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evaluierungskriterien festlegen und Codes an Studierende mailen</small></h1>
 		
 		<!-- Dropdowns -->
 		<div class="row">
