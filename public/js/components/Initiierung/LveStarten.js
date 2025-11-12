@@ -165,6 +165,10 @@ export default {
 					lv.kurzbzlang.toLowerCase().includes(query) ||
 					lv.lehrveranstaltung_id.toString().includes(query)
 			);
+		},
+		openEvaluation(lvevaluierung_lehrveranstaltung_id){
+			console.log(lvevaluierung_lehrveranstaltung_id);
+			window.open( this.$api.getUri() + 'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/', '_blank');
 		}
 	},
 	template: `
@@ -217,7 +221,7 @@ export default {
 		<div class="accordion" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
 			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
 				<div class="accordion-item">
-					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
+					<h2 class="accordion-header position-relative" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
 						<button 
 							class="accordion-button collapsed d-flex" 
 							type="button" 
@@ -263,7 +267,7 @@ export default {
 								</span>
 							</div>
 							<!-- right side icon -->
-							<div>
+							<div class="me-5">
 								<span class="badge rounded-pill border border-secondary text-secondary me-2"
 									:title="'Submitted / Total Students'"
 										data-bs-toggle="tooltip"
@@ -272,6 +276,12 @@ export default {
 									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
 								</span>
 							</div>
+						</button>
+						<button 
+							class="btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"
+							@click="openEvaluation(lveLv.lvevaluierung_lehrveranstaltung_id)"
+						>
+							<i class="fa fa-square-poll-horizontal"></i>
 						</button>
 					</h2>
 					<div 
