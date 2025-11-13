@@ -178,7 +178,7 @@ export default {
 			<!-- Lehrende -->
 			<div class="card-body border-bottom">
 				<i class="fa fa-graduation-cap me-2"></i>
-				<span class="d-none d-md-inline me-2">Lehrende:</span>
+				<span class="d-none d-md-inline me-2">{{ $p.t('lehre/lektorInnen') }}:</span>
 				<span v-html="getLektorenInfoString(lveLvDetail.lektoren)"></span>
 			</div><!--.end card body-->
 			<!-- LV-Evaluierungen -->
