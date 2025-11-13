@@ -17,6 +17,7 @@ export default {
 	created() {
 		const lehrveranstaltung_id = this.$route.query?.lehrveranstaltung_id;
 
+		this.isLoading = true;
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
@@ -25,6 +26,7 @@ export default {
 			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
 			.then(result => {
 				this.lveLvs = result.data;
+				this.isLoading = false;
 
 				// Give Accordion time to build item DOMs first
  				setTimeout(() => {
@@ -47,7 +49,8 @@ export default {
 			canSwitch: null,
 			canSwitchInfo: [],
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
-			selLv: null					// Autocomplete selected LV
+			selLv: null,					// Autocomplete selected LV
+			isLoading: false,
 		}
 	},
 	computed: {
@@ -124,11 +127,13 @@ export default {
 			}
 		},
 		onChangeStudiensemester(e) {
+			this.isLoading = true;
 			this.$api
 				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
 				.then(result => {
 					this.lveLvs = result.data;
 					this.selLv = null;	// Reset Autocomplete field
+					this.isLoading = false;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
@@ -309,8 +314,14 @@ export default {
 				  </div><!--.end accordion-item -->
 			</template><!--.end template v-for -->
 		</div><!--.end accordion -->
-		<!-- Placeholder Card: If no LV for Evaluation found -->
-		<div v-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
+	
+		<!-- Placeholder Card: When Loading or if no LV for Evaluation found -->
+		<div v-if="isLoading" class="card card flex-grow-1 mb-3">
+			<div class="card-body d-flex justify-content-center align-items-center text-center">
+				<span><i class="fa-solid fa-spinner fa-pulse fa-4x"></i></span>
+			</div>
+		</div>
+		<div v-else-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
 			<div class="card-body d-flex justify-content-center align-items-center text-center">
 				<span class="h5 text-muted">
 					Keine Lehrveranstaltungen zur Evaluierung freigegeben in {{ selStudiensemester}}
