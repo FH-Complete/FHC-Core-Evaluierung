@@ -199,6 +199,9 @@ export default {
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
+								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
 								</form-input>
 							</div>
@@ -213,6 +216,9 @@ export default {
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
+									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
 								</form-input>
 							</div>
