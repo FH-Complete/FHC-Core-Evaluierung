@@ -383,7 +383,7 @@ export default {
 							class="card-body d-flex flex-column align-items-center justify-content-center">
 						</div>
 					</div>
-				</div><!-- .col LV Infos + Countdown (lg only) -->
+				</aside><!-- .col LV Infos + Countdown (lg only) -->
 			</div><!-- .row lv-evaluierung-body -->
 			
 			<!-- LV-Evaluierung-Footer -->
