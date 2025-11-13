@@ -47,6 +47,9 @@ class EvaluierungLib
 		// Append Lecturers to result array
 		$data->lehrende = hasData($result) ? getData($result) : [];
 
+		// Add Studiensemester
+		$data->studiensemester_kurzbz = $studiensemester_kurzbz;
+
 		return $data;
 	}
 
