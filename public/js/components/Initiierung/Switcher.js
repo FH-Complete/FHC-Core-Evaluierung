@@ -83,7 +83,7 @@ export default {
 							<i 
 								class="fa fa-ban fa-lg text-muted" 
 								:title="canSwitchInfo.join(', ')"
-								data-bs-toggle="tooltip"
+								v-tooltip="canSwitchInfo.join(', ')"
 								data-bs-html="true"
 								data-bs-custom-class="tooltip-left">
 							</i>
@@ -93,7 +93,7 @@ export default {
 							<i 
 								class="fa fa-info-circle text-primary fa-lg" 
 								:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-								data-bs-toggle="tooltip"
+								v-tooltip="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
 								data-bs-html="true"
 								data-bs-custom-class="tooltip-left">
 							</i>

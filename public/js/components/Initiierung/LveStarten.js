@@ -89,13 +89,6 @@ export default {
 			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
 		}
 	},
-	updated(){
-		// Init Bootstrap tooltips
-		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-		let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-			return new bootstrap.Tooltip(tooltipTriggerEl)
-		})
-	},
 	methods: {
 		loadEvaluierungData(lveLvId, lv_aufgeteilt) {
 			if (!lveLvId) return Promise.reject("No LveLvID provided");
@@ -243,8 +236,8 @@ export default {
 									<i
 										class="fa-solid text-dark me-2" 
 										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
+										v-tooltip="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
 										data-bs-custom-class="tooltip-left"
 									>								
 									</i>
@@ -253,8 +246,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
+										v-tooltip="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -263,8 +256,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
-										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
+										v-tooltip="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -275,9 +268,10 @@ export default {
 							</div>
 							<!-- right side icon -->
 							<div>
-								<span class="badge rounded-pill border border-secondary text-secondary me-2"
-									:title="'Submitted / Total Students'"
-										data-bs-toggle="tooltip"
+								<span 
+									class="badge rounded-pill border border-secondary text-secondary me-2"
+									:title="'Submitted / Total Students'"						
+									v-tooltip						
 								>
 									<i class="fa-regular fa-comment me-1"></i>
 									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
