@@ -395,7 +395,7 @@ export default {
 				
 				<!-- Submit button -->
 				<div class="col-8 col-lg-12 text-end">
-				<button class="btn btn-primary" @keyup.enter="onSubmit" type="submit"> {{ $p.t('global/abschicken') }}</button>
+				<button class="btn btn-primary" type="submit"> {{ $p.t('global/abschicken') }}</button>
 			</div>	
 			</footer><!-- .row lv-evaluierung-footer-->
 		</form-form>
