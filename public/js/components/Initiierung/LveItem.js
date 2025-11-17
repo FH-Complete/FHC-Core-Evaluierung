@@ -8,6 +8,7 @@ export default {
 		FormForm,
 		FormInput
 	},
+	emits: ["update-editable-checks"],
 	data() {
 		return {
 			infoStudierendenlink: `
@@ -245,6 +246,7 @@ export default {
 							</div>
 						</div><!--.d-flex -->
 					</div><!--.col -->
+					</div><!--.row-->
 				</form-form><!--.end form -->
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->

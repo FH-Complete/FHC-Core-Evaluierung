@@ -304,7 +304,7 @@ export default {
 						<!-- LV-Evaluierungen -->
 						<template v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId">
 							<Lve-Item 
-								:sel-lve-lv-id="lveLv.selLveLvId"
+								:sel-lve-lv-id="selLveLvId"
 								:sel-lve-lv-details="selLveLvDetails"
 								@update-editable-checks="updateEditableChecks"
 							>								
