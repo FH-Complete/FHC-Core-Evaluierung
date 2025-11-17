@@ -1,5 +1,4 @@
 import LveStarten from '../components/Initiierung/LveStarten.js';
-//import DateHelper from '../helpers/DateHelper';
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
@@ -25,5 +24,4 @@ app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
-	//.use(DateHelper)
 	.mount('#lve-initiierung-main')

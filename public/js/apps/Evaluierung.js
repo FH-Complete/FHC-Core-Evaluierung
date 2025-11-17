@@ -2,7 +2,6 @@ import LveLogin from '../components/LvE/Login.js';
 import LveEvaluierung from '../components/LvE/Evaluierung.js';
 import LveLogout from '../components/LvE/Logout.js';
 import SpracheDropdown from "../widgets/SpracheDropdown.js";
-import DateHelper from '../helpers/DateHelper';
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 
 const selectedLanguage = Vue.ref(FHC_JS_DATA_STORAGE_OBJECT.user_language);
@@ -63,5 +62,4 @@ app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
-	.use(DateHelper)
 	.mount('#lve-evaluierung-main')
