@@ -3,8 +3,6 @@ import LveEvaluierung from '../components/LvE/Evaluierung.js';
 import LveLogout from '../components/LvE/Logout.js';
 import SpracheDropdown from "../widgets/SpracheDropdown.js";
 import DateHelper from '../helpers/DateHelper';
-import FhcAlert from '../../../../js/plugins/FhcAlert.js';
-import FhcApi from "../../../../js/plugins/Api.js";
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 
 const selectedLanguage = Vue.ref(FHC_JS_DATA_STORAGE_OBJECT.user_language);
@@ -64,8 +62,6 @@ const app = Vue.createApp({
 app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
-	.use(FhcApi)
-	.use(FhcAlert)
 	.use(Phrasen)
 	.use(DateHelper)
 	.mount('#lve-evaluierung-main')
