@@ -105,69 +105,69 @@ export default {
 				</div>
 				<!-- Right table -->
 				<div class="col-md-6">
-							<table class="table table-sm table-bordered align-middle">
-								<tbody>
-									<tr>
-										<th>Einladungen versandt</th>
-										<td>20</td>
-									</tr>
-									<tr>
-										<th>Abgeschlossene Evaluierungen</th>
-										<td>
-											<div class="d-flex justify-content-between">
-												<span>15</span>
-												<span 
-													v-if="true"
-													data-bs-toggle="tooltip" 
-													data-bs-placement="top" 
-													title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
-												>
-												&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
-												</span>
-												<span 
-													v-if="true"
-													data-bs-toggle="tooltip" 
-													data-bs-placement="top" 
-													title="Wenig abgeschlossene Evaluierungen"
-												>
-												&lt; 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
-												</span>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<th>Rücklaufquote</th>
-										<td>
-											<div class="d-flex justify-content-between">
-												<span>75%</span>
-												<span 
-													v-if="true"
-													data-bs-toggle="tooltip" 
-													data-bs-placement="top" 
-													title="Sehr geringe Rücklaufquote"
-												>
-												&lt; 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
-												</span>
-											</div>
-										</td>
-									</tr>
-									<tr>
-										<th>Evaluierungszeitraum</th>
-										<td>01.11.2025 – 03.11.2025</td>
-									</tr>
-									<tr>
-										<th>Durchführungszeitraum (in min)</th>
-										<td>
-											<div class="d-flex justify-content-between">
-												<span>Ø 7,5</span>
-												<span>Min 5</span>
-												<span>Max 10</span>
-											</div>
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
+					<table class="table table-sm table-bordered align-middle">
+						<tbody>
+							<tr>
+								<th>Einladungen versandt</th>
+								<td>20</td>
+							</tr>
+							<tr>
+								<th>Abgeschlossene Evaluierungen</th>
+								<td>
+									<div class="d-flex justify-content-between">
+										<span>15</span>
+										<span 
+											v-if="true"
+											data-bs-toggle="tooltip" 
+											data-bs-placement="top" 
+											title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
+										>
+										&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
+										</span>
+										<span 
+											v-if="true"
+											data-bs-toggle="tooltip" 
+											data-bs-placement="top" 
+											title="Wenig abgeschlossene Evaluierungen"
+										>
+										&lt; 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
+										</span>
+									</div>
+								</td>
+							</tr>
+							<tr>
+								<th>Rücklaufquote</th>
+								<td>
+									<div class="d-flex justify-content-between">
+										<span>75%</span>
+										<span 
+											v-if="true"
+											data-bs-toggle="tooltip" 
+											data-bs-placement="top" 
+											title="Sehr geringe Rücklaufquote"
+										>
+										&lt; 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
+										</span>
+									</div>
+								</td>
+							</tr>
+							<tr>
+								<th>Evaluierungszeitraum</th>
+								<td>01.11.2025 – 03.11.2025</td>
+							</tr>
+							<tr>
+								<th>Durchführungszeitraum (in min)</th>
+								<td>
+									<div class="d-flex justify-content-between">
+										<span>Ø 7,5</span>
+										<span>Min 5</span>
+										<span>Max 10</span>
+									</div>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		  	<!-- Dynamic content -->
 			<keep-alive>
