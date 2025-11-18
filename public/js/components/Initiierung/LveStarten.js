@@ -82,13 +82,6 @@ export default {
 			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt);
 		},
 	},
-	mounted() {
-		// Add Event Listener to load evaluation data only when an accordion item is expanded
-		const accordion = document.getElementById('accordionFlush');
-		if (accordion) {
-			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
-		}
-	},
 	methods: {
 		loadEvaluierungData(lveLvId, lv_aufgeteilt) {
 			if (!lveLvId) return Promise.reject("No LveLvID provided");
