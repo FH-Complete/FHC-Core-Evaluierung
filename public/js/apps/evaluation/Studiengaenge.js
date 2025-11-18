@@ -1,7 +1,4 @@
 import Studiengaenge from "../../components/Evaluation/Studiengaenge.js";
-import DateHelper from '../../helpers/DateHelper';
-import FhcAlert from '../../../../../js/plugins/FhcAlert.js';
-import FhcApi from "../../../../../js/plugins/Api.js";
 import Phrasen from "../../../../../js/plugins/Phrasen.js";
 import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js"
 
@@ -27,9 +24,6 @@ const app = Vue.createApp({
 app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
-	.use(FhcApi)
-	.use(FhcAlert)
 	.use(Phrasen)
-	.use(DateHelper)
 	.use(highchartsPlugin, {tagName: 'highcharts'})
 	.mount('#evaluation-studiengaenge-main')
