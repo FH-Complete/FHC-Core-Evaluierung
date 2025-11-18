@@ -117,20 +117,20 @@ export default {
 											<div class="d-flex justify-content-between">
 												<span>15</span>
 												<span 
-													v-if=""
+													v-if="true"
 													data-bs-toggle="tooltip" 
 													data-bs-placement="top" 
 													title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
 												>
-												< 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
+												&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
 												</span>
 												<span 
-													v-if=""
+													v-if="true"
 													data-bs-toggle="tooltip" 
 													data-bs-placement="top" 
 													title="Wenig abgeschlossene Evaluierungen"
 												>
-												< 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
+												&lt; 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
 												</span>
 											</div>
 										</td>
@@ -141,12 +141,12 @@ export default {
 											<div class="d-flex justify-content-between">
 												<span>75%</span>
 												<span 
-													v-if=""
+													v-if="true"
 													data-bs-toggle="tooltip" 
 													data-bs-placement="top" 
 													title="Sehr geringe Rücklaufquote"
 												>
-												< 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
+												&lt; 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
 												</span>
 											</div>
 										</td>
