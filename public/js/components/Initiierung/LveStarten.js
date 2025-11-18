@@ -17,6 +17,7 @@ export default {
 	created() {
 		const lehrveranstaltung_id = this.$route.query?.lehrveranstaltung_id;
 
+		this.isLoading = true;
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
@@ -25,6 +26,7 @@ export default {
 			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
 			.then(result => {
 				this.lveLvs = result.data;
+				this.isLoading = false;
 
 				// Give Accordion time to build item DOMs first
  				setTimeout(() => {
@@ -47,7 +49,8 @@ export default {
 			canSwitch: null,
 			canSwitchInfo: [],
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
-			selLv: null					// Autocomplete selected LV
+			selLv: null,					// Autocomplete selected LV
+			isLoading: false,
 		}
 	},
 	computed: {
@@ -79,12 +82,12 @@ export default {
 			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt);
 		},
 	},
-	updated(){
-		// Init Bootstrap tooltips
-		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-		let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-			return new bootstrap.Tooltip(tooltipTriggerEl)
-		})
+	mounted() {
+		// Add Event Listener to load evaluation data only when an accordion item is expanded
+		const accordion = document.getElementById('accordionFlush');
+		if (accordion) {
+			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
+		}
 	},
 	methods: {
 		loadEvaluierungData(lveLvId, lv_aufgeteilt) {
@@ -117,11 +120,13 @@ export default {
 			}
 		},
 		onChangeStudiensemester(e) {
+			this.isLoading = true;
 			this.$api
 				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
 				.then(result => {
 					this.lveLvs = result.data;
 					this.selLv = null;	// Reset Autocomplete field
+					this.isLoading = false;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
@@ -236,8 +241,8 @@ export default {
 									<i
 										class="fa-solid text-dark me-2" 
 										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
+										v-tooltip="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
 										data-bs-custom-class="tooltip-left"
 									>								
 									</i>
@@ -246,8 +251,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
+										v-tooltip="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -256,8 +261,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
-										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
+										v-tooltip="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -268,9 +273,10 @@ export default {
 							</div>
 							<!-- right side icon -->
 							<div class="me-5">
-								<span class="badge rounded-pill border border-secondary text-secondary me-2"
-									:title="'Submitted / Total Students'"
-										data-bs-toggle="tooltip"
+								<span 
+									class="badge rounded-pill border border-secondary text-secondary me-2"
+									:title="'Submitted / Total Students'"						
+									v-tooltip						
 								>
 									<i class="fa-regular fa-comment me-1"></i>
 									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
@@ -305,7 +311,7 @@ export default {
 						<!-- LV-Evaluierungen -->
 						<Lve-Item 
 							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
-							:sel-lve-lv-id="lveLv.selLveLvId"
+							:sel-lve-lv-id="selLveLvId"
 							:sel-lve-lv-details="selLveLvDetails"
 							@update-editable-checks="updateEditableChecks"
 						>								
@@ -314,8 +320,14 @@ export default {
 				  </div><!--.end accordion-item -->
 			</template><!--.end template v-for -->
 		</div><!--.end accordion -->
-		<!-- Placeholder Card: If no LV for Evaluation found -->
-		<div v-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
+	
+		<!-- Placeholder Card: When Loading or if no LV for Evaluation found -->
+		<div v-if="isLoading" class="card card flex-grow-1 mb-3">
+			<div class="card-body d-flex justify-content-center align-items-center text-center">
+				<span><i class="fa-solid fa-spinner fa-pulse fa-4x"></i></span>
+			</div>
+		</div>
+		<div v-else-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
 			<div class="card-body d-flex justify-content-center align-items-center text-center">
 				<span class="h5 text-muted">
 					Keine Lehrveranstaltungen zur Evaluierung freigegeben in {{ selStudiensemester}}

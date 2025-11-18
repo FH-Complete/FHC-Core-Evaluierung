@@ -123,7 +123,7 @@ export default {
 					  	:placeholder="frage.placeholder_by_language"
 						@input="$emit('update:antwort', $event.target.value)"
 					  	style="height: 100px"
-					/>
+					>
 					</form-input>
 				</div>
 			</div><!-- .card Fragebogenfrage Text -->

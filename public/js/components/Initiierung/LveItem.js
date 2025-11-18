@@ -8,6 +8,7 @@ export default {
 		FormForm,
 		FormInput
 	},
+	emits: ["update-editable-checks"],
 	data() {
 		return {
 			infoStudierendenlink: `
@@ -25,13 +26,6 @@ export default {
 			type: Array,
 			required: true
 		}
-	},
-	updated(){
-		// Init Bootstrap tooltips
-		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-		let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-			return new bootstrap.Tooltip(tooltipTriggerEl)
-		})
 	},
 	methods: {
 		saveOrUpdateLvevaluierung(lveLvDetail){
@@ -110,47 +104,11 @@ export default {
 		getLektorenInfoString(lektoren) {
 			return lektoren.map(l => l.vorname + ' ' + l.nachname).join(', ');
 		},
-		getBadgeStudierende(lveLvDetail) {
-			let badge = '';
-			if (lveLvDetail.studenten && lveLvDetail.studenten.length > 0) {
-				// Add Icon and Tooltip
-				const tooltipStudierende = lveLvDetail.studenten.map(s => s.nachname + ' ' + s.vorname).join('<br>');
-				badge = ` 
- 					<span 
- 						class="badge rounded-pill border border-secondary text-secondary"
- 						title="${tooltipStudierende}" 
- 						data-bs-toggle="tooltip"
- 						data-bs-html="true"
- 						data-bs-custom-class="tooltip-left"
-					>
-						<i class="fa-solid fa-users ms-1"></i> 
-						Studierende
-						<i class="fa-solid fa-eye ms-1"></i> 
-					</span>
-				`;
-			}
-
-			return badge;
+		getStudierendeString(studenten) {
+			return studenten.map(s => s.nachname + ' ' + s.vorname).join('<br>');
 		},
-		getBadgeStundenplan(lveLvDetail) {
-			let badge = '';
-			if (lveLvDetail.stundenplan && lveLvDetail.stundenplan.length > 0) {
-				const tooltipStudienplan = lveLvDetail.stundenplan.map(s => DateHelper.formatDate(s.datum)).join('<br>');
-				badge = ` 
- 					<span
- 						class="badge rounded-pill border border-secondary text-secondary" 
- 						title="${tooltipStudienplan}"
- 						data-bs-toggle="tooltip"
- 						data-bs-html="true"
- 						data-bs-custom-class="tooltip-left"
-					>
-						<i class="fa-solid fa-list ms-1"></i> 
-						Stundenplan
-						<i class="fa-solid fa-eye ms-1"></i> 
-					</span>
-				`;
-			}
-			return badge;
+		getStundenplanterminString(stundenplan) {
+			return stundenplan.map(s => DateHelper.formatDate(s.datum)).join('<br>');
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
 			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
@@ -171,14 +129,30 @@ export default {
 			<div class="card-body pb-0">
 				<i class="fa fa-users me-2"></i>
 				<span class="d-none d-md-inline me-2">Gruppen:</span>
-				<span v-html="getLeGruppenInfoString(lveLvDetail)"></span>
-				<span v-html="getBadgeStudierende(lveLvDetail)" class="d-none d-md-inline"></span>
-				<span v-html="getBadgeStundenplan(lveLvDetail)" class="d-none d-md-inline"></span>
+				<span v-html="getLeGruppenInfoString(lveLvDetail)" class="me-2"></span>
+				<span
+ 						class="badge rounded-pill border border-secondary text-secondary d-none d-md-inline me-2" 
+						:title="getStudierendeString(lveLvDetail.studenten)"
+ 						v-tooltip="getStudierendeString(lveLvDetail.studenten)"
+ 						data-bs-html="true"
+ 						data-bs-custom-class="tooltip-left"
+					>
+						<i class="fa-solid fa-list ms-1"></i> Stundenplan<i class="fa-solid fa-eye ms-1"></i> 
+					</span>
+					<span
+ 						class="badge rounded-pill border border-secondary text-secondary d-none d-md-inline" 
+						:title="getStundenplanterminString(lveLvDetail.stundenplan)"
+ 						v-tooltip="getStundenplanterminString(lveLvDetail.stundenplan)" 				
+ 						data-bs-html="true"
+ 						data-bs-custom-class="tooltip-left"
+					>
+						<i class="fa-solid fa-list ms-1"></i> Stundenplan<i class="fa-solid fa-eye ms-1"></i> 
+					</span>
 			</div><!--.end card-body -->
 			<!-- Lehrende -->
 			<div class="card-body border-bottom">
 				<i class="fa fa-graduation-cap me-2"></i>
-				<span class="d-none d-md-inline me-2">Lehrende:</span>
+				<span class="d-none d-md-inline me-2">{{ $p.t('lehre/lektorInnen') }}:</span>
 				<span v-html="getLektorenInfoString(lveLvDetail.lektoren)"></span>
 			</div><!--.end card body-->
 			<!-- LV-Evaluierungen -->
@@ -199,6 +173,9 @@ export default {
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
+								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
 								</form-input>
 							</div>
@@ -213,6 +190,9 @@ export default {
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
+									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
 								</form-input>
 							</div>
@@ -230,7 +210,7 @@ export default {
 									<i 
 										class="fa fa-ban fa-lg text-muted" 
 										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
-										data-bs-toggle="tooltip"
+										v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
 										data-bs-html="true"
 										data-bs-custom-class="tooltip-left">
 									</i>
@@ -239,6 +219,7 @@ export default {
 							</div>
 						</div><!--.d-flex -->
 					</div><!--.col -->
+					</div><!--.row-->
 				</form-form><!--.end form -->
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->
@@ -262,8 +243,8 @@ export default {
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
 							class="ms-2 badge rounded-pill border border-secondary text-secondary"
-							:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.vorname + ' ' + s.nachname).join('<br>')"
-							data-bs-toggle="tooltip"
+							:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
+							v-tooltip="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
 							data-bs-html="true"
 							data-bs-custom-class="tooltip-left"
 						>
@@ -275,7 +256,7 @@ export default {
 							<i 
 								class="fa fa-info-circle text-primary fa-lg" 
 								:title="infoStudierendenlink"
-								data-bs-toggle="tooltip"
+								v-tooltip="infoStudierendenlink"
 								data-bs-html="true"
 								data-bs-custom-class="tooltip-left">
 							</i>
