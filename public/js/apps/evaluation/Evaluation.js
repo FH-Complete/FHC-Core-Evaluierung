@@ -10,7 +10,11 @@ const router = VueRouter.createRouter({
 		{
 			path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluation/Evaluation`,
 			name: 'Evaluation',
-			component: Evaluation
+			component: Evaluation,
+			props: route => ({
+				lvevaluierung_id: route.query.lvevaluierung_id ?? null,
+				lvevaluierung_lehrveranstaltung_id: route.query.lvevaluierung_lehrveranstaltung_id ?? null
+			})
 		}
 	]
 });

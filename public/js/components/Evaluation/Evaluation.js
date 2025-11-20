@@ -9,6 +9,7 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
+	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id'],
 	data() {
 		return {
 			selectedView: 'auswertung',
@@ -25,6 +26,10 @@ export default {
 			if (this.selectedView === 'reflexion') return 'Evaluation-Reflexion'
 			if (this.selectedView === 'einmeldung') return 'Evaluation-Einmeldung'
 		}
+	},
+	created() {
+		console.log("Eval ID:", this.lvevaluierung_id);
+		console.log("LVE-LV ID:", this.lvevaluierung_lehrveranstaltung_id);
 	},
 	methods: {
 		changeView(view) {
