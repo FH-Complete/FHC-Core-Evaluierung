@@ -1,6 +1,7 @@
 import Evaluation from "../../components/Evaluation/Evaluation.js";
 import Phrasen from "../../../../../js/plugins/Phrasen.js";
 import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js"
+import DateHelper from "../../helpers/DateHelper";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 const router = VueRouter.createRouter({
@@ -20,6 +21,8 @@ const app = Vue.createApp({
 	},
 	template: `<router-view></router-view>`
 });
+
+app.config.globalProperties.DateHelper = DateHelper;
 
 app
 	.use(router)
