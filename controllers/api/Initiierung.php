@@ -62,7 +62,7 @@ class Initiierung extends FHCAPI_Controller
 			$item->countStudents = count($students);
 
 			// count submitted Evaluierungen of LV
-			$submittedEvaluierungen = $this->getSubmittedEvaluierungen($item->lvevaluierung_lehrveranstaltung_id);
+			$submittedEvaluierungen = $this->getAbgeschlosseneEvaluierungenByLveLv($item->lvevaluierung_lehrveranstaltung_id);
 			$item->countSubmitted = count($submittedEvaluierungen);
 		}
 
@@ -736,9 +736,9 @@ class Initiierung extends FHCAPI_Controller
 	 * @param $lvevaluierung_lehrveranstaltung_id
 	 * @return array
 	 */
-	private function getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id)
+	private function getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id)
 	{
-		$result = $this->LvevaluierungCodeModel->getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
 
 		if(isError($result))
 		{

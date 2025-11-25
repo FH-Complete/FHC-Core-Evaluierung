@@ -54,13 +54,12 @@ class LvevaluierungCode_model extends DB_Model
 	}
 
 	/**
-	 * Get submitted Evaluierungen (=Student submitted Evaluierung).
-	 * If Endezeit is set, the Evaluierung was submitted.
+	 * Get abgeschlossene Evaluierungen by LVE-LV ID.
 	 *
 	 * @param $lvevaluierung_lehrveranstaltung_id
 	 * @return mixed
 	 */
-	public function getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id)
+	public function getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id)
 	{
 		$qry = "
 			SELECT 
