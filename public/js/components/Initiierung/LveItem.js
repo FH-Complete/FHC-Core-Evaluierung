@@ -114,14 +114,30 @@ export default {
 				Saved on ${DateHelper.formatDate(lveLvDetail.insertamum)} 
 				by ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
 			`;
+		},
+		openEvaluationByLve(lvevaluierung_id){
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+					'?lvevaluierung_id=' + lvevaluierung_id;
+
+			window.open(url, '_blank');
 		}
 	},
 	template: `
 		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 			<!-- Card title -->
-			<div class="card-header" 
+			<div 
+				class="card-header d-flex justify-content-between align-items-center" 
 				:class="{'fhc-bgc-blue text-light': !lveLvDetail.editableCheck.isDisabledEvaluierung}">
-				LV-Evaluierung
+				<div>LV-Evaluierung</div>
+				<div>
+					<button 
+						class="btn btn-outline-secondary"
+						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
+					>
+						<i class="fa fa-square-poll-horizontal"></i>
+					</button>
+				</div>
 			</div><!--.end card-header -->
 			<!-- Gruppen -->
 			<div class="card-body pb-0">
