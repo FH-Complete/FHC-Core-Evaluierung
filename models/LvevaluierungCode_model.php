@@ -54,6 +54,27 @@ class LvevaluierungCode_model extends DB_Model
 	}
 
 	/**
+	 * Get abgeschlossene Evaluierungen by LVE ID.
+	 *
+	 * @param $lvevaluierung_id
+	 * @return mixed
+	 */
+	public function getAbgeschlosseneEvaluierungenByLve($lvevaluierung_id)
+	{
+		$qry = "
+			SELECT 
+			    *
+			FROM 
+			    extension.tbl_lvevaluierung_code lvec
+			WHERE 
+			    lvec.lvevaluierung_id = ?
+				AND lvec.endezeit IS NOT NULL	
+		";
+
+		return $this->execQuery($qry, [$lvevaluierung_id]);
+	}
+
+	/**
 	 * Get abgeschlossene Evaluierungen by LVE-LV ID.
 	 *
 	 * @param $lvevaluierung_lehrveranstaltung_id

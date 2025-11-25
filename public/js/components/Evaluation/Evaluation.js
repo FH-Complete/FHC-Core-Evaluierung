@@ -1,3 +1,4 @@
+import ApiEvaluation from "../../api/evaluation.js";
 import EvaluationAuswertung from "./EvaluationAuswertung.js";
 import EvaluationReflexion from "./EvaluationReflexion.js";
 import EvaluationEinmeldung from "./EvaluationEinmeldung.js";
@@ -12,6 +13,18 @@ export default {
 	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id'],
 	data() {
 		return {
+			evalData: {
+				bezeichnung: '',
+				verpflichtend: null,
+				lv_aufgeteilt: null,
+				lvLeitungen: [],
+				lehrende: [],
+				codes_ausgegeben: 0,
+				countSubmitted: 0,
+				ruecklaufquote: 0,
+				startzeit: null,
+				endezeit: null,
+			},
 			selectedView: 'auswertung',
 			scrollPositions: {
 				auswertung: 0,
@@ -25,11 +38,47 @@ export default {
 			if (this.selectedView === 'auswertung') return 'Evaluation-Auswertung'
 			if (this.selectedView === 'reflexion') return 'Evaluation-Reflexion'
 			if (this.selectedView === 'einmeldung') return 'Evaluation-Einmeldung'
+		},
+		lehrveranstaltung() {
+			if (!this.evalData.bezeichnung) return;
+
+			const d = this.evalData;
+			return `${d.stgKurzbz}-${d.semester}: ${d.bezeichnung} - ${d.orgform_kurzbz}`;
+		},
+		verpflichtend(){
+			if (this.evalData.verpflichtend === null) return;
+			return this.evalData.verpflichtend ? 'Ja' : 'Nein';
+		},
+		lvAufgeteilt(){
+			if (this.evalData.lv_aufgeteilt === null) return;
+			return this.evalData.lv_aufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV';
+		},
+		lehrende() {
+			return this.evalData?.lehrende?.map(l => `${l.vorname} ${l.nachname}`).join(', ');
+		},
+		lvLeitungen() {
+			return this.evalData?.lvLeitungen?.map(l => `${l.vorname} ${l.nachname}`).join(', ');
+		},
+		formattedEvalPeriod() {
+			if (!this.evalData.startzeit || !this.evalData.endezeit) return;
+
+			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
+		},
+		avgDuration() {
+			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
 		}
 	},
 	created() {
-		console.log("Eval ID:", this.lvevaluierung_id);
-		console.log("LVE-LV ID:", this.lvevaluierung_lehrveranstaltung_id);
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
+			const apiCall = this.lvevaluierung_id
+				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id)
+				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+
+			this.$api
+				.call(apiCall)
+				.then(result => this.evalData = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		}
 	},
 	methods: {
 		changeView(view) {
@@ -53,7 +102,7 @@ export default {
 			<div class="d-flex justify-content-between align-items-center flex-wrap">
 				<div>
 					<h2 class="d-none d-lg-inline-block mb-0">
-						LV-Reflexion <small>Grundlagen der Programmierung</small>
+						LV-Reflexion <small>{{ evalData.bezeichnung }}</small>
 					</h2>
 					<h2 class="d-lg-none mb-0">LV-Reflexion</h2>
 				</div>
@@ -87,23 +136,23 @@ export default {
 						<tbody>
 							<tr>
 								<th>Lehrveranstaltung</th>
-								<td>BBE - 1: Grundlagen der Programmierung - VZ</td>
+								<td>{{ lehrveranstaltung }}</td>
 							</tr>
 							<tr>
 								<th>Verpflichtende Evaluation</th>
-								<td>Ja</td>
+								<td>{{ verpflichtend }}</td>
 							</tr>
 							<tr>
 								<th>Evaluationseinheit</th>
-								<td>Gesamt-LV</td>
+								<td>{{ lvAufgeteilt }}</td>
 							</tr>
 							<tr>
 								<th>LV-Leitung</th>
-								<td>Cristina Hainberger</td>
+								<td>{{ lvLeitungen }}</td>
 							</tr>
 							<tr>
 								<th>Lehrende</th>
-								<td>Cristina Hainberger, Andreas Österreicher</td>
+								<td>{{ lehrende }}</td>
 							</tr>
 						</tbody>
 					</table>
@@ -114,15 +163,15 @@ export default {
 						<tbody>
 							<tr>
 								<th>Einladungen versandt</th>
-								<td>20</td>
+								<td>{{ evalData.codes_ausgegeben }}</td>
 							</tr>
 							<tr>
 								<th>Abgeschlossene Evaluierungen</th>
 								<td>
 									<div class="d-flex justify-content-between">
-										<span>15</span>
+										<span>{{ evalData.countSubmitted }}</span>
 										<span 
-											v-if="true"
+											v-if="evalData.countSubmitted < 5"
 											data-bs-toggle="tooltip" 
 											data-bs-placement="top" 
 											title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
@@ -130,7 +179,7 @@ export default {
 										&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
 										</span>
 										<span 
-											v-if="true"
+											v-else-if="evalData.countSubmitted < 10"
 											data-bs-toggle="tooltip" 
 											data-bs-placement="top" 
 											title="Wenig abgeschlossene Evaluierungen"
@@ -144,9 +193,9 @@ export default {
 								<th>Rücklaufquote</th>
 								<td>
 									<div class="d-flex justify-content-between">
-										<span>75%</span>
+										<span>{{ evalData.ruecklaufquote }}%</span>
 										<span 
-											v-if="true"
+											v-if="evalData.ruecklaufquote < 30"
 											data-bs-toggle="tooltip" 
 											data-bs-placement="top" 
 											title="Sehr geringe Rücklaufquote"
@@ -158,15 +207,15 @@ export default {
 							</tr>
 							<tr>
 								<th>Evaluierungszeitraum</th>
-								<td>01.11.2025 – 03.11.2025</td>
+								<td>{{ formattedEvalPeriod }}</td>
 							</tr>
 							<tr>
 								<th>Durchführungszeitraum (in min)</th>
 								<td>
 									<div class="d-flex justify-content-between">
-										<span>Ø 7,5</span>
-										<span>Min 5</span>
-										<span>Max 10</span>
+										<span>Ø {{ avgDuration }}</span>
+										<span>Min {{ evalData.minDuration }}</span>
+										<span>Max {{ evalData.maxDuration }} </span>
 									</div>
 								</td>
 							</tr>
