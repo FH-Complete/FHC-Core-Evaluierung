@@ -120,9 +120,7 @@ export default {
 					<input type="radio" class="btn-check" id="option3" 
 						:checked="selectedView==='einmeldung'" 
 						@change="changeView('einmeldung')">
-					<label class="btn btn-outline-primary" for="option3">
-						<i class="fa fa-medal"></i><span class="d-none d-lg-inline-block ms-2" disabled="'true'">LV Weiterentwicklung</span>
-					</label>
+					<label class="btn btn-outline-primary" for="option3"><i class="fa fa-medal"></i></label>
 				</div>
 			</div>
 		</div>
