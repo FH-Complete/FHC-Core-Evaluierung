@@ -106,6 +106,7 @@ export default {
 				},
 				yAxis: {
 					min: 0,
+					max: Math.max(10, Math.max(...fbFragen.antworten.frequencies)),	// default 10, only stretch up if needed
 					title: { text: "Häufigkeit" },
 					tickInterval: 2,
 				},
