@@ -11,6 +11,8 @@ class Evaluation extends FHCAPI_Controller
 		parent::__construct(array(
 				'getEvaluationDataByLve' => 'extension/lvevaluierung_init:r',
 				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_init:r',
+				'getAuswertungDataByLve' => 'extension/lvevaluierung_init:r',
+				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_init:r',
 			)
 		);
 
@@ -136,6 +138,62 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($data);
 	}
 
+	/**
+	 * Fetch single-response evaluation data for a given LVE ID.
+	 * Structured into Gruppe > Frage > Antwort and calculates the interpolated median for each answer.
+	 *
+	 * @return void
+	 */
+	public function getAuswertungDataByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Re-structure data
+		$auswertungData = $this->mapAuswertungData($data);
+
+		// Calculate interpolierten Median for each Antwort
+		foreach ($auswertungData as &$gruppe) {
+			foreach ($gruppe['fbFragen'] as &$frage) {
+				$werte = $frage['antworten']['werte'];
+				$frequencies = $frage['antworten']['frequencies'];
+				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
+			}
+		}
+
+		$this->terminateWithSuccess($auswertungData);
+	}
+
+	/**
+	 * Fetch single-response evaluation data for a given LVE-LV ID. (Which aggregates all belonging LVE Evaluation data)
+	 * Structured into Gruppe > Frage > Antwort and calculates the interpolated median for each answer.
+	 *
+	 * @return void
+	 */
+	public function getAuswertungDataByLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Re-structure data
+		$auswertungData = $this->mapAuswertungData($data);
+
+		// Calculate interpolierten Median for each Antwort
+		foreach ($auswertungData as &$gruppe) {
+			foreach ($gruppe['fbFragen'] as &$frage) {
+				$werte = $frage['antworten']['werte'];
+				$frequencies = $frage['antworten']['frequencies'];
+				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
+			}
+		}
+
+		$this->terminateWithSuccess($auswertungData);
+	}
+
 	// Helper methods
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
@@ -165,6 +223,68 @@ class Evaluation extends FHCAPI_Controller
 			'minStartzeit' => $startTimes ? min($startTimes) : null,
 			'maxEndezeit'   => $endTimes ? max($endTimes) : null,
 		];
+	}
+
+	/**
+	 * Converts flat SQL rows into nested structure: Gruppe > Frage > Antworten.
+	 * Collects each Antwort's values and their selection frequencies.
+	 *
+	 * @param $data
+	 * @return array
+	 */
+	public function mapAuswertungData($data)
+	{
+		$fbGruppen = [];
+
+		foreach ($data as $item)
+		{
+			$fbGruppeId = $item->lvevaluierung_fragebogen_gruppe_id;
+			$frageId = $item->lvevaluierung_frage_id;
+
+			// Create group if not exists
+			if (!isset($fbGruppen[$fbGruppeId])) {
+				$fbGruppen[$fbGruppeId] = [
+					'lvevaluierung_fragebogen_gruppe_id' => $fbGruppeId,
+					'bezeichnung' => $item->fbGruppenBezeichnung,
+					'typ' => $item->fbGruppenTyp,
+					'sort' => $item->fbGruppenSort,
+					'fbFragen' => []
+				];
+			}
+
+			// Create question if not exists
+			if (!isset($fbGruppen[$fbGruppeId]['fbFragen'][$frageId])) {
+				$fbGruppen[$fbGruppeId]['fbFragen'][$frageId] = [
+					'lvevaluierung_frage_id' => $frageId,
+					'bezeichnung' => $item->fbFrageBezeichnung,
+					'typ' => $item->fbFrageTyp,
+					'sort' => $item->fbFrageSort,
+					'antworten' => [
+						'werte' => [],
+						'frequencies' => [],
+						'bezeichnungen' => [],
+						'iMedian' => [
+							'actYear' => 0,
+							'actYearMin1' => 0,
+							'actYearMin2' => 0,
+						]	// default
+					]
+				];
+			}
+
+			// Push antworten values
+			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['werte'][] = $item->wert;
+			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['frequencies'][] = $item->frequency;
+			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['bezeichnungen'][] = $item->fbFrageAntwortBezeichnung;
+		}
+
+		// Re-index arrays
+		$fbGruppen = array_map(function($gruppe) {
+			$gruppe['fbFragen'] = array_values($gruppe['fbFragen']);
+			return $gruppe;
+		}, array_values($fbGruppen));
+
+		return $fbGruppen;
 	}
 	/**
 	 * Get Lvevaluierung.

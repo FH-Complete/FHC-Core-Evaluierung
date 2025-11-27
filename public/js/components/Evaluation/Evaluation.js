@@ -223,7 +223,12 @@ export default {
 			</div>
 		  	<!-- Dynamic content -->
 			<keep-alive>
-				<component :is="selectedComponent" class="d-block"></component>
+				<component 
+					:is="selectedComponent" 
+					:lvevaluierung_id="lvevaluierung_id"
+    				:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
+					class="d-block"
+				></component>
 			</keep-alive>
 		</main>
 	</div>

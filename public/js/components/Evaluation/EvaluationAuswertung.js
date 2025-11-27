@@ -1,7 +1,8 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import FhcChart from "../../../../../js/components/Chart/FhcChart.js";
-import ChartHelper from "../../helpers/ChartHelper";
+import ChartHelper from "../../helpers/ChartHelper.js";
+import ApiEvaluation from "../../api/evaluation";
 
 export default {
 	name: "EvaluationAuswertung",
@@ -10,24 +11,33 @@ export default {
 		FormInput,
 		FhcChart,
 	},
+	props:  {
+		lvevaluierung_id: {
+			type: [String, Number],
+			default: null
+		},
+		lvevaluierung_lehrveranstaltung_id: {
+			type: [String, Number],
+			default: null
+		}
+	},
 	data() {
 		return {
-			chartOptionsEinzelfrage: null,
+			auswertungData: [],
 			chartOptionsLvImZeitverlauf: null
 		}
 	},
 	created() {
-		// Fetch data and create bar charts for Einzelfragen
-		const fbFragen = {
-				bezeichnung: 'Bitte bewerten Sie die LV',
-				sort: 1,
-				antworten: {
-					werte: [1, 2, 3, 4, 5],
-					frequencies: [2, 4, 9, 1, 3],
-					iMedian: 2.6
-				}
-			};
-		this.chartOptionsEinzelfrage = this.createEinzelfrageChart(fbFragen);
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
+			const apiCall = this.lvevaluierung_id
+					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id)
+					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+
+			this.$api
+				.call(apiCall)
+				.then(result => this.auswertungData = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		}
 
 		// Fetch data and create timeline chart for LV im Zeitverlauf
 		const fbGruppen = [
@@ -72,6 +82,17 @@ export default {
 		];
 		this.chartOptionsLvImZeitverlauf = this.createTimelineChart(fbGruppen);
 	},
+	computed: {
+		chartOptionsByFrageId() {
+			const result = {};
+			this.auswertungData.forEach(gruppe => {
+				gruppe.fbFragen.forEach(frage => {
+					result[frage.lvevaluierung_frage_id] = this.createEinzelfrageChart(frage);
+				});
+			});
+			return result;
+		}
+	},
 	methods: {
 		createEinzelfrageChart(fbFragen){
 			return {
@@ -101,7 +122,7 @@ export default {
 						}
 					},
 					plotLines: [
-						{ value: fbFragen.antworten.iMedian, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.toFixed(2)}` } }
+						{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
 					]
 				},
 				yAxis: {
@@ -114,7 +135,7 @@ export default {
 			}
 		},
 		createTimelineChart(fbGruppen) {
-			const yearKeys = ["actY", "actYm1", "actYm2"];
+			const yearKeys = ["actYear", "actYearMin1", "actYearMin2"];
 			const yearNames = ["Aktuelles Jahr", "Letztes Jahr", "Vor 2 Jahren"];
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
@@ -215,118 +236,20 @@ export default {
 		<h3 class="mb-4">Auswertung</h3>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
 			<h4 class="my-4">Auswertung Einzelfragen</h4>
-			<div class="row g-3 py-3 mb-3 bg-light">
-				<div class="col-md-6 col-xl-4">
+			<div v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
+				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
+				
+				<h5 class="mb-3">{{ gruppe.bezeichnung }}</h5>
+ 
+				<div v-for="frage in gruppe.fbFragen" :key="frage.lvevaluierung_frage_id"
+					class="col-md-6 col-lg-4 col-xl-3">
 					<div class="card h-100">
 						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="row g-3 py-3 mb-3">
-				<h5>Organisation</h5>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
+							<fhc-chart :chartOptions="chartOptionsByFrageId[frage.lvevaluierung_frage_id]"></fhc-chart>
 						</div>
 					</div>
 				</div>
 			</div>
-			<div class="row g-3 py-3 mb-3 bg-light">
-				<h5>Moodle Kurs</h5>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="row g-3 py-3 mb-3">
-				<h5>Durchführung der LV</h5>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-				<div class="col-md-6 col-xl-4">
-					<div class="card h-100">
-						<div class="card-body d-flex justify-content-center align-items-center">
-							<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-						</div>
-					</div>
-				</div>
-			</div>
-			<div class="row g-3 py-3 mb-3 bg-light">
-			<h5>Infrastruktur</h5>
-			<div class="col-md-6 col-xl-4">
-				<div class="card h-100">
-					<div class="card-body d-flex justify-content-center align-items-center">
-						<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-4">
-				<div class="card h-100">
-					<div class="card-body d-flex justify-content-center align-items-center">
-						<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-					</div>
-				</div>
-			</div>
-			<div class="col-md-6 col-xl-4">
-				<div class="card h-100">
-					<div class="card-body d-flex justify-content-center align-items-center">
-						<fhc-chart :chartOptions="chartOptionsEinzelfrage"></fhc-chart>
-					</div>
-				</div>
-			</div>
-		</div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
 			<h4 class="my-4">Textantworten</h4>
