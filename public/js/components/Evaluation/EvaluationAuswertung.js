@@ -23,8 +23,7 @@ export default {
 	},
 	data() {
 		return {
-			auswertungData: [],
-			chartOptionsLvImZeitverlauf: null
+			auswertungData: []
 		}
 	},
 	created() {
@@ -38,49 +37,6 @@ export default {
 				.then(result => this.auswertungData = result.data)
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
-
-		// Fetch data and create timeline chart for LV im Zeitverlauf
-		const fbGruppen = [
-			{
-				bezeichnung: '',
-				fbFragen: [
-					{ bezeichnung: 'Bitte bewerten Sie die LV', iMedian: { actY: 2.5, actYm1: 2.8, actYm2: 3.0 } },
-					{ bezeichnung: 'Bitte bewerten Sie Ihren Kompetenzzuwachs durch die LV', iMedian: { actY: 3.1, actYm1: 3.4, actYm2: 3.6 } }
-				]
-			},
-			{
-				bezeichnung: 'Organisation',
-				fbFragen: [
-					{ bezeichnung: 'Bitte bewerten Sie die inhaltliche Abstimmung mit vorangegangenen LVs', iMedian: { actY: 3.7, actYm1: 3.9, actYm2: 4.0 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Workload-Verteilung in der LV', iMedian: { actY: 4.0, actYm1: 4.2, actYm2: 4.3 } }
-				]
-			},
-			{
-				bezeichnung: 'Moodle Kurs',
-				fbFragen: [
-					{ bezeichnung: 'Bitte bewerten Sie den inhaltlichen Aufbau und die Struktur', iMedian: { actY: 3.8, actYm1: 4.0, actYm2: 4.1 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Übungsmöglichkeiten/ Prüfungsvorbereitung', iMedian: { actY: 4.1, actYm1: 4.2, actYm2: 4.3 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Qualität der Unterlagen', iMedian: { actY: 3.5, actYm1: 4.0, actYm2: 4.6 } }
-				]
-			},
-			{
-				bezeichnung: 'Durchführung der LV',
-				fbFragen: [
-					{ bezeichnung: 'Bitte bewerten Inhaltsvermittlung und Verständlichkeit', iMedian: { actY: 4.0, actYm1: 4.3, actYm2: 4.3 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Qualität des Feedbacks durch Lehrende', iMedian: { actY: 3.9, actYm1: 3.9, actYm2: 4.0 } },
-					{ bezeichnung: 'Bitte bewerten Sie die LV-Kommunikation mit Lehrenden', iMedian: { actY: 4.1, actYm1: 4.2, actYm2: 4.3 } }
-				]
-			},
-			{
-				bezeichnung: 'Infrastruktur',
-				fbFragen: [
-					{ bezeichnung: 'Bitte bewerten Sie die IT Infrastruktur (Hardware, Software) für die LV', iMedian: { actY: 3.5, actYm1: 3.5, actYm2: 3.5 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Raumausstattung für die LV', iMedian: { actY: 3.8, actYm1: 4.0, actYm2: 4.1 } },
-					{ bezeichnung: 'Bitte bewerten Sie die Raumgröße für die LV', iMedian: { actY: 4.0, actYm1: 4.1, actYm2: 4.3 } }
-				]
-			}
-		];
-		this.chartOptionsLvImZeitverlauf = this.createTimelineChart(fbGruppen);
 	},
 	computed: {
 		chartOptionsByFrageId() {
@@ -91,6 +47,9 @@ export default {
 				});
 			});
 			return result;
+		},
+		chartOptionsLvImZeitverlauf() {
+			return this.createTimelineChart(this.auswertungData);
 		}
 	},
 	methods: {
@@ -143,7 +102,7 @@ export default {
 				subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
-					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.iMedian[key])),
+					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
 					visible: i === 0 // only current year visible by default
 				})),
 				yAxis: {

@@ -139,7 +139,7 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
-	 * Fetch single-response evaluation data for a given LVE ID.
+	 * Fetch evaluation data for a given LVE ID.
 	 * Structured into Gruppe > Frage > Antwort and calculates the interpolated median for each answer.
 	 *
 	 * @return void
@@ -167,7 +167,7 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
-	 * Fetch single-response evaluation data for a given LVE-LV ID. (Which aggregates all belonging LVE Evaluation data)
+	 * Fetch evaluation data for a given LVE-LV ID. (Which aggregates all belonging LVE Evaluation data)
 	 * Structured into Gruppe > Frage > Antwort and calculates the interpolated median for each answer.
 	 *
 	 * @return void
