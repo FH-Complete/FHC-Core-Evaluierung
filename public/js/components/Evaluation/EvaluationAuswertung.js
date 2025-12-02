@@ -23,18 +23,28 @@ export default {
 	},
 	data() {
 		return {
-			auswertungData: []
+			auswertungData: [],
+			textantworten: []
 		}
 	},
 	created() {
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
-			const apiCall = this.lvevaluierung_id
+			const apiCallAuswertungData = this.lvevaluierung_id
 					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id)
 					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+			const apiCallTextantworten = this.lvevaluierung_id
+					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id)
+					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 			this.$api
-				.call(apiCall)
-				.then(result => this.auswertungData = result.data)
+				.call(apiCallAuswertungData)
+				.then(result => {
+					this.auswertungData = result.data;
+					return this.$api.call(apiCallTextantworten)
+				})
+				.then(result => {
+					this.textantworten = result.data
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
@@ -211,16 +221,20 @@ export default {
 			</div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
-			<h4 class="my-4">Textantworten</h4>
-			<div class="row row-cols-1 row-cols-lg-2 g-3">
-				<div class="col">
-					<div class="card card-body border-0 bg-light">Textantwort 1</div>
-				</div>
-				<div class="col">
-					<div class="card card-body border-0 bg-light">Textantwort 2</div>
-				</div>
-				<div class="col">
-					<div class="card card-body border-0 bg-light">Textantwort 3</div>
+			<h4 class="my-5">Textantworten</h4>
+			<div v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
+				class="row-col mb-5">
+			
+				<h5 class="mb-3">{{ frage.bezeichnung }}</h5>
+				
+				<div class="row">
+					<div class="col-12">
+						<div class="columns-1 columns-md-2 gap-3">
+							<div v-for="antwort in frage.antworten" :key="antwort.lvevaluierung_antwort_id" class="card mb-3">
+								<div class="card-body">{{ antwort.antwort }}</div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -39,4 +39,25 @@ export default {
 			}
 		}
 	},
+	getTextantwortenByLve(lvevaluierung_id)
+	{
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getTextantwortenByLve',
+			params: {
+				lvevaluierung_id: lvevaluierung_id
+			}
+		}
+	},
+	getTextantwortenByLveLv(lvevaluierung_lehrveranstaltung_id)
+	{
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getTextantwortenByLveLv',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+
 }

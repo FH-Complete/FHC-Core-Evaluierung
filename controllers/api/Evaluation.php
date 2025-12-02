@@ -13,6 +13,8 @@ class Evaluation extends FHCAPI_Controller
 				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_init:r',
 				'getAuswertungDataByLve' => 'extension/lvevaluierung_init:r',
 				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_init:r',
+				'getTextantwortenByLve' => 'extension/lvevaluierung_init:r',
+				'getTextantwortenByLveLv' => 'extension/lvevaluierung_init:r',
 			)
 		);
 
@@ -194,6 +196,40 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($auswertungData);
 	}
 
+	/**
+	 * Fetch Textantworten by LVE ID.
+	 *
+	 * @return void
+	 */
+	public function getTextantwortenByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
+		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLve($lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$textantworten = $this->mapTextantworten($data);
+
+		$this->terminateWithSuccess($textantworten);
+	}
+
+	/**
+	 * Fetch Textantworten by LVE-LV ID.
+	 *
+	 * @return void
+	 */
+	public function getTextantwortenByLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
+		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$textantworten = $this->mapTextantworten($data);
+
+		$this->terminateWithSuccess($textantworten);
+	}
+
 	// Helper methods
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
@@ -285,6 +321,37 @@ class Evaluation extends FHCAPI_Controller
 		}, array_values($fbGruppen));
 
 		return $fbGruppen;
+	}
+
+	public function mapTextantworten($data)
+	{
+		$textantworten = [];
+
+		foreach($data as $item)
+		{
+			$frageId = $item->lvevaluierung_frage_id;
+
+			// Create group if not exists
+			if (!isset($textantworten[$frageId])) {
+				$textantworten[$frageId] = [
+					'lvevaluierung_frage_id' => $frageId,
+					'bezeichnung' => $item->fbFrageBezeichnung,
+					'sort' => $item->fbFrageSort,
+					'antworten' => []
+				];
+			}
+
+			// Add answer
+			$textantworten[$frageId]['antworten'][] = [
+				'lvevaluierung_antwort_id' => $item->lvevaluierung_antwort_id,
+				'antwort' => $item->antwort
+			];
+		}
+
+		// Re-index array
+		$textantworten = array_values($textantworten);
+
+		return $textantworten;
 	}
 	/**
 	 * Get Lvevaluierung.
