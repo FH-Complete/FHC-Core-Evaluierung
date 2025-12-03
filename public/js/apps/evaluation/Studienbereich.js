@@ -1,6 +1,7 @@
 import Studienbereich from "../../components/Evaluation/Studienbereich.js";
 import Phrasen from "../../../../../js/plugins/Phrasen.js";
-import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js"
+import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js";
+import tooltip from "../../../../../js/directives/tooltip.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 const router = VueRouter.createRouter({
@@ -26,4 +27,5 @@ app
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.use(highchartsPlugin, {tagName: 'highcharts'})
+	.directive('tooltip', tooltip)
 	.mount('#evaluation-studienbereich-main')

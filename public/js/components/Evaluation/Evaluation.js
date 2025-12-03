@@ -170,16 +170,14 @@ export default {
 										<span>{{ evalData.countSubmitted }}</span>
 										<span 
 											v-if="evalData.countSubmitted < 5"
-											data-bs-toggle="tooltip" 
-											data-bs-placement="top" 
+											v-tooltip
 											title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
 										>
 										&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
 										</span>
 										<span 
 											v-else-if="evalData.countSubmitted < 10"
-											data-bs-toggle="tooltip" 
-											data-bs-placement="top" 
+											v-tooltip
 											title="Wenig abgeschlossene Evaluierungen"
 										>
 										&lt; 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
@@ -194,8 +192,7 @@ export default {
 										<span>{{ evalData.ruecklaufquote }}%</span>
 										<span 
 											v-if="evalData.ruecklaufquote < 30"
-											data-bs-toggle="tooltip" 
-											data-bs-placement="top" 
+											v-tooltip
 											title="Sehr geringe Rücklaufquote"
 										>
 										&lt; 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
