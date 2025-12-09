@@ -10,7 +10,7 @@ class Studiengaenge extends Auth_Controller
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-			'index'=> 'extension/lvevaluierung_init:rw'	// TODO!
+			'index'=> 'extension/lvevaluierung_stg:rw'
 			)
 		);
 
@@ -23,7 +23,7 @@ class Studiengaenge extends Auth_Controller
 	 */
 	public function index()
 	{
-		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_init:rw'))	// TODO!
+		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_stg:rw'))
 		{
 			$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge');
 		}

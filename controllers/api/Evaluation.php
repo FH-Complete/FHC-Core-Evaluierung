@@ -7,14 +7,14 @@ class Evaluation extends FHCAPI_Controller
 	public function __construct()
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
-		// todo check permissions
+
 		parent::__construct(array(
-				'getEvaluationDataByLve' => 'extension/lvevaluierung_init:r',
-				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_init:r',
-				'getAuswertungDataByLve' => 'extension/lvevaluierung_init:r',
-				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_init:r',
-				'getTextantwortenByLve' => 'extension/lvevaluierung_init:r',
-				'getTextantwortenByLveLv' => 'extension/lvevaluierung_init:r',
+				'getEvaluationDataByLve' => 'extension/lvevaluierung_stg:r',
+				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getAuswertungDataByLve' => 'extension/lvevaluierung_stg:r',
+				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
+				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
 			)
 		);
 
