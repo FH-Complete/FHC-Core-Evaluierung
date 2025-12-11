@@ -140,10 +140,6 @@ export default {
 							],
 							clearable: true
 						},
-						headerFilterFunc: (headerValue, rowValue) => {
-							if (headerValue === "" || headerValue === undefined) return true;
-							return Number(rowValue) === Number(headerValue);
-						},
 						hozAlign:"center",
 						tooltip: (cell) => {
 							return cell.getValue() ? "Gruppenbasis" : "Gesamt-LV"
