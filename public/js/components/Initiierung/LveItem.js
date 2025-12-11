@@ -122,9 +122,7 @@ export default {
 	template: `
 		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 			<!-- Card title -->
-			<div 
-				class="card-header d-flex justify-content-between align-items-center" 
-				:class="{'fhc-bgc-blue text-light': !lveLvDetail.editableCheck.isDisabledEvaluierung}">
+			<div class="card-header d-flex justify-content-between align-items-center">
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
