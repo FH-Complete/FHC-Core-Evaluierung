@@ -66,6 +66,7 @@ export default {
 				},
 				ajaxResponse: (url, params, response) => response.data,
 				layout: 'fitColumns',
+				height:"calc(100vh - 350px)", // 350 for header and margin height
 				autoResize: true,
 				resizableColumnFit: true,
 				selectable: false,
