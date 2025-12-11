@@ -349,7 +349,7 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>Info an QM & Rektorat</button>
+					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
 					<a type="button" class="btn btn-outline-secondary" href="#" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
 				</template>
 			</core-filter-cmpt>
