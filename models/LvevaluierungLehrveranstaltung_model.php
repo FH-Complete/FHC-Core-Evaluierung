@@ -19,7 +19,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param int|null	$lehrveranstaltung_id	Optional: filter for a specific LV
 	 * @return mixed
 	 */
-	public function getLveLvs($studiensemester_kurzbz, $lehrveranstaltung_id = null)
+	public function getLveLvsByUser($studiensemester_kurzbz, $lehrveranstaltung_id = null)
 	{
 		$uid = getAuthUid();
 		$params = [$studiensemester_kurzbz, $uid, $uid];
@@ -77,6 +77,61 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		return $this->execQuery($qry, $params);
 	}
+
+	/**
+	 * Get Lvs that are scheduled for evaluation in the given Studiensemester and Studiengang (can be number or array).
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $studiengang_kz
+	 * @return mixed
+	 */
+	public function getLveLvsByStg($studiensemester_kurzbz, $studiengang_kz)
+	{
+		if (is_numeric($studiengang_kz) && !is_array($studiengang_kz))
+		{
+			$studiengang_kz = [$studiengang_kz];
+		}
+		$params = [$studiensemester_kurzbz, $studiengang_kz];
+
+		$qry = '
+			-- Alle LVs eines bestimmten Studiensemesters, wo eingeloggter user Lektor ist
+			WITH lvs AS (
+				SELECT
+					DISTINCT ON (lv.lehrveranstaltung_id) 
+					lv.lehrveranstaltung_id,
+					lv.bezeichnung,
+					lv.orgform_kurzbz,
+					lv.semester,
+					lv.studiengang_kz,
+					stg.kurzbzlang,
+					le.studiensemester_kurzbz
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN lehre.tbl_lehreinheit le USING (lehrveranstaltung_id)
+					JOIN public.tbl_studiengang stg USING (studiengang_kz)
+				WHERE
+					le.studiensemester_kurzbz = ?
+					AND stg.studiengang_kz IN ?
+				ORDER BY
+					lv.lehrveranstaltung_id
+			)
+	
+			-- Final join
+			SELECT
+				*
+			FROM		  	
+				lvs	
+			JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv 
+				ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
+				AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
+			ORDER BY
+			  bezeichnung,
+			  orgform_kurzbz
+		';
+
+		return $this->execQuery($qry, $params);
+	}
+
 	/**
 	 * Get Lv to be evaluated of given ID, including its Lehreinheiten, associated Gruppen and Lektoren, where the
 	 * logged-in user is assigned to at least one Lehreinheit as a Lektor.

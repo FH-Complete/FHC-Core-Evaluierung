@@ -8,7 +8,7 @@ class Initiierung extends FHCAPI_Controller
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-				'getLveLvs' => 'extension/lvevaluierung_init:r',
+				'getLveLvsByUser' => 'extension/lvevaluierung_init:r',
 				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
@@ -37,12 +37,12 @@ class Initiierung extends FHCAPI_Controller
 	 * Get Lvs that are scheduled for evaluation in the given Studiensemester, where the logged-in user is assigned
 	 * to at least one Lehreinheit as a Lektor.
 	 */
-	public function getLveLvs()
+	public function getLveLvsByUser()
 	{
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$lehrveranstaltung_id = $this->input->get('lehrveranstaltung_id'); // can be null
 
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvs(
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByUser(
 			$studiensemester_kurzbz,
 			$lehrveranstaltung_id
 		)

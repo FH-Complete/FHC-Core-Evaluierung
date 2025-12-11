@@ -23,7 +23,7 @@ export default {
 			.then(result => this.studiensemester = result.data)
 			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
 			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
-			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
+			.then(() => this.$api.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester)))
 			.then(result => {
 				this.lveLvs = result.data;
 				this.isLoading = false;
@@ -115,7 +115,7 @@ export default {
 		onChangeStudiensemester(e) {
 			this.isLoading = true;
 			this.$api
-				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
+				.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester))
 				.then(result => {
 					this.lveLvs = result.data;
 					this.selLv = null;	// Reset Autocomplete field
