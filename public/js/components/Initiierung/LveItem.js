@@ -126,10 +126,10 @@ export default {
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
-						class="btn btn-outline-secondary"
+						class="btn btn-sm btn-outline-secondary"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
-						<i class="fa fa-square-poll-horizontal"></i>
+						<i class="fa fa-square-poll-horizontal me-2"></i>LV-Evaluation
 					</button>
 				</div>
 			</div><!--.end card-header -->

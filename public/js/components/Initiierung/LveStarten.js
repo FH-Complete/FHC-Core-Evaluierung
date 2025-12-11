@@ -279,7 +279,7 @@ export default {
 							</div>
 						</button>
 						<button 
-							class="btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"
+							class="btn btn-outline-secondary btn-sm position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"
 							@click="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"
 						>
 							<i class="fa fa-square-poll-horizontal"></i>
