@@ -54,6 +54,10 @@ export default {
 			const selStudiensemester = this.selStudiensemester;
 			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung}` : "";
 		},
+		site_url_opLvKvp(){
+			console.log(this.$api.getUri);
+			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
+		},
 		tabulatorOptions() {
 			const self = this;
 			return {
@@ -184,14 +188,29 @@ export default {
 					{
 						title:'LV-Evaluation',
 						formatter:() => '<button class="btn btn-outline-secondary"><i class="fa-solid fa-square-poll-horizontal me-2"></i>LV-Evaluation</button>',
-						cellClick: (e, cell) => self.openEvaluationByLveLv(cell.getRow().getData().lvevaluierung_lehrveranstaltung_id),
+						cellClick: (e, cell) => self.openEvaluationByLveLv(cell.getData().lvevaluierung_lehrveranstaltung_id),
 						hozAlign:"center",
 						headerSort:false,
 						width: 140
 					},
 					{
 						title:'LV-Weiterentwicklung (OP)',
-						formatter:() => '<a href="#" target="_blank" role="button" class="btn btn-outline-secondary me-2"><i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung</a>',
+						formatter(cell) {
+							const templateId = cell.getData().lehrveranstaltung_template_id;
+							if (templateId === null) {
+								return `<small class=text-muted">LV ist kein Quellkurs</small>`;
+							}
+							else
+							{
+								const lvId = cell.getData().lehrveranstaltung_id;
+								const url = self.site_url_opLvKvp + lvId;
+								return `
+									<a href="${url}" target="_blank" role="button" class="btn btn-outline-secondary me-2">
+										<i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung
+									</a>`
+							}
+
+						},
 						hozAlign:"center",
 						headerSort:false,
 						width: 220
@@ -226,7 +245,7 @@ export default {
 					},
 				]
 			}
-		}
+		},
 	},
 	methods: {
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){

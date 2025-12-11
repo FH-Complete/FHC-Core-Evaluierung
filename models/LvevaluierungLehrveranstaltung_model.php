@@ -103,6 +103,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					lv.orgform_kurzbz,
 					lv.semester,
 					lv.studiengang_kz,
+					lv.lehrveranstaltung_template_id,
 					stg.kurzbzlang,
 					le.studiensemester_kurzbz
 				FROM
