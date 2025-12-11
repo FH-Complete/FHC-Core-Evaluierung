@@ -50,6 +50,11 @@ class Initiierung extends FHCAPI_Controller
 
 		$data = $this->getDataOrTerminateWithError($result);
 
+		// Get Ruecklauf data
+		$lveLvIds = array_column($data, 'lvevaluierung_lehrveranstaltung_id');
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLveLv($lveLvIds);
+		$rlData = hasData($result) ? getData($result) : [];
+
 		// Add info
 		foreach ($data as &$item)
 		{
@@ -61,9 +66,13 @@ class Initiierung extends FHCAPI_Controller
 			$students = $this->getStudentsForLvOrExit($item);
 			$item->countStudents = count($students);
 
-			// count submitted Evaluierungen of LV
-			$submittedEvaluierungen = $this->getAbgeschlosseneEvaluierungenByLveLv($item->lvevaluierung_lehrveranstaltung_id);
-			$item->countSubmitted = count($submittedEvaluierungen);
+			$lveLvId = $item->lvevaluierung_lehrveranstaltung_id;
+			$agg = current(array_filter($rlData, function($r) use ($lveLvId) {
+				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
+			}));
+			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = $agg ? (float)$agg->ruecklaufquote : 0;
 		}
 
 		$this->terminateWithSuccess($data);

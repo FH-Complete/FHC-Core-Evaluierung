@@ -270,12 +270,11 @@ export default {
 							<!-- right side icon -->
 							<div class="me-5">
 								<span 
-									class="badge rounded-pill border border-secondary text-secondary me-2"
-									:title="'Submitted / Total Students'"						
+									class="text-secondary me-2 text-end"
+									:title="'Abgeschickete Fragebögen/Ausgesendete Codes/Anzahl Studierende'"				
 									v-tooltip						
 								>
-									<i class="fa-regular fa-comment me-1"></i>
-									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
+									{{lveLv.submittedCodes}}/{{lveLv.codesAusgegeben}}/{{lveLv.countStudents}}
 								</span>
 							</div>
 						</button>
