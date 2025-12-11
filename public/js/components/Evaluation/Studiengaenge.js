@@ -117,9 +117,7 @@ export default {
 								{ value: false, label: "nicht verpflichtend" }
 							],
 						},
-						tooltip: (cell) => {
-							return cell.getValue() ? "verpflichtend" : "nicht verpflichtend"
-						},
+						tooltip: (e, cell) => cell.getValue() ? "verpflichtend" : "nicht verpflichtend",
 						minWidth: 100
 
 					},
@@ -128,8 +126,8 @@ export default {
 						field:'lv_aufgeteilt',
 						formatter: (cell) => {
 							return cell.getValue()
-								? '<i class="fa-solid fa-expand text-dark" title="Gruppenbasis"></i>'
-								: '<i class="fa-solid fa-square-full text-dark" title="Gesamt-LV"></i>';
+								? '<i class="fa-solid fa-expand text-dark"></i>'
+								: '<i class="fa-solid fa-square-full text-dark"></i>';
 						},
 						headerFilter: "list",
 						headerFilterParams: {
@@ -141,9 +139,7 @@ export default {
 							clearable: true
 						},
 						hozAlign:"center",
-						tooltip: (cell) => {
-							return cell.getValue() ? "Gruppenbasis" : "Gesamt-LV"
-						},
+						tooltip: (e, cell) => cell.getValue() ? "Gruppenbasis" : "Gesamt-LV",
 						minWidth: 120
 					},
 					{
@@ -156,7 +152,8 @@ export default {
 							return `${submittedCodes}/${codesAusgegeben}`;
 						},
 						hozAlign: "right",
-						minWidth: 100
+						minWidth: 100,
+						tooltip: "Abgeschickte Fragebögen/Ausgesendete Codes",
 					},
 					{
 						title:'RL-Quote',
@@ -242,24 +239,24 @@ export default {
 		updateVerpflichtend(cell)
 		{
 			this.$api
-					.call(ApiEvaluation.updateVerpflichtend(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
-					.then(result => {
-						if (result.data) {
-							this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
-						}
-					})
-					.catch(error => this.$fhcAlert.handleSystemError(error));
+				.call(ApiEvaluation.updateVerpflichtend(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
+				.then(result => {
+					if (result.data) {
+						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		updateReviewedLvInStg(cell)
 		{
 			this.$api
-					.call(ApiEvaluation.updateReviewedLvInStg(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
-					.then(result => {
-						if (result.data) {
-							this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
-						}
-					})
-					.catch(error => this.$fhcAlert.handleSystemError(error));
+				.call(ApiEvaluation.updateReviewedLvInStg(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
+				.then(result => {
+					if (result.data) {
+						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		sendInfomail(){
 			this.$fhcAlert
