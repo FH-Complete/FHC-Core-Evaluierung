@@ -89,11 +89,7 @@ export default {
 		getLeGruppenInfoString(lveLvDetail) {
 			let infoString = '';
 			infoString = lveLvDetail.kurzbz + ' - ' + lveLvDetail.lehrform_kurzbz + ' - ';
-			infoString+= lveLvDetail.gruppen.map(g => g.gruppe_bezeichnung).join(', ');
-
-			if (lveLvDetail.studenten && lveLvDetail.studenten.length > 0) {
-				infoString += ` | <i class="fa-solid fa-user"></i> ${lveLvDetail.studenten.length}`;
-			}
+			infoString+= lveLvDetail.gruppen.map(g => g.gruppe_bezeichnung).join('<br>');
 
 			//infoString += ' | LE: ' + lveLvDetail.lehreinheit_id; // todo delete after testing
 
@@ -143,24 +139,36 @@ export default {
 			<div class="card-body pb-0">
 				<i class="fa fa-users me-2"></i>
 				<span class="d-none d-md-inline me-2">Gruppen:</span>
-				<span v-html="getLeGruppenInfoString(lveLvDetail)" class="me-2"></span>
 				<span
- 						class="badge rounded-pill border border-secondary text-secondary d-none d-md-inline me-2" 
+					class="badge border border-secondary text-secondary d-none d-md-inline me-2"
+					:title="getLeGruppenInfoString(lveLvDetail)"
+					v-tooltip="getLeGruppenInfoString(lveLvDetail)"
+					data-bs-html="true"
+					data-bs-custom-class="tooltip-left"
+				>
+					Gruppen<i class="fa-solid fa-arrow-pointer mx-2"></i>
+				</span>
+
+				<span
+ 						class="badge border border-secondary text-secondary me-2" 
 						:title="getStudierendeString(lveLvDetail.studenten)"
  						v-tooltip="getStudierendeString(lveLvDetail.studenten)"
  						data-bs-html="true"
  						data-bs-custom-class="tooltip-left"
 					>
-						<i class="fa-solid fa-list ms-1"></i> Stundenplan<i class="fa-solid fa-eye ms-1"></i> 
+						<span v-if="lveLvDetail.studenten && lveLvDetail.studenten.length > 0">
+							{{ lveLvDetail.studenten.length }}
+						</span>
+						Studierende<i class="fa-solid fa-arrow-pointer mx-2"></i>
 					</span>
 					<span
- 						class="badge rounded-pill border border-secondary text-secondary d-none d-md-inline" 
+ 						class="badge border border-secondary text-secondary d-none d-md-inline" 
 						:title="getStundenplanterminString(lveLvDetail.stundenplan)"
  						v-tooltip="getStundenplanterminString(lveLvDetail.stundenplan)" 				
  						data-bs-html="true"
  						data-bs-custom-class="tooltip-left"
 					>
-						<i class="fa-solid fa-list ms-1"></i> Stundenplan<i class="fa-solid fa-eye ms-1"></i> 
+						LV-Plan<i class="fa-solid fa-arrow-pointer mx-2"></i> 
 					</span>
 			</div><!--.end card-body -->
 			<!-- Lehrende -->
