@@ -4,6 +4,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class Evaluation extends FHCAPI_Controller
 {
+	const BERECHTIGUNG_STG = 'extension/lvevaluierung_stg';
 	public function __construct()
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
@@ -15,6 +16,10 @@ class Evaluation extends FHCAPI_Controller
 				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_stg:r',
 				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
 				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
+				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
+				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
+				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
 			)
 		);
 
@@ -230,6 +235,104 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($textantworten);
 	}
 
+	//------------------------------------------------------------------------------------------------------------------
+	// Evaluation Studiengaenge
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Get Studiengaenge by given Studiensemester for which the user is entitled.
+	 *
+	 * @return void
+	 */
+	public function getEntitledStgs()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$entitledStgs = $this->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_STG) ?: [];
+		$result = $this->StudiengangModel->getEntitledStgs($entitledStgs, $studiensemester_kurzbz);
+		$stgs = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($stgs);
+	}
+
+	/**
+	 * Get Lv-List Data of all Lvs that shall be evaluated in given Studiensemester and Studiengang.
+	 * (from Lvevaluierung-Lehrveranstaltung table)
+	 *
+	 * @return void
+	 */
+	public function getLvListByStg()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$studiengang_kz = $this->input->get('studiengang_kz');
+
+		// Permission check
+		$entitledStgs = $this->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_STG) ?: [];
+		if ($studiengang_kz && !in_array($studiengang_kz, $entitledStgs)) $this->terminateWithError('Permission denied');
+
+		// Get LV List
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByStg(
+			$studiensemester_kurzbz,
+			$studiengang_kz
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Get Ruecklauf data
+		$lveLvIds = array_column($data, 'lvevaluierung_lehrveranstaltung_id');
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLveLv($lveLvIds);
+		$rlData = hasData($result) ? getData($result) : [];
+
+		// Add Ruecklauf values to data
+		foreach ($data as $item) {
+			$lveLvId = $item->lvevaluierung_lehrveranstaltung_id;
+			$agg = current(array_filter($rlData, function($r) use ($lveLvId) {
+				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
+			}));
+			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = $agg ? (float)$agg->ruecklaufquote : 0;
+		}
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Update verpflichtende Evaluierungen for given Lehrveranstaltungen.
+	 *
+	 * @return void
+	 */
+	public function updateVerpflichtend(){
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$isVerpflichtend = $this->input->post('isVerpflichtend');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			['verpflichtend' => $isVerpflichtend]
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Update verpflichtende Evaluierungen for given Lehrveranstaltungen.
+	 *
+	 * @return void
+	 */
+	public function updateReviewedLvInStg(){
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$isReviewed = $this->input->post('isReviewed');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			['reviewed_stg' => $isReviewed]
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
 	// Helper methods
 	// -----------------------------------------------------------------------------------------------------------------
 	/**

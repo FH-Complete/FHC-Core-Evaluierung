@@ -1,30 +1,70 @@
+import FormInput from "../../../../../js/components/Form/Input.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
+import ApiEvaluation from "../../api/evaluation";
+import ApiFhc from "../../api/fhc";
 
 export default {
 	components: {
+		FormInput,
 		CoreFilterCmpt
 	},
 	data() {
 		return {
+			lists: {
+				studiensemester: [],
+				stgs: [],
+			},
+			selStudiensemester: null,
+			selStgKz: null,
 			table: null,
-			data: [
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 1', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 87.32, submitted: 0, codes_ausgegeben: 0, reviewed: false, },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 2', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 43.67, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 3', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 92.11, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 4', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 37.94, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 5', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: true, rlQuote: 58.26, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 6', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 14.23, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 7', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 66.12, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 8', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 25.39, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 9', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: true, rlQuote: 73.54, submitted: 0, codes_ausgegeben: 0 },
-				{ lvevaluierung_lehrveranstaltung_id: 1677, studiengang_kz: 227, lvBezeichnung: 'Lehrveranstaltung 10', orgform_kurzbz: 'VZ', semester: 1, verpflichtend: true, lv_aufgeteilt: false, rlQuote: 31.77, submitted: 0, codes_ausgegeben: 0 },
-			]
+		}
+	},
+	created() {
+		this.$api
+			.call(ApiFhc.Studiensemester.getAll())
+			.then(result => this.lists.studiensemester = result.data)
+			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
+			.then(result => {
+				this.selStudiensemester = result.data[0].studiensemester_kurzbz;
+				return this.$api.call(ApiEvaluation.getEntitledStgs(this.selStudiensemester))
+			})
+			.then(result => {
+				this.lists.stgs = result.data
+				this.selStgKz = result.data[0].studiengang_kz;
+			})
+			.catch(error => this.$fhcAlert.handleSystemError(error) );
+	},
+	watch: {
+		selStudiensemester(newVal){
+			if (newVal && this.selStgKz && this.table)
+			{
+				this.table.replaceData();
+			}
+		},
+		selStgKz(newVal){
+			if (newVal && this.selStudiensemester && this.table)
+			{
+				this.table.replaceData();
+			}
 		}
 	},
 	computed: {
+		selStgFullName() {
+			const stg = this.lists.stgs.find(s => s.studiengang_kz == this.selStgKz);
+			const selStudiensemester = this.selStudiensemester;
+			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung}` : "";
+		},
 		tabulatorOptions() {
 			const self = this;
 			return {
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.selStudiensemester || !this.selStgKz) {
+						return Promise.resolve({ data: [] });
+					}
+					return this.$api.call(ApiEvaluation.getLvListByStg(this.selStudiensemester, this.selStgKz))
+				},
+				ajaxResponse: (url, params, response) => response.data,
 				layout: 'fitColumns',
 				autoResize: true,
 				resizableColumnFit: true,
@@ -33,11 +73,11 @@ export default {
 				columns: [
 					{
 						title:'LV-Bezeichnung',
-						field:'lvBezeichnung',
+						field:'bezeichnung',
 						headerFilter:"input",
 						bottomCalc:"count",
 						bottomCalcFormatter:"plaintext",
-						widthGrow: 4
+						widthGrow: 3
 					},
 					{
 						title:'OrgForm',
@@ -113,39 +153,44 @@ export default {
 						title: "Rücklauf",
 						field: "ruecklauf",
 						headerFilter:"input",
-						mutator: function(value, data){
-							return `${data.submitted}/${data.codes_ausgegeben}`;
+						formatter: function(cell) {
+							const submittedCodes = cell.getData().submittedCodes;
+							const codesAusgegeben = cell.getData().codesAusgegeben;
+							return `${submittedCodes}/${codesAusgegeben}`;
 						},
 						hozAlign: "right",
 						minWidth: 100
 					},
 					{
 						title:'RL-Quote',
-						field:'rlQuote',
+						field:'ruecklaufQuote',
 						headerFilter:"input",
 						hozAlign:"left",
 						formatter:"progress",
 						formatterParams: {
 							min: 0,
 							max: 100,
-							legend: (value) => {
-								return value !== null && value !== undefined ? value + "%" : "";
+							color: function(value) {
+								return (value < 30) ? "red" : "";
 							},
+							legend: function(value) {
+								return value + "%"
+							},	// todo check later. disappears on reload. Tabulator 5.2. issue?
 							legendAlign: "right"
 						},
 						sorter: "number",
 						width: 200,
 						bottomCalc:"avg",
 						bottomCalcFormatter: function(cell) {
-							const raw = cell.getValue();
-							const num = parseFloat(raw);
-							return isNaN(num) ? "–" : num.toFixed(2) + "%";
-						}
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : num + "%";
+						},
+						tooltip: (e, cell) => (cell.getValue() < 30) ? "Sehr geringe Rücklaufquote" : "",
 					},
 					{
 						title:'LV-Evaluation',
 						formatter:() => '<button class="btn btn-outline-secondary"><i class="fa-solid fa-square-poll-horizontal me-2"></i>LV-Evaluation</button>',
-						cellClick: () => self.openEvaluationByLveLv(1617), // todo remove test 1617
+						cellClick: (e, cell) => self.openEvaluationByLveLv(cell.getRow().getData().lvevaluierung_lehrveranstaltung_id),
 						hozAlign:"center",
 						headerSort:false,
 						width: 140
@@ -159,7 +204,7 @@ export default {
 					},
 					{
 						title:'Reviewed',
-						field:'reviewed',
+						field:'reviewed_stg',
 						formatter:"tickCross",
 						headerFilter: "list",
 						headerFilterParams: {
@@ -182,9 +227,7 @@ export default {
 								{ value: false, label: "nicht erledigt" }
 							],
 						},
-						tooltip: (cell) => {
-							return cell.getValue() ? "erledigt" : "nicht erledigt"
-						},
+						tooltip: (e, cell) => cell.getValue() ? "erledigt" : "nicht erledigt",
 						width:120
 					},
 				]
@@ -199,38 +242,84 @@ export default {
 
 			window.open(url, '_blank');
 		},
-		async onTableBuilt(){
+		updateVerpflichtend(cell)
+		{
+			this.$api
+					.call(ApiEvaluation.updateVerpflichtend(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
+					.then(result => {
+						if (result.data) {
+							this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+						}
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		updateReviewedLvInStg(cell)
+		{
+			this.$api
+					.call(ApiEvaluation.updateReviewedLvInStg(cell.getData().lvevaluierung_lehrveranstaltung_id, cell.getValue()))
+					.then(result => {
+						if (result.data) {
+							this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+						}
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		sendInfomail(){
+			this.$fhcAlert
+				.confirm({
+					header: 'Bitte bestätigen Sie:',
+					message:`--TestText von IT--Ich habe alle LV-Evaluierungen des Studiengangs ${this.selStgFullName} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet. Mit Klick auf "OK" wird die nächste LVE-KVP Instanz per mail zum weiteren Review informiert.`
+				})
+				.then()
+		},
+		onTableBuilt() {
 			this.table = this.$refs.stgTable.tabulator;
-			this.table.setData(this.data); // todo change
+		},
+		onCellEdited(cell) {
+			switch (cell.getField()){
+				case 'verpflichtend':
+					this.updateVerpflichtend(cell);
+					break;
+				case 'reviewed_stg':
+					this.updateReviewedLvInStg(cell);
+					break;
+				default:
+					break;
+			}
 		}
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
 		<h1 class="mb-5">MALVE Übersicht<small class="fs-5 fw-normal text-muted"> | LV-Evaluationen & Auswertungen einsehen</small></h1>
 	 	<div class="row align-items-center mb-3">
+	 		<h4>{{ selStgFullName }}</h4>
 			<div class="col-md-12">
 				<div class="d-flex justify-content-end align-items-center">
+					<div class="me-2">
+						<form-input
+							type="select"
+							v-model="selStudiensemester"
+							name="studiensemester_kurzbz"
+							:label="$p.t('lehre/studiensemester')">
+							<option 
+								v-for="studSem in lists.studiensemester"
+								:key="studSem.studiensemester_kurzbz" 
+								:value="studSem.studiensemester_kurzbz">
+								{{ studSem.studiensemester_kurzbz }}
+							</option>
+						</form-input>
+					</div>
 					<div>
-						<select class="form-select d-inline w-auto me-2">
-							<option>2025/26</option>
-							<option>2024/25</option>
-							<option>2023/24</option>
-						</select>
-						<select class="form-select d-inline w-auto me-2">
-							<option>BIF</option>
-							<option>BBE</option>
-							<option>BEL</option>
-						</select>
-						<select class="form-select d-inline w-auto me-2">
-							<option>VZ</option>
-							<option>BB</option>
-							<option>DUA</option>
-						</select>
-						<select class="form-select d-inline w-auto me-2">
-							<option>1</option>
-							<option>2</option>
-							<option>3</option>
-						</select>
+						<form-input
+							type="select"
+							v-model="selStgKz"
+							name="studiengang_kz"
+							:label="$p.t('lehre/studiengang')"
+							>
+							<option v-for="stg in lists.stgs" :key="stg.studiengang_kz" :value="stg.studiengang_kz">
+								{{ stg.kuerzel }} {{ stg.bezeichnung }}
+							</option>
+						</form-input>
 					</div><!--.div right buttons -->
 				</div><!--.d-flex-->
 			</div><!--.col -->
@@ -242,10 +331,13 @@ export default {
 				table-only
 				:side-menu="false"
 				:tabulator-options="tabulatorOptions"
-				:tabulator-events="[{event: 'tableBuilt', handler: onTableBuilt}]">
+				:tabulator-events="[
+					{event: 'tableBuilt', handler: onTableBuilt},
+					{event: 'cellEdited', handler: onCellEdited},
+				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary"><i class="fa fa-envelope me-2"></i>Info an QM & Rektorat</button>
-					<a type="button" class="btn btn-outline-secondary" href="+" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
+					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>Info an QM & Rektorat</button>
+					<a type="button" class="btn btn-outline-secondary" href="#" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
 				</template>
 			</core-filter-cmpt>
 		</div>
