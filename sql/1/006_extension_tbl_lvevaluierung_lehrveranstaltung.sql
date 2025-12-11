@@ -23,6 +23,15 @@ CREATE SEQUENCE IF NOT EXISTS extension.seq_tbl_lvevaluierung_lehrveranstaltung_
 ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
     ALTER COLUMN lvevaluierung_lehrveranstaltung_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id');
 
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung ADD COLUMN IF NOT EXISTS reviewed_stg boolean;
+COMMENT ON COLUMN extension.tbl_lvevaluierung_lehrveranstaltung.reviewed_stg IS 'Review Spalte für Studiengänge Übersicht';
+ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
+    ALTER COLUMN reviewed_stg SET DEFAULT FALSE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_lehrveranstaltung TO vilesci;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_lehrveranstaltung TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_lehrveranstaltung_lvevaluierung_lehrveranstaltung_id TO vilesci;
