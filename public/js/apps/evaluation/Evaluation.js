@@ -13,8 +13,12 @@ const router = VueRouter.createRouter({
 			name: 'Evaluation',
 			component: Evaluation,
 			props: route => ({
-				lvevaluierung_id: route.query.lvevaluierung_id ?? null,
-				lvevaluierung_lehrveranstaltung_id: route.query.lvevaluierung_lehrveranstaltung_id ?? null
+				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
+						? Number(route.query.lvevaluierung_id)
+						: null,
+				lvevaluierung_lehrveranstaltung_id: route.query.lvevaluierung_lehrveranstaltung_id && route.query.lvevaluierung_lehrveranstaltung_id !== 'null'
+						? Number(route.query.lvevaluierung_lehrveranstaltung_id)
+						: null
 			})
 		}
 	]

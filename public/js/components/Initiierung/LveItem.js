@@ -126,6 +126,7 @@ export default {
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
+						v-if="lveLvDetail.lvevaluierung_id !== null"
 						class="btn btn-sm btn-outline-secondary"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
