@@ -75,7 +75,6 @@ export default {
 			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
 		},
 		site_url_opLvKvp(){
-			console.log(this.$api.getUri);
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
 		tabulatorOptions() {
