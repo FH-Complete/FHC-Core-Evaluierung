@@ -62,13 +62,24 @@ export default {
 			}
 		}
 	},
-	getLvListByStg(studiensemester_kurzbz, studiengang_kz) {
+	getOrgformsByStg(studiengang_kz, studiensemester_kurzbz){
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getOrgformsByStg',
+			params: {
+				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	getLvListByStg(studiensemester_kurzbz, studiengang_kz, orgform_kurzbz) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvListByStg',
 			params: {
 				studiensemester_kurzbz: studiensemester_kurzbz,
-				studiengang_kz: studiengang_kz
+				studiengang_kz: studiengang_kz,
+				orgform_kurzbz: orgform_kurzbz
 			}
 		}
 	},

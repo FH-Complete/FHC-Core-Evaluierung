@@ -17,6 +17,7 @@ class Evaluation extends FHCAPI_Controller
 				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
 				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
+				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
 				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
 				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
@@ -256,6 +257,23 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
+	 * Get Orgforms by given Studiengang and Studiensemester.
+	 *
+	 * @return void
+	 */
+	public function getOrgformsByStg()
+	{
+		$studiengang_kz = $this->input->get('studiengang_kz');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->getOrgformsByStg($studiengang_kz, $studiensemester_kurzbz);
+		$orgforms = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($orgforms);
+	}
+
+	/**
 	 * Get Lv-List Data of all Lvs that shall be evaluated in given Studiensemester and Studiengang.
 	 * (from Lvevaluierung-Lehrveranstaltung table)
 	 *
@@ -265,6 +283,7 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$studiengang_kz = $this->input->get('studiengang_kz');
+		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 
 		// Permission check
 		$entitledStgs = $this->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_STG) ?: [];
@@ -273,7 +292,8 @@ class Evaluation extends FHCAPI_Controller
 		// Get LV List
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByStg(
 			$studiensemester_kurzbz,
-			$studiengang_kz
+			$studiengang_kz,
+			$orgform_kurzbz
 		);
 		$data = $this->getDataOrTerminateWithError($result);
 

@@ -85,13 +85,13 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param $studiengang_kz
 	 * @return mixed
 	 */
-	public function getLveLvsByStg($studiensemester_kurzbz, $studiengang_kz)
+	public function getLveLvsByStg($studiensemester_kurzbz, $studiengang_kz, $orgform_kurzbz)
 	{
 		if (is_numeric($studiengang_kz) && !is_array($studiengang_kz))
 		{
 			$studiengang_kz = [$studiengang_kz];
 		}
-		$params = [$studiensemester_kurzbz, $studiengang_kz];
+		$params = [$studiensemester_kurzbz, $studiengang_kz, $orgform_kurzbz];
 
 		$qry = '
 			-- Alle LVs eines bestimmten Studiensemesters, wo eingeloggter user Lektor ist
@@ -113,6 +113,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				WHERE
 					le.studiensemester_kurzbz = ?
 					AND stg.studiengang_kz IN ?
+					AND lv.orgform_kurzbz = ?
 				ORDER BY
 					lv.lehrveranstaltung_id
 			)

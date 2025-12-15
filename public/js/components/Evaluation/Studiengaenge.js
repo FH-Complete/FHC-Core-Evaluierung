@@ -13,9 +13,11 @@ export default {
 			lists: {
 				studiensemester: [],
 				stgs: [],
+				orgforms: [],
 			},
 			selStudiensemester: null,
 			selStgKz: null,
+			selOrgform: null,
 			table: null,
 		}
 	},
@@ -31,6 +33,11 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
+				return this.$api.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
+			})
+			.then(result => {
+				this.lists.orgforms = result.data
+				this.selOrgform = result.data[0].orgform_kurzbz;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
@@ -44,15 +51,28 @@ export default {
 		selStgKz(newVal){
 			if (newVal && this.selStudiensemester && this.table)
 			{
+				this.$api
+					.call(ApiEvaluation.getOrgformsByStg(newVal, this.selStudiensemester))
+					.then(result => {
+						this.lists.orgforms = result.data
+						this.selOrgform = result.data[0].orgform_kurzbz;
+						this.table.replaceData();
+					})
+			}
+		},
+		selOrgform(newVal){
+			if (newVal && this.selOrgform && this.table)
+			{
 				this.table.replaceData();
 			}
-		}
+		},
 	},
 	computed: {
 		selStgFullName() {
 			const stg = this.lists.stgs.find(s => s.studiengang_kz == this.selStgKz);
 			const selStudiensemester = this.selStudiensemester;
-			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung}` : "";
+			const selOrgform = this.selOrgform;
+			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
 		},
 		site_url_opLvKvp(){
 			console.log(this.$api.getUri);
@@ -63,10 +83,14 @@ export default {
 			return {
 				ajaxURL: 'dummy',
 				ajaxRequestFunc: () => {
-					if (!this.selStudiensemester || !this.selStgKz) {
+					if (!this.selStudiensemester || !this.selStgKz || !this.selOrgform) {
 						return Promise.resolve({ data: [] });
 					}
-					return this.$api.call(ApiEvaluation.getLvListByStg(this.selStudiensemester, this.selStgKz))
+					return this.$api.call(ApiEvaluation.getLvListByStg(
+							this.selStudiensemester,
+							this.selStgKz,
+							this.selOrgform
+					))
 				},
 				ajaxResponse: (url, params, response) => response.data,
 				layout: 'fitColumns',
@@ -322,7 +346,7 @@ export default {
 							</option>
 						</form-input>
 					</div>
-					<div>
+					<div class="me-2">
 						<form-input
 							type="select"
 							v-model="selStgKz"
@@ -331,6 +355,18 @@ export default {
 							>
 							<option v-for="stg in lists.stgs" :key="stg.studiengang_kz" :value="stg.studiengang_kz">
 								{{ stg.kuerzel }} {{ stg.bezeichnung }}
+							</option>
+						</form-input>
+					</div><!--.div right buttons -->
+					<div>
+						<form-input
+							type="select"
+							v-model="selOrgform"
+							name="orgform_kurzbz"
+							:label="$p.t('lehre/organisationsform')"
+							>
+							<option v-for="orgform in lists.orgforms" :key="orgform.orgform_kurzbz" :value="orgform.orgform_kurzbz">
+								{{ orgform.orgform_kurzbz }}
 							</option>
 						</form-input>
 					</div><!--.div right buttons -->
