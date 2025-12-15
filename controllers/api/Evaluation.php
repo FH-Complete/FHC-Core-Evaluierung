@@ -249,7 +249,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$entitledStgs = $this->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_STG) ?: [];
-		$result = $this->StudiengangModel->getEntitledStgs($entitledStgs, $studiensemester_kurzbz);
+		$result = $this->StudiengangModel->getByStgs($entitledStgs, $studiensemester_kurzbz);
 		$stgs = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($stgs);
