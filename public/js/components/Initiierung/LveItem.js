@@ -261,15 +261,15 @@ export default {
 						</span>
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-							class="ms-2 badge rounded-pill border border-secondary text-secondary"
+							class="mx-2 badge border border-secondary text-secondary"
 							:title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
 							v-tooltip="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
 							data-bs-html="true"
 							data-bs-custom-class="tooltip-left"
 						>
-							<i class="fa fa-users"></i>
-							Mail erhalten
-							<i class="fa-solid fa-eye ms-1"></i> 
+<!--							{{lveLvDetail.codes_ausgegeben }} Mailempfänger	-->
+							Mailempfänger
+							<i class="fa-solid fa-arrow-pointer ms-1"></i> 
 						</span>	
 						<span class="ms-2">
 							<i 
