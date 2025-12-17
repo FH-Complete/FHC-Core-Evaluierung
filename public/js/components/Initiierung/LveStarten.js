@@ -271,10 +271,10 @@ export default {
 							<div class="me-5">
 								<span 
 									class="text-secondary me-2 text-end"
-									:title="'Abgeschickete Fragebögen/Ausgesendete Codes/Anzahl Studierende'"				
+									:title="'Abgeschickete Fragebögen/Ausgesendete Codes'"				
 									v-tooltip						
 								>
-									{{lveLv.submittedCodes}}/{{lveLv.codesAusgegeben}}/{{lveLv.countStudents}}
+									{{lveLv.submittedCodes}}/{{lveLv.codesAusgegeben}}
 								</span>
 							</div>
 						</button>
