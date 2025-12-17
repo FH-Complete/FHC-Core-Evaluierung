@@ -15,24 +15,28 @@ export default {
 		LveItem,
 	},
 	created() {
-		const lehrveranstaltung_id = this.$route.query?.lehrveranstaltung_id;
+		const { lehrveranstaltung_id, studiensemester_kurzbz } = this.$route.query;
 
 		this.isLoading = true;
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
 			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
-			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
-			.then(() => this.$api.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester)))
+			.then(result => {
+				this.selStudiensemester = studiensemester_kurzbz ?? result.data[0].studiensemester_kurzbz;
+				return this.$api.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester));
+			})
 			.then(result => {
 				this.lveLvs = result.data;
 				this.isLoading = false;
 
-				// Give Accordion time to build item DOMs first
- 				setTimeout(() => {
-					 // Now look if $route.query LV-ID is found in lveLvs
-					this.lookupLv(lehrveranstaltung_id);
-			 	}, 10);
+				if (lehrveranstaltung_id) {
+					// Give Accordion time to build item DOMs first
+					setTimeout(() => {
+						 // Now look if $route.query LV-ID is found in lveLvs
+						this.lookupLv(lehrveranstaltung_id);
+					}, 10);
+				}
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
@@ -51,6 +55,7 @@ export default {
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
 			selLv: null,					// Autocomplete selected LV
 			isLoading: false,
+			routeLvNotFound: false
 		}
 	},
 	computed: {
@@ -66,6 +71,7 @@ export default {
 	},
 	watch: {
 		selLv(newVal){
+			this.routeLvNotFound = false;
 			const lveLvId = newVal?.lvevaluierung_lehrveranstaltung_id;
 			if (typeof lveLvId === 'number') {
 				this.selLveLvId = lveLvId;
@@ -112,6 +118,12 @@ export default {
 				const foundLv = this.lveLvs.find(lv => lv.lehrveranstaltung_id == lehrveranstaltung_id);
 				if (foundLv) {
 					this.selLv = foundLv;  // Triggers selLv watcher
+				}
+				else {
+					// Route LV not found. Set explicit "not found" state
+					this.selLv = null;
+					this.selLveLvId = null;
+					this.routeLvNotFound = true;
 				}
 			}
 		},
@@ -221,6 +233,10 @@ export default {
 				</form-input>
 			</div>
 		</div><!--.end row -->
+		<!-- Alert when routed LV not found -->
+		<div v-if="routeLvNotFound && !isLoading && lveLvs.length > 0" class="alert alert-info mb-3 text-center">
+			<span>Gesuchte LV (noch) nicht zur Evaluierung bereit.</span>
+		</div>	
 		<!-- LV Accordion List -->
 		<div class="accordion" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
 			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
@@ -331,7 +347,7 @@ export default {
 					Keine Lehrveranstaltungen zur Evaluierung freigegeben in {{ selStudiensemester}}
 				</span>
 			</div>
-		</div>	
+		</div>
 	</div><!--.end div -->
 	`
 }
