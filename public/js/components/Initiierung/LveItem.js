@@ -224,17 +224,16 @@ export default {
 									Speichern
 								</button>
 							</div>
-							<div class="ms-md-auto text-muted">	
+							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	
 								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>
-								<div v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
-									<i 
-										class="fa fa-ban fa-lg text-muted" 
-										:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
-										v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
-										data-bs-html="true"
-										data-bs-custom-class="tooltip-left">
-									</i>
-								</div>
+								<i 
+									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"
+									class="fa fa-ban fa-lg text-muted" 
+									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									data-bs-html="true"
+									data-bs-custom-class="tooltip-left">
+								</i>
 								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
 							</div>
 						</div><!--.d-flex -->
