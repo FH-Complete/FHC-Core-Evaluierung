@@ -326,7 +326,7 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">MALVE Übersicht<small class="fs-5 fw-normal text-muted"> | LV-Evaluationen & Auswertungen einsehen</small></h1>
+		<h1 class="mb-5">MALVE - Studiengang Übersicht<small class="fs-5 fw-normal text-muted"> | LV-Evaluationen & Auswertungen einsehen</small></h1>
 	 	<div class="row align-items-center mb-3">
 	 		<h4>{{ selStgFullName }}</h4>
 			<div class="col-md-12">
