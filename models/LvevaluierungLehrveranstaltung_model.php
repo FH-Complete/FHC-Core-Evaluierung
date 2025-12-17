@@ -264,6 +264,8 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
+				--- filter only main studies (to start with)
+				AND stg.studiengang_kz BETWEEN 0 AND 10000
 			  	-- filter only to be evaluated
 				AND lv.evaluierung = TRUE
 			  	-- filter only not already inserted
