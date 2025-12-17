@@ -70,7 +70,10 @@ export default {
 			if (typeof lveLvId === 'number') {
 				this.selLveLvId = lveLvId;
 
-				this.openAccordionItem();
+				// Wait until (accordion) DOM has updated
+				this.$nextTick(() => {
+					this.openAccordionItem();
+				});
 			}
 			else {
 				this.selLveLvId = null;
