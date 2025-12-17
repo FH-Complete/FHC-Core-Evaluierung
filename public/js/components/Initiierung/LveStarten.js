@@ -200,7 +200,7 @@ export default {
 				</template>
 				<template #header>
 					<div class="d-grid">
-						<button type="button" class="btn btn-secondary btn-light" @click="this.selLv = null">Alle anzeigen</button>
+						<button type="button" class="btn btn-secondary btn-light" @click="selLv = null">Alle anzeigen</button>
 					</div>
 				</template>
 				</form-input>
