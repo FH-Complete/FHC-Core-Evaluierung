@@ -209,7 +209,7 @@ class Initiierung extends FHCAPI_Controller
 
 				// User cannot send mails for Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Sending by LV-Leitung'];
+				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Only LV-Leitung can send'];
 			}
 		}
 
