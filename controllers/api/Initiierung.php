@@ -129,7 +129,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Editable by LV-Leitung'];
+				$canSwitchInfo = ['Only LV-Leitung can edit'];
 
 				// User should only see own Lehreinheiten
 				$groupedByLe = array_filter($groupedByLe, function ($item) {
@@ -201,11 +201,11 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Editable by LV-Leitung'];
+				$canSwitchInfo = ['Only LV-Leitung can edit'];
 
 				// User cannot start Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Editable by LV-Leitung'];
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Only LV-Leitung can edit'];
 
 				// User cannot send mails for Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
@@ -482,7 +482,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
 					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Editable by Lector of LV'];
+					$isDisabledEvaluierungInfo = ['Only Lector of LV can edit'];
 				}
 			}
 

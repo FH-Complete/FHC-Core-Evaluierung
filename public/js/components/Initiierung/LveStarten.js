@@ -238,7 +238,7 @@ export default {
 			<span>Gesuchte LV (noch) nicht zur Evaluierung bereit.</span>
 		</div>	
 		<!-- LV Accordion List -->
-		<div class="accordion" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
+		<div class="accordion accordion-flush" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
 			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">

@@ -126,7 +126,7 @@ export default {
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
-						class="btn btn-sm btn-outline-secondary"
+						class="btn btn-outline-secondary"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
 						<i class="fa fa-square-poll-horizontal me-2"></i>LV-Evaluation
@@ -135,16 +135,14 @@ export default {
 			</div><!--.end card-header -->
 			<!-- Gruppen -->
 			<div class="card-body pb-0">
-				<i class="fa fa-users me-2"></i>
-				<span class="d-none d-md-inline me-2">Gruppen:</span>
 				<span
-					class="badge border border-secondary text-secondary d-none d-md-inline me-2"
+					class="badge border border-secondary text-secondary me-2"
 					:title="getLeGruppenInfoString(lveLvDetail)"
 					v-tooltip="getLeGruppenInfoString(lveLvDetail)"
 					data-bs-html="true"
 					data-bs-custom-class="tooltip-left"
 				>
-					Gruppen<i class="fa-solid fa-arrow-pointer mx-2"></i>
+					Gruppen<i class="fa-solid fa-arrow-pointer ms-2"></i>
 				</span>
 
 				<span
@@ -157,26 +155,26 @@ export default {
 						<span v-if="lveLvDetail.studenten && lveLvDetail.studenten.length > 0">
 							{{ lveLvDetail.studenten.length }}
 						</span>
-						Studierende<i class="fa-solid fa-arrow-pointer mx-2"></i>
+						Studierende<i class="fa-solid fa-arrow-pointer ms-2"></i>
 					</span>
 					<span
- 						class="badge border border-secondary text-secondary d-none d-md-inline" 
+ 						class="badge border border-secondary text-secondary" 
 						:title="getStundenplanterminString(lveLvDetail.stundenplan)"
  						v-tooltip="getStundenplanterminString(lveLvDetail.stundenplan)" 				
  						data-bs-html="true"
  						data-bs-custom-class="tooltip-left"
 					>
-						LV-Plan<i class="fa-solid fa-arrow-pointer mx-2"></i> 
+						LV-Plan<i class="fa-solid fa-arrow-pointer ms-2"></i> 
 					</span>
 			</div><!--.end card-body -->
 			<!-- Lehrende -->
 			<div class="card-body border-bottom">
-				<i class="fa fa-graduation-cap me-2"></i>
-				<span class="d-none d-md-inline me-2">{{ $p.t('lehre/lektorInnen') }}:</span>
+				<i class="d-lg-none fa fa-graduation-cap me-2"></i>
+				<span class="d-none d-lg-inline me-2">{{ $p.t('lehre/lektorInnen') }}:</span>
 				<span v-html="getLektorenInfoString(lveLvDetail.lektoren)"></span>
 			</div><!--.end card body-->
 			<!-- LV-Evaluierungen -->
-			<div class="card-body mb-3">
+			<div class="card-body pb-3 border-bottom">
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung" class="text-muted">
 					<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
 					<div class="row gx-5">
@@ -193,7 +191,7 @@ export default {
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
-								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail"
   									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
   									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
@@ -210,7 +208,7 @@ export default {
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
-									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung"
+									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail"
   									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
   									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
 								>
@@ -224,41 +222,51 @@ export default {
 									Speichern
 								</button>
 							</div>
-							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	
-								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>
-								<i 
-									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"
-									class="fa fa-ban fa-lg text-muted" 
-									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
-									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
-									data-bs-html="true"
-									data-bs-custom-class="tooltip-left">
-								</i>
-								<!-- span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>-->
-							</div>
+<!--							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	-->
+<!--								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>-->
+<!--								<i -->
+<!--									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"-->
+<!--									class="fa fa-ban fa-lg text-muted" -->
+<!--									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
+<!--									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
+<!--									data-bs-html="true"-->
+<!--									data-bs-custom-class="tooltip-left">-->
+<!--								</i>-->
+<!--								&lt;!&ndash; span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>&ndash;&gt;-->
+<!--							</div>-->
 						</div><!--.d-flex -->
 					</div><!--.col -->
 					</div><!--.row-->
+				
+					<div class="row text-dark">
+						<div class="col-12 pt-4">
+							<span>Status: </span>
+							<span v-if="lveLvDetail.insertamum" class="me-2">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
+							<span v-else-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
+								{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}
+							</span>
+						</div>
+					</div>
 				</form-form><!--.end form -->
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->
 			<!-- Codes versenden -->
-			<div class="card-footer bg-white mb-3" 
+			<div class="card-body mb-3" 
 				v-if="lveLvDetail.lvevaluierung_id || lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
 			>
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
-					<div class="col-5 col-md-4">
-						<span class="d-md-none"><i class="fa fa-envelope me-2"></i>Email</span>
-						<span class="d-none d-md-inline"><i class="fa fa-envelope me-2"></i>Email Status</span>
-					</div>
-					<div class="col-7 col-md-8 text-end">
-						<span v-if="isSendingMail"><i class="fa-solid fa-spinner fa-pulse"></i></span>
+					<div class="col-6 col-md-5">
+						<span class="d-lg-none"><i class="fa fa-envelope"></i></span>
+						<span class="d-none d-lg-inline">Email Status:</span>
+						<span v-if="isSendingMail"><i class="fa-solid fa-spinner fa-pulse ms-2"></i></span>
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
-							class="text-muted ms-2 small">
+							class="ms-2">
 							{{lveLvDetail.editableCheck.isDisabledSendMailInfo.join(', ')}}
 						</span>
+					</div>
+					<div class="col-6 col-md-7 text-end">
 						<span 
 							v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
 							class="mx-2 badge border border-secondary text-secondary"
@@ -267,8 +275,7 @@ export default {
 							data-bs-html="true"
 							data-bs-custom-class="tooltip-left"
 						>
-<!--							{{lveLvDetail.codes_ausgegeben }} Mailempfänger	-->
-							Mailempfänger
+							{{lveLvDetail.codes_ausgegeben }} Mailempfänger
 							<i class="fa-solid fa-arrow-pointer ms-1"></i> 
 						</span>	
 						<span class="ms-2">
