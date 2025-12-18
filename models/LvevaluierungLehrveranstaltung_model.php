@@ -261,6 +261,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			FROM
 				lehre.tbl_lehrveranstaltung lv
 				join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
+			 	join public.tbl_studiengang stg using (studiengang_kz)
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
