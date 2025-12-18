@@ -8,7 +8,7 @@ class Initiierung extends FHCAPI_Controller
 	{
 		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-				'getLveLvs' => 'extension/lvevaluierung_init:r',
+				'getLveLvsByUser' => 'extension/lvevaluierung_init:r',
 				'getDataForEvaluierungByLe' => 'extension/lvevaluierung_init:rw',
 				'getDataForEvaluierungByLv' => 'extension/lvevaluierung_init:rw',
 				'updateLvAufgeteilt' => 'extension/lvevaluierung_init:rw',
@@ -37,18 +37,23 @@ class Initiierung extends FHCAPI_Controller
 	 * Get Lvs that are scheduled for evaluation in the given Studiensemester, where the logged-in user is assigned
 	 * to at least one Lehreinheit as a Lektor.
 	 */
-	public function getLveLvs()
+	public function getLveLvsByUser()
 	{
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$lehrveranstaltung_id = $this->input->get('lehrveranstaltung_id'); // can be null
 
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvs(
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByUser(
 			$studiensemester_kurzbz,
 			$lehrveranstaltung_id
 		)
 		;
 
 		$data = $this->getDataOrTerminateWithError($result);
+
+		// Get Ruecklauf data
+		$lveLvIds = array_column($data, 'lvevaluierung_lehrveranstaltung_id');
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLveLv($lveLvIds);
+		$rlData = hasData($result) ? getData($result) : [];
 
 		// Add info
 		foreach ($data as &$item)
@@ -61,9 +66,13 @@ class Initiierung extends FHCAPI_Controller
 			$students = $this->getStudentsForLvOrExit($item);
 			$item->countStudents = count($students);
 
-			// count submitted Evaluierungen of LV
-			$submittedEvaluierungen = $this->getSubmittedEvaluierungen($item->lvevaluierung_lehrveranstaltung_id);
-			$item->countSubmitted = count($submittedEvaluierungen);
+			$lveLvId = $item->lvevaluierung_lehrveranstaltung_id;
+			$agg = current(array_filter($rlData, function($r) use ($lveLvId) {
+				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
+			}));
+			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = $agg ? (float)$agg->ruecklaufquote : 0;
 		}
 
 		$this->terminateWithSuccess($data);
@@ -120,7 +129,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Editable by LV-Leitung'];
+				$canSwitchInfo = ['Only LV-Leitung can edit'];
 
 				// User should only see own Lehreinheiten
 				$groupedByLe = array_filter($groupedByLe, function ($item) {
@@ -192,15 +201,15 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Editable by LV-Leitung'];
+				$canSwitchInfo = ['Only LV-Leitung can edit'];
 
 				// User cannot start Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Editable by LV-Leitung'];
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Only LV-Leitung can edit'];
 
 				// User cannot send mails for Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Sending by LV-Leitung'];
+				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Only LV-Leitung can send'];
 			}
 		}
 
@@ -473,7 +482,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
 					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Editable by Lector of LV'];
+					$isDisabledEvaluierungInfo = ['Only Lector of LV can edit'];
 				}
 			}
 
@@ -736,9 +745,9 @@ class Initiierung extends FHCAPI_Controller
 	 * @param $lvevaluierung_lehrveranstaltung_id
 	 * @return array
 	 */
-	private function getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id)
+	private function getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id)
 	{
-		$result = $this->LvevaluierungCodeModel->getSubmittedEvaluierungen($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
 
 		if(isError($result))
 		{

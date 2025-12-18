@@ -1,6 +1,6 @@
 <?php
 $includesArray = array(
-	'title' => 'Evaluierung Initiierung',
+	'title' => 'Evaluation',
 	'vue3' => true,
 	'axios027' => true,
 	'bootstrap5' => true,
@@ -10,29 +10,22 @@ $includesArray = array(
 	'highcharts' => true,
 	'customJSs' => array('vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js'),
 	'customJSModules' => array(
-        'public/extensions/FHC-Core-Evaluierung/js/apps/Initiierung.js'
+        'public/extensions/FHC-Core-Evaluierung/js/apps/evaluation/Evaluation.js'
     ),
 	'customCSSs' => array(
+		'public/css/components/verticalsplit.css',
         'public/css/components/primevue.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
 		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css'
 	)
 );
 
-if (defined("CIS4")) {
-	$this->load->view(
-		'templates/CISVUE-Header',
-		$includesArray
-	);
-} else {
-	$this->load->view(
-		'templates/FHC-Header',
-		$includesArray
-	);
-}
+
+$this->load->view('templates/FHC-Header', $includesArray);
+
 ?>
 
-<div id="lve-initiierung-main"></div>
+<div id="evaluation-evaluation-main"></div>
 
 <?php
 if (defined("CIS4")) {

@@ -73,3 +73,19 @@
     60%  { transform: scale(0.95); }
     100% { transform: scale(1); }
 }
+
+/* Auswertung Textantworten - column style
+/* -------------------------------------------------------------------------------------------------------------------*/
+/* Column style for 2 visually even-height columns of Textantworten. On mobile collapses to one column */
+.columns-1 {
+    column-count: 1;
+}
+@media (min-width: 768px) {
+    .columns-md-2 {
+        column-count: 2;
+    }
+}
+.columns-1 > .card,
+.columns-md-2 > .card {
+    break-inside: avoid;
+}

@@ -17,6 +17,11 @@ export default {
 		'update:lvevaluierung_frage_antwort_id',
 		'update:antwort'
 	],
+	data() {
+		return {
+			selAntwort: null
+		}
+	},
 	created() {
 		this.$emit('update:lvevaluierung_frage_id', this.frage.lvevaluierung_frage_id)
 	},
@@ -34,6 +39,20 @@ export default {
 			return Number.isInteger(antwortWert) && antwortWert >= 0 && antwortWert <= 5
 				? icons[antwortWert]
 				: 'circle-question';
+		},
+		handleSelection(antwort) {
+			// deselect if same wert clicked
+			if (this.selAntwort === antwort.wert) {
+				this.selAntwort = null;
+				this.$emit('update:lvevaluierung_frage_antwort_id', null);
+				return;
+			}
+
+			// select new wert
+			this.selAntwort = antwort.wert;
+
+			// emit id instead of wert
+			this.$emit('update:lvevaluierung_frage_antwort_id', antwort.lvevaluierung_frage_antwort_id);
 		}
 	},
 	template: `  
@@ -60,20 +79,16 @@ export default {
 						<div class="px-md-2">
 						  	<div class="mb-auto">
 								<input
-								type="radio"
-								:name="'frage-' + frage.lvevaluierung_frage_id"				
-								:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
-								:value="antwort.wert"
-								:checked="lvevaluierung_frage_antwort_id == antwort.wert"
-						 		@click="$emit('update:lvevaluierung_frage_antwort_id',
-								  	lvevaluierung_frage_antwort_id == antwort.wert 
-										? null 
-										: antwort.wert
-									)"
-								container-class="btn px-md-4"
-								class="btn-check antwort-radio-btn"
-								:aria-describedby="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
-							>
+									type="radio"
+									:name="'frage-' + frage.lvevaluierung_frage_id"				
+									:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
+									:value="antwort.wert"
+									:checked="selAntwort == antwort.wert"
+									@click="handleSelection(antwort)"
+									container-class="btn px-md-4"
+									class="btn-check antwort-radio-btn"
+									:aria-describedby="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
+								>
 							</div>
 						  	<div class="px-1">
 								<label
@@ -82,12 +97,12 @@ export default {
 									>
 									<i
 										:class="[
-											(lvevaluierung_frage_antwort_id == antwort.wert ? 'fa-solid' : 'fa-regular'),
+											(selAntwort == antwort.wert ? 'fa-solid' : 'fa-regular'),
 											'fa-' + getIcon(antwort.wert),
 											'fa-2x',
 											'antwort-icon',
 											'wert-' + antwort.wert,
-											lvevaluierung_frage_antwort_id == antwort.wert ? 'antwort-checked' : ''
+											selAntwort == antwort.wert ? 'antwort-checked' : ''
 										  ]"
 									></i>
 									<!-- Hidden accessible label -->
@@ -98,7 +113,7 @@ export default {
 							</div>
 							<!-- Visible Answer Text -->
 						  	<div class="antwort-text-wrapper mt-1">
-						  		<span 
+						  		<span v-if="antwort.wert == 1 || antwort.wert == 5"
 						  			:id="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
 						  			class="small text-muted text-wrap"
 								>
@@ -123,7 +138,7 @@ export default {
 					  	:placeholder="frage.placeholder_by_language"
 						@input="$emit('update:antwort', $event.target.value)"
 					  	style="height: 100px"
-					/>
+					>
 					</form-input>
 				</div>
 			</div><!-- .card Fragebogenfrage Text -->

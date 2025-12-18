@@ -1,8 +1,6 @@
 import LveStarten from '../components/Initiierung/LveStarten.js';
-import DateHelper from '../helpers/DateHelper';
-import FhcAlert from '../../../../js/plugins/FhcAlert.js';
-import FhcApi from "../../../../js/plugins/Api.js";
 import Phrasen from "../../../../js/plugins/Phrasen.js";
+import tooltip from "../../../../js/directives/tooltip.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 const router = VueRouter.createRouter({
@@ -26,8 +24,6 @@ const app = Vue.createApp({
 app
 	.use(router)
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
-	.use(FhcApi)
-	.use(FhcAlert)
 	.use(Phrasen)
-	.use(DateHelper)
+	.directive('tooltip', tooltip)
 	.mount('#lve-initiierung-main')

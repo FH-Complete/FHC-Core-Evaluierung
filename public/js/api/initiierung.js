@@ -1,8 +1,8 @@
 export default {
-	getLveLvs(studiensemester_kurzbz, lehrveranstaltung_id = null) {
+	getLveLvsByUser(studiensemester_kurzbz, lehrveranstaltung_id = null) {
 		return {
 			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvs',
+			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getLveLvsByUser',
 			params: {
 				studiensemester_kurzbz: studiensemester_kurzbz,
 				lehrveranstaltung_id: lehrveranstaltung_id

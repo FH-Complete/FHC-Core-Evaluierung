@@ -47,8 +47,8 @@ export default {
 		<div class="mb-3">
 			<!-- LV-Leitungen -->
 			<div class="mb-3 pb-3 border-bottom" v-if="this.lvLeitungen">
-				<i class="fa fa-star me-2"></i>
-				<span class="d-none d-md-inline me-2">LV-Leitung:</span>
+		<!--		<i class="fa fa-star me-2"></i>-->
+				<span class="me-2 fw-bolder">LV-Leitung:</span>
 				<span v-html="getLektorenInfoString(lvLeitungen)"></span>
 			</div>
 			<!-- Switch Radio Buttons -->	
@@ -83,7 +83,7 @@ export default {
 							<i 
 								class="fa fa-ban fa-lg text-muted" 
 								:title="canSwitchInfo.join(', ')"
-								data-bs-toggle="tooltip"
+								v-tooltip="canSwitchInfo.join(', ')"
 								data-bs-html="true"
 								data-bs-custom-class="tooltip-left">
 							</i>
@@ -93,7 +93,7 @@ export default {
 							<i 
 								class="fa fa-info-circle text-primary fa-lg" 
 								:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-								data-bs-toggle="tooltip"
+								v-tooltip="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
 								data-bs-html="true"
 								data-bs-custom-class="tooltip-left">
 							</i>

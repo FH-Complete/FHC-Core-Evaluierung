@@ -15,22 +15,28 @@ export default {
 		LveItem,
 	},
 	created() {
-		const lehrveranstaltung_id = this.$route.query?.lehrveranstaltung_id;
+		const { lehrveranstaltung_id, studiensemester_kurzbz } = this.$route.query;
 
+		this.isLoading = true;
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.studiensemester = result.data)
 			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
-			.then(result => this.selStudiensemester = result.data[0].studiensemester_kurzbz)
-			.then(() => this.$api.call(ApiInitiierung.getLveLvs(this.selStudiensemester)))
+			.then(result => {
+				this.selStudiensemester = studiensemester_kurzbz ?? result.data[0].studiensemester_kurzbz;
+				return this.$api.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester));
+			})
 			.then(result => {
 				this.lveLvs = result.data;
+				this.isLoading = false;
 
-				// Give Accordion time to build item DOMs first
- 				setTimeout(() => {
-					 // Now look if $route.query LV-ID is found in lveLvs
-					this.lookupLv(lehrveranstaltung_id);
-			 	}, 10);
+				if (lehrveranstaltung_id) {
+					// Give Accordion time to build item DOMs first
+					setTimeout(() => {
+						 // Now look if $route.query LV-ID is found in lveLvs
+						this.lookupLv(lehrveranstaltung_id);
+					}, 10);
+				}
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
@@ -47,7 +53,9 @@ export default {
 			canSwitch: null,
 			canSwitchInfo: [],
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
-			selLv: null					// Autocomplete selected LV
+			selLv: null,					// Autocomplete selected LV
+			isLoading: false,
+			routeLvNotFound: false
 		}
 	},
 	computed: {
@@ -63,11 +71,15 @@ export default {
 	},
 	watch: {
 		selLv(newVal){
+			this.routeLvNotFound = false;
 			const lveLvId = newVal?.lvevaluierung_lehrveranstaltung_id;
 			if (typeof lveLvId === 'number') {
 				this.selLveLvId = lveLvId;
 
-				this.openAccordionItem();
+				// Wait until (accordion) DOM has updated
+				this.$nextTick(() => {
+					this.openAccordionItem();
+				});
 			}
 			else {
 				this.selLveLvId = null;
@@ -78,20 +90,6 @@ export default {
 
 			this.loadEvaluierungData(newId, this.selLveLv.lv_aufgeteilt);
 		},
-	},
-	mounted() {
-		// Add Event Listener to load evaluation data only when an accordion item is expanded
-		const accordion = document.getElementById('accordionFlush');
-		if (accordion) {
-			accordion.addEventListener('shown.bs.collapse', this.handleAccordionShown);
-		}
-	},
-	updated(){
-		// Init Bootstrap tooltips
-		let tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-		let tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-			return new bootstrap.Tooltip(tooltipTriggerEl)
-		})
 	},
 	methods: {
 		loadEvaluierungData(lveLvId, lv_aufgeteilt) {
@@ -121,20 +119,29 @@ export default {
 				if (foundLv) {
 					this.selLv = foundLv;  // Triggers selLv watcher
 				}
+				else {
+					// Route LV not found. Set explicit "not found" state
+					this.selLv = null;
+					this.selLveLvId = null;
+					this.routeLvNotFound = true;
+				}
 			}
 		},
 		onChangeStudiensemester(e) {
+			this.isLoading = true;
 			this.$api
-				.call(ApiInitiierung.getLveLvs(this.selStudiensemester))
+				.call(ApiInitiierung.getLveLvsByUser(this.selStudiensemester))
 				.then(result => {
 					this.lveLvs = result.data;
 					this.selLv = null;	// Reset Autocomplete field
+					this.isLoading = false;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		openAccordionItem() {
-			const collapseEl = document.getElementById('flush-collapse' + this.selLveLvId);
-			if (collapseEl) {
+			const ref = this.$refs['flush-collapse' + this.selLveLvId];
+			if (Array.isArray(ref) && ref.length > 0) {
+				const collapseEl = ref[0];
 				// Get Bootstrap Collapse-Instance oder erstelle neue (toggle: false = nicht automatisch umschalten)
 				const bsCollapse = bootstrap.Collapse.getInstance(collapseEl) || new bootstrap.Collapse(collapseEl, { toggle: false });
 				bsCollapse.show();
@@ -171,6 +178,13 @@ export default {
 					lv.kurzbzlang.toLowerCase().includes(query) ||
 					lv.lehrveranstaltung_id.toString().includes(query)
 			);
+		},
+		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
+			const url = this.$api.getUri() +
+				'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+				'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
+
+			window.open(url, '_blank');
 		}
 	},
 	template: `
@@ -198,7 +212,7 @@ export default {
 				</template>
 				<template #header>
 					<div class="d-grid">
-						<button type="button" class="btn btn-secondary btn-light" @click="this.selLv = null">Alle anzeigen</button>
+						<button type="button" class="btn btn-secondary btn-light" @click="selLv = null">Alle anzeigen</button>
 					</div>
 				</template>
 				</form-input>
@@ -219,8 +233,12 @@ export default {
 				</form-input>
 			</div>
 		</div><!--.end row -->
+		<!-- Alert when routed LV not found -->
+		<div v-if="routeLvNotFound && !isLoading && lveLvs.length > 0" class="alert alert-info mb-3 text-center">
+			<span>Gesuchte LV (noch) nicht zur Evaluierung bereit.</span>
+		</div>	
 		<!-- LV Accordion List -->
-		<div class="accordion" id="accordionFlush">
+		<div class="accordion accordion-flush" id="accordionFlush" @[\`shown.bs.collapse\`]="handleAccordionShown">
 			<template v-for="lveLv in visibleLveLvs" :key="lveLv.lvevaluierung_lehrveranstaltung_id">	
 				<div class="accordion-item">
 					<h2 class="accordion-header" :id="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id">
@@ -238,8 +256,8 @@ export default {
 									<i
 										class="fa-solid text-dark me-2" 
 										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
+										v-tooltip="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
 										data-bs-custom-class="tooltip-left"
 									>								
 									</i>
@@ -248,8 +266,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
+										v-tooltip="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -258,8 +276,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
-										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"
-										data-bs-toggle="tooltip"
+										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
+										v-tooltip="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -269,24 +287,32 @@ export default {
 								</span>
 							</div>
 							<!-- right side icon -->
-							<div>
-								<span class="badge rounded-pill border border-secondary text-secondary me-2"
-									:title="'Submitted / Total Students'"
-										data-bs-toggle="tooltip"
+							<div class="me-2">
+								<span 
+									class="text-secondary me-2 text-end"
+									:title="'Abgeschickete Fragebögen/Ausgesendete Codes'"				
+									v-tooltip						
 								>
-									<i class="fa-regular fa-comment me-1"></i>
-									{{lveLv.countSubmitted}}/{{lveLv.countStudents}}
+									{{lveLv.submittedCodes}}/{{lveLv.codesAusgegeben}}
 								</span>
 							</div>
 						</button>
+<!--						<button -->
+<!--							class="btn btn-outline-secondary btn-sm position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"-->
+<!--							@click="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"-->
+<!--						>-->
+<!--							<i class="fa fa-square-poll-horizontal"></i>-->
+<!--						</button>-->
 					</h2>
 					<div 
+						:ref="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						:id="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						class="accordion-collapse collapse md-mx-3 px-3" 
 						:aria-labelledby="'flush-heading' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 						data-bs-parent="#accordionFlush"
 						:data-lve-lv-id="lveLv.lvevaluierung_lehrveranstaltung_id"
 					>
+						<!-- Switcher -->
 						<Switcher 
   							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
   							:can-switch="canSwitch"
@@ -295,28 +321,33 @@ export default {
 							:lv-leitungen="lvLeitungen"
 							@on-update-lv-aufgeteilt="onUpdateLvAufgeteilt"
 						>
-						</Switcher>
+						</Switcher>						
 						<!-- LV-Evaluierungen -->
-						<template v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId">
-							<Lve-Item 
-								:sel-lve-lv-id="lveLv.selLveLvId"
-								:sel-lve-lv-details="selLveLvDetails"
-								@update-editable-checks="updateEditableChecks"
-							>								
-							</Lve-Item>
-						</template>
+						<Lve-Item 
+							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
+							:sel-lve-lv-id="selLveLvId"
+							:sel-lve-lv-details="selLveLvDetails"
+							@update-editable-checks="updateEditableChecks"
+						>								
+						</Lve-Item>
 					</div><!--.end accordion-collapse -->
 				  </div><!--.end accordion-item -->
 			</template><!--.end template v-for -->
 		</div><!--.end accordion -->
-		<!-- Placeholder Card: If no LV for Evaluation found -->
-		<div v-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
+	
+		<!-- Placeholder Card: When Loading or if no LV for Evaluation found -->
+		<div v-if="isLoading" class="card card flex-grow-1 mb-3">
+			<div class="card-body d-flex justify-content-center align-items-center text-center">
+				<span><i class="fa-solid fa-spinner fa-pulse fa-4x"></i></span>
+			</div>
+		</div>
+		<div v-else-if="lveLvs.length == 0"  class="card card flex-grow-1 mb-3">
 			<div class="card-body d-flex justify-content-center align-items-center text-center">
 				<span class="h5 text-muted">
 					Keine Lehrveranstaltungen zur Evaluierung freigegeben in {{ selStudiensemester}}
 				</span>
 			</div>
-		</div>	
+		</div>
 	</div><!--.end div -->
 	`
 }

@@ -19,7 +19,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param int|null	$lehrveranstaltung_id	Optional: filter for a specific LV
 	 * @return mixed
 	 */
-	public function getLveLvs($studiensemester_kurzbz, $lehrveranstaltung_id = null)
+	public function getLveLvsByUser($studiensemester_kurzbz, $lehrveranstaltung_id = null)
 	{
 		$uid = getAuthUid();
 		$params = [$studiensemester_kurzbz, $uid, $uid];
@@ -77,6 +77,64 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		return $this->execQuery($qry, $params);
 	}
+
+	/**
+	 * Get Lvs that are scheduled for evaluation in the given Studiensemester and Studiengang (can be number or array).
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $studiengang_kz
+	 * @return mixed
+	 */
+	public function getLveLvsByStg($studiensemester_kurzbz, $studiengang_kz, $orgform_kurzbz)
+	{
+		if (is_numeric($studiengang_kz) && !is_array($studiengang_kz))
+		{
+			$studiengang_kz = [$studiengang_kz];
+		}
+		$params = [$studiensemester_kurzbz, $studiengang_kz, $orgform_kurzbz];
+
+		$qry = '
+			-- Alle LVs eines bestimmten Studiensemesters, wo eingeloggter user Lektor ist
+			WITH lvs AS (
+				SELECT
+					DISTINCT ON (lv.lehrveranstaltung_id) 
+					lv.lehrveranstaltung_id,
+					lv.bezeichnung,
+					lv.orgform_kurzbz,
+					lv.semester,
+					lv.studiengang_kz,
+					lv.lehrveranstaltung_template_id,
+					stg.kurzbzlang,
+					le.studiensemester_kurzbz
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN lehre.tbl_lehreinheit le USING (lehrveranstaltung_id)
+					JOIN public.tbl_studiengang stg USING (studiengang_kz)
+				WHERE
+					le.studiensemester_kurzbz = ?
+					AND stg.studiengang_kz IN ?
+					AND (lv.orgform_kurzbz = ? 
+						OR lv.orgform_kurzbz IS NULL)
+				ORDER BY
+					lv.lehrveranstaltung_id
+			)
+	
+			-- Final join
+			SELECT
+				*
+			FROM		  	
+				lvs	
+			JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv 
+				ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
+				AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
+			ORDER BY
+			  bezeichnung,
+			  orgform_kurzbz
+		';
+
+		return $this->execQuery($qry, $params);
+	}
+
 	/**
 	 * Get Lv to be evaluated of given ID, including its Lehreinheiten, associated Gruppen and Lektoren, where the
 	 * logged-in user is assigned to at least one Lehreinheit as a Lektor.
@@ -192,8 +250,10 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param $studiensemester_kurzbz
 	 * @return mixed
 	 */
-	public function insertLehrveranstaltungenFor($studiensemester_kurzbz)
+	public function insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs = null)
 	{
+		$params = [];
+
 		$qry = "
 			SELECT
 				DISTINCT 
@@ -204,9 +264,12 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			FROM
 				lehre.tbl_lehrveranstaltung lv
 				join lehre.tbl_lehreinheit le using (lehrveranstaltung_id)
+			 	join public.tbl_studiengang stg using (studiengang_kz)
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
+				-- filter only main studies (to start with)
+				AND stg.studiengang_kz BETWEEN 0 AND 10000
 			  	-- filter only to be evaluated
 				AND lv.evaluierung = TRUE
 			  	-- filter only not already inserted
@@ -217,11 +280,24 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					extension.tbl_lvevaluierung_lehrveranstaltung
 				  WHERE
 					studiensemester_kurzbz = ?
-				)
+				)";
+		$params[]= $studiensemester_kurzbz;
+		$params[]= $studiensemester_kurzbz;
+
+		// Filter particular Studiengaenge // todo for Pilotphase. Remove then?
+		if (!is_null($stgs))
+		{
+			$stgs = !is_array($stgs) ? [$stgs] : $stgs;
+			$qry.= " AND stg.studiengang_kz IN ? ";
+			$params[]= $stgs;
+		}
+
+		$qry.= "
 		  	ORDER BY
 				lehrveranstaltung_id
 		";
-		$result = $this->execQuery($qry, [$studiensemester_kurzbz, $studiensemester_kurzbz]);
+
+		$result = $this->execQuery($qry, $params);
 		if (isError($result)) return (getError($result));
 
 		$insertBatch = hasData($result) ? getData($result) : [];
