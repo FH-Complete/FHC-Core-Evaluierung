@@ -35,11 +35,17 @@ class Initiierung extends JOB_Controller
 
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 
-		$studiensemester_kurzbz = 'WS2025'; // todo adapt when clearly defined
+		// Only for pilotphase
+		if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG') && CIS_EVALUIERUNG_ANZEIGEN_STG )
+		{
+			$stgs = unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG);
+			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs);
+		}
+		else
+		{
+			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz);
+		}
 
-		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
-
-		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz);
 		if (isError($result))
 		{
 			$this->logError(getError($result));

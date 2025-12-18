@@ -249,8 +249,10 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param $studiensemester_kurzbz
 	 * @return mixed
 	 */
-	public function insertLehrveranstaltungenFor($studiensemester_kurzbz)
+	public function insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs = null)
 	{
+		$params = [];
+
 		$qry = "
 			SELECT
 				DISTINCT 
@@ -265,7 +267,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
-				--- filter only main studies (to start with)
+				-- filter only main studies (to start with)
 				AND stg.studiengang_kz BETWEEN 0 AND 10000
 			  	-- filter only to be evaluated
 				AND lv.evaluierung = TRUE
@@ -277,11 +279,24 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					extension.tbl_lvevaluierung_lehrveranstaltung
 				  WHERE
 					studiensemester_kurzbz = ?
-				)
+				)";
+		$params[]= $studiensemester_kurzbz;
+		$params[]= $studiensemester_kurzbz;
+
+		// Filter particular Studiengaenge // todo for Pilotphase. Remove then?
+		if (!is_null($stgs))
+		{
+			$stgs = !is_array($stgs) ? [$stgs] : $stgs;
+			$qry.= " AND stg.studiengang_kz IN ? ";
+			$params[]= $stgs;
+		}
+
+		$qry.= "
 		  	ORDER BY
 				lehrveranstaltung_id
 		";
-		$result = $this->execQuery($qry, [$studiensemester_kurzbz, $studiensemester_kurzbz]);
+
+		$result = $this->execQuery($qry, $params);
 		if (isError($result)) return (getError($result));
 
 		$insertBatch = hasData($result) ? getData($result) : [];
