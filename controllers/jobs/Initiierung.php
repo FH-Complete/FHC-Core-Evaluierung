@@ -23,8 +23,16 @@ class Initiierung extends JOB_Controller
 	 *
 	 * @return void
 	 */
-	public function initEvaluierungForLehrveranstaltungen()
+	public function initEvaluierungForLehrveranstaltungen($studiensemester_kurzbz = null)
 	{
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			exit;
+		}
+
+		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 
 		$studiensemester_kurzbz = 'WS2025'; // todo adapt when clearly defined
