@@ -113,7 +113,8 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				WHERE
 					le.studiensemester_kurzbz = ?
 					AND stg.studiengang_kz IN ?
-					AND lv.orgform_kurzbz = ?
+					AND (lv.orgform_kurzbz = ? 
+						OR lv.orgform_kurzbz IS NULL)
 				ORDER BY
 					lv.lehrveranstaltung_id
 			)
