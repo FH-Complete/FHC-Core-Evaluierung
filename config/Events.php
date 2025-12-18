@@ -10,8 +10,9 @@ Events::on('lvMenuBuild', function ($menu_reference, $params) {
 	// Show LVE Neu only for Pilot Studiengänge
 	// TODO alternative link to 'old' LVE
 	if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG')
-		&& CIS_EVALUIERUNG_ANZEIGEN_STG && $params['angemeldet']
-		&& (!defined('CIS_EVALUIERUNG_ANZEIGEN_STG') || in_array($params['studiengang_kz'], unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG)))
+		&& CIS_EVALUIERUNG_ANZEIGEN_STG
+		&& $params['angemeldet']
+		&& in_array($params['studiengang_kz'], unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG))
 		&& ($params['permissionLib']->isBerechtigt('extension/lvevaluierung_init')))
 	{
 		$lehrveranstaltung_id = $params['lvid'];
