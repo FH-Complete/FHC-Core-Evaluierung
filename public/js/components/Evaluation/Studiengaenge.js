@@ -126,26 +126,17 @@ export default {
 						title:'Verpflichtend',
 						field:'verpflichtend',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
 						tooltip: (e, cell) => cell.getValue() ? "verpflichtend" : "nicht verpflichtend",
 						minWidth: 100
@@ -242,29 +233,20 @@ export default {
 						width: 220
 					},
 					{
-						title:'Reviewed',
+						title:'Erledigt',
 						field:'reviewed_stg',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
 						tooltip: (e, cell) => cell.getValue() ? "erledigt" : "nicht erledigt",
 						width:120
