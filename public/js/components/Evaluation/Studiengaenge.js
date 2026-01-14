@@ -98,6 +98,9 @@ export default {
 				resizableColumnFit: true,
 				selectable: false,
 				index: 'lvevaluierung_lehrveranstaltung_id',
+				columnDefaults: {
+					headerTooltip: true
+				},
 				columns: [
 					{
 						title:'LV-Bezeichnung',
