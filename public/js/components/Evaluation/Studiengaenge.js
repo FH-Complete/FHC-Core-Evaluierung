@@ -195,12 +195,15 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc:"avg",
+						bottomCalc: values => {
+							const nums = values.filter(v => typeof v === 'number')
+							if (!nums.length) return null
+							return nums.reduce((a, b) => a + b, 0) / nums.length
+						},
 						bottomCalcFormatter: function(cell) {
 							const num = cell.getValue();
-							return isNaN(num) ? "–" : num + "%";
-						},
-						tooltip: (e, cell) => (cell.getValue() < 30) ? "Sehr geringe Rücklaufquote" : "",
+							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+						}
 					},
 					{
 						title:'LV-Evaluation',
