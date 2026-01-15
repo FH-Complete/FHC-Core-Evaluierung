@@ -107,7 +107,10 @@ export default {
 						field:'bezeichnung',
 						headerFilter:"input",
 						bottomCalc:"count",
-						bottomCalcFormatter:"plaintext",
+						bottomCalcFormatter: function(cell) {
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : "Anzahl: " + num;
+						},
 						widthGrow: 3
 					},
 					{
