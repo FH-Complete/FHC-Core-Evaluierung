@@ -170,6 +170,24 @@ export default {
 						title: "Rücklauf",
 						field: "ruecklauf",
 						headerFilter:"input",
+						headerFilterFunc: (filterValue, rowValue, rowData) => {
+							if (filterValue === "") return true
+
+							const filter = String(filterValue)
+
+							const submitted = String(rowData.submittedCodes ?? "")
+							const issued = String(rowData.codesAusgegeben ?? "")
+
+							// match:
+							// 8  → 8/26
+							// 2  → 8/26
+							// 26 → 8/26
+							// 0  → 0/0, 13/0, 0/12
+							return (
+									submitted.includes(filter) ||
+									issued.includes(filter)
+							)
+						},
 						formatter: function(cell) {
 							const submittedCodes = cell.getData().submittedCodes;
 							const codesAusgegeben = cell.getData().codesAusgegeben;
@@ -183,18 +201,10 @@ export default {
 						title:'RL-Quote',
 						field:'ruecklaufQuote',
 						headerFilter:"input",
-						hozAlign:"left",
-						formatter:"progress",
-						formatterParams: {
-							min: 0,
-							max: 100,
-							color: function(value) {
-								return (value < 30) ? "red" : "";
-							},
-							legend: function(value) {
-								return value + "%"
-							},	// todo check later. disappears on reload. Tabulator 5.2. issue?
-							legendAlign: "right"
+						hozAlign:"right",
+						formatter: cell => {
+							const value = cell.getValue();
+							return value !== null ? `${value}%` : '-'
 						},
 						sorter: "number",
 						width: 200,

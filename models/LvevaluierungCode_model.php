@@ -117,11 +117,11 @@ class LvevaluierungCode_model extends DB_Model
 				lvelv.lvevaluierung_lehrveranstaltung_id,
 				COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes,
 				COALESCE(SUM(DISTINCT lve.codes_ausgegeben), 0) AS sum_codes_ausgegeben,
-				COALESCE(ROUND(
+				ROUND(
 					COUNT(lvec.lvevaluierung_code_id)::numeric 
 					/ NULLIF(SUM(DISTINCT lve.codes_ausgegeben), 0) * 100,
 					2
-				), 0) AS ruecklaufquote
+				) AS ruecklaufquote
 			FROM 
 				extension.tbl_lvevaluierung_lehrveranstaltung lvelv
 				JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)

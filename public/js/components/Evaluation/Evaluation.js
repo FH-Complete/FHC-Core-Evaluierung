@@ -21,7 +21,7 @@ export default {
 				lehrende: [],
 				codes_ausgegeben: 0,
 				countSubmitted: 0,
-				ruecklaufquote: 0,
+				ruecklaufquote: null,
 				startzeit: null,
 				endezeit: null,
 			},
@@ -169,14 +169,14 @@ export default {
 									<div class="d-flex justify-content-between">
 										<span>{{ evalData.countSubmitted }}</span>
 										<span 
-											v-if="evalData.countSubmitted < 5"
+											v-if="evalData.codes_ausgegeben > 0 && evalData.countSubmitted < 5"
 											v-tooltip
 											title="Sehr wenig abgeschlossene Evaluierungen. Anonymität beachten."
 										>
 										&lt; 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
 										</span>
 										<span 
-											v-else-if="evalData.countSubmitted < 10"
+											v-else-if="evalData.codes_ausgegeben > 0 && evalData.countSubmitted < 10"
 											v-tooltip
 											title="Wenig abgeschlossene Evaluierungen"
 										>
@@ -188,7 +188,7 @@ export default {
 							<tr>
 								<th>Rücklaufquote</th>
 								<td>
-									<div class="d-flex justify-content-between">
+									<div v-if="evalData.ruecklaufquote !== null" class="d-flex justify-content-between">
 										<span>{{ evalData.ruecklaufquote }}%</span>
 										<span 
 											v-if="evalData.ruecklaufquote < 30"
