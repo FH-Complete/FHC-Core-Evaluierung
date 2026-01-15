@@ -119,6 +119,8 @@ export default {
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		initializeAntworten(fbGruppen) {
+			this.fbAntworten = [];
+
 			// Build initital fbAntworten antwort objects
 			fbGruppen.forEach(gruppe => {
 				gruppe.fbFrage.forEach(frage => {
