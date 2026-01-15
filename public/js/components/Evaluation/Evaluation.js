@@ -102,9 +102,9 @@ export default {
 			<div class="d-flex justify-content-between align-items-center flex-wrap">
 				<div>
 					<h2 class="d-none d-lg-inline-block mb-0">
-						LV-Reflexion <small>{{ evalData.bezeichnung }}</small>
+						LV-Evaluation <small>{{ evalData.bezeichnung }}</small>
 					</h2>
-					<h2 class="d-lg-none mb-0">LV-Reflexion</h2>
+					<h2 class="d-lg-none mb-0">LV-Evaluation</h2>
 				</div>
 				<div class="btn-group mt-2 mt-lg-0" role="group">
 					<input type="radio" class="btn-check" id="option1" 
