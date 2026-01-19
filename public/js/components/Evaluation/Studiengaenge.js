@@ -77,6 +77,12 @@ export default {
 		site_url_opLvKvp(){
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
+		site_url_opStgKvp(){
+			return null;	// todo define url
+		},
+		isDisabledSubmitMalveBtn(){
+			return true;	// todo adapt conditionally
+		},
 		tabulatorOptions() {
 			const self = this;
 			return {
@@ -301,7 +307,7 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		sendInfomail(){
+		submitMalve(){
 			this.$fhcAlert
 				.confirm({
 					header: 'Bitte bestätigen Sie:',
@@ -385,8 +391,17 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
-					<a type="button" class="btn btn-outline-secondary" href="#" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
+					<button class="btn btn-primary" @click="submitMalve" :disabled="isDisabledSubmitMalveBtn"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
+					<a 
+						type="button" 
+						class="btn btn-outline-secondary" 
+						:class="{ disabled: isDisabledSubmitMalveBtn }"
+						:href="site_url_opStgKvp" 
+						target="_blank"
+						:aria-disabled="isDisabledSubmitMalveBtn"
+					>
+						<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
+					</a>
 				</template>
 			</core-filter-cmpt>
 		</div>
