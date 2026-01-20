@@ -72,6 +72,10 @@ class Evaluation extends FHCAPI_Controller
 		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLve($lve->lvevaluierung_id);
 		$submittedLveCodes = hasData($result) ? getData($result) : [];
 		$countSubmitted = count($submittedLveCodes);
+		$ruecklaufquote = null;
+		if ($lve->codes_ausgegeben !== null && $lve->codes_ausgegeben > 0) {
+			$ruecklaufquote = round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2);
+		}
 
 		// For min/max duration
 		$durations = $this->getDurations($submittedLveCodes);
@@ -83,7 +87,7 @@ class Evaluation extends FHCAPI_Controller
 			['lehrende' => $lehrende],
 			['codes_ausgegeben' => $lve->codes_ausgegeben],
 			['countSubmitted' => $countSubmitted],
-			['ruecklaufquote' => $countSubmitted > 0 ? round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2) : 0],
+			['ruecklaufquote' => $ruecklaufquote],
 			['startzeit' => $lve->startzeit],
 			['endezeit' => $lve->endezeit],
 			['minDuration' => $durations ? min($durations) : 0],
@@ -122,6 +126,10 @@ class Evaluation extends FHCAPI_Controller
 		$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$countSubmitted = count($submittedLveCodes);
 		$codesAusgegeben = (array_sum(array_column($lves, 'codes_ausgegeben')));
+		$ruecklaufquote = null;
+		if ($codesAusgegeben !== null && $codesAusgegeben > 0) {
+			$ruecklaufquote = round(($countSubmitted / $codesAusgegeben) * 100, 2);
+		}
 
 		// For min/max duration
 		$durations = $this->getDurations($submittedLveCodes);
@@ -136,7 +144,7 @@ class Evaluation extends FHCAPI_Controller
 			['lehrende' => $lehrende],
 			['codes_ausgegeben' => $codesAusgegeben],
 			['countSubmitted' => $countSubmitted],
-			['ruecklaufquote' => $countSubmitted > 0 ? round(($countSubmitted / $codesAusgegeben) * 100, 2) : 0],
+			['ruecklaufquote' => $ruecklaufquote],
 			['startzeit' => $periodTimes['minStartzeit']],
 			['endezeit' => $periodTimes['maxEndezeit']],
 			['minDuration' => $durations ? min($durations) : 0],
@@ -168,6 +176,7 @@ class Evaluation extends FHCAPI_Controller
 				$werte = $frage['antworten']['werte'];
 				$frequencies = $frage['antworten']['frequencies'];
 				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
+				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
 			}
 		}
 
@@ -196,6 +205,7 @@ class Evaluation extends FHCAPI_Controller
 				$werte = $frage['antworten']['werte'];
 				$frequencies = $frage['antworten']['frequencies'];
 				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
+				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
 			}
 		}
 
@@ -310,7 +320,9 @@ class Evaluation extends FHCAPI_Controller
 			}));
 			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
 			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
-			$item->ruecklaufQuote = $agg ? (float)$agg->ruecklaufquote : 0;
+			$item->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float) $agg->ruecklaufquote
+				: null;
 		}
 
 		$this->terminateWithSuccess($data);
@@ -423,6 +435,11 @@ class Evaluation extends FHCAPI_Controller
 						'frequencies' => [],
 						'bezeichnungen' => [],
 						'iMedian' => [
+							'actYear' => 0,
+							'actYearMin1' => 0,
+							'actYearMin2' => 0,
+						],	// default
+						'hodgesLehmann' => [
 							'actYear' => 0,
 							'actYearMin1' => 0,
 							'actYearMin2' => 0,

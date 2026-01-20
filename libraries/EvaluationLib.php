@@ -88,6 +88,61 @@ class EvaluationLib
 		return round($L + (($medianPos - $F) / $f) * $w, 2);
 	}
 
+	// TODO iMedian formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
+	/**
+	 * Calculate Hodges-Lehmann estimator (HLE) for a single question
+	 *
+	 * @param array $werte         	Antwort-Werte (1-5)
+	 * @param array $frequencies	Frequencies of selected Antwort-Werte
+	 * @return float|null          	Hodges–Lehmann estimator (rounded), or null
+	 */
+	public function getHodgesLehmannEstimator($werte, $frequencies)
+	{
+		$n = count($werte);
+		if ($n !== count($frequencies)) return null;
+
+		$pairs = [];
+
+		// Generate all pairs (z_i + z_j)/2 with i ≤ j
+		for ($i = 0; $i < $n; $i++) {
+			for ($j = $i; $j < $n; $j++) {
+				$mean = ($werte[$i] + $werte[$j]) / 2;
+
+				// Weight = number of times this pair occurs
+				$weight = ($i === $j)
+					? ($frequencies[$i] * ($frequencies[$i] + 1)) / 2	// self-pairs
+					: $frequencies[$i] * $frequencies[$j];				// cross-pairs
+
+				if ($weight > 0) {
+					$pairs[] = ['value' => $mean, 'weight' => $weight];
+				}
+			}
+		}
+
+		if (empty($pairs)) return null;
+
+		// Sort
+		usort($pairs, function($a, $b) {
+			if ($a['value'] == $b['value']) return 0;
+			return ($a['value'] < $b['value']) ? -1 : 1;
+		});
+
+		// Weighted median
+		$totalWeight = array_sum(array_column($pairs, 'weight'));
+		$medianPos   = $totalWeight / 2;
+
+		$cumWeight = 0;
+		foreach ($pairs as $pair) {
+			$cumWeight += $pair['weight'];
+			if ($cumWeight >= $medianPos) {
+				return round($pair['value'], 2);
+			}
+		}
+
+		return null;
+	}
+
+
 	public function getLanguageIndex()
 	{
 		$this->_ci->load->model('system/Sprache_model', 'SpracheModel');

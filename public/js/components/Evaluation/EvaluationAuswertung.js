@@ -72,7 +72,21 @@ export default {
 					data: fbFragen.antworten.frequencies,
 					pointStart: fbFragen.antworten.werte[0],
 					color: "#6fcd98"
-				}],
+					},
+					//Dummy-Series ONLY for vertical Hodges-Lehmann Estimator legend
+					{
+						name: fbFragen.antworten.hodgesLehmann.actYear !== null
+								? `Hodges-Lehmann Estimator (HLE): ${fbFragen.antworten.hodgesLehmann.actYear}`
+								: "Hodges-Lehmann Estimator (HLE)",
+						type: "line",
+						data: [],                 // no data -> dummy
+						color: "orange",
+						dashStyle: "Dot",
+						lineWidth: 2,
+						marker: { enabled: false },
+						enableMouseTracking: false
+					}
+				],
 				xAxis: {
 					title: { text: "Bewertung" },
 					min: fbFragen.antworten.werte[0],
@@ -91,7 +105,8 @@ export default {
 						}
 					},
 					plotLines: [
-						{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
+						//{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
+						{ value: fbFragen.antworten.hodgesLehmann.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `HLE ${fbFragen.antworten.hodgesLehmann.actYear}` }}
 					]
 				},
 				yAxis: {
@@ -109,10 +124,12 @@ export default {
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
-				subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
+				//subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
+				subtitle: { text: 'HLE - Hodges Lehmann Estimator der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
-					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
+					//data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
+					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.hodgesLehmann[key])),
 					visible: i === 0 // only current year visible by default
 				})),
 				yAxis: {

@@ -77,6 +77,12 @@ export default {
 		site_url_opLvKvp(){
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
+		site_url_opStgKvp(){
+			return null;	// todo define url
+		},
+		isDisabledSubmitMalveBtn(){
+			return true;	// todo adapt conditionally
+		},
 		tabulatorOptions() {
 			const self = this;
 			return {
@@ -98,13 +104,19 @@ export default {
 				resizableColumnFit: true,
 				selectable: false,
 				index: 'lvevaluierung_lehrveranstaltung_id',
+				columnDefaults: {
+					headerTooltip: true
+				},
 				columns: [
 					{
 						title:'LV-Bezeichnung',
 						field:'bezeichnung',
 						headerFilter:"input",
 						bottomCalc:"count",
-						bottomCalcFormatter:"plaintext",
+						bottomCalcFormatter: function(cell) {
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : "Anzahl: " + num;
+						},
 						widthGrow: 3
 					},
 					{
@@ -123,26 +135,17 @@ export default {
 						title:'Verpflichtend',
 						field:'verpflichtend',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
 						tooltip: (e, cell) => cell.getValue() ? "verpflichtend" : "nicht verpflichtend",
 						minWidth: 100
@@ -173,6 +176,24 @@ export default {
 						title: "Rücklauf",
 						field: "ruecklauf",
 						headerFilter:"input",
+						headerFilterFunc: (filterValue, rowValue, rowData) => {
+							if (filterValue === "") return true
+
+							const filter = String(filterValue)
+
+							const submitted = String(rowData.submittedCodes ?? "")
+							const issued = String(rowData.codesAusgegeben ?? "")
+
+							// match:
+							// 8  → 8/26
+							// 2  → 8/26
+							// 26 → 8/26
+							// 0  → 0/0, 13/0, 0/12
+							return (
+									submitted.includes(filter) ||
+									issued.includes(filter)
+							)
+						},
 						formatter: function(cell) {
 							const submittedCodes = cell.getData().submittedCodes;
 							const codesAusgegeben = cell.getData().codesAusgegeben;
@@ -186,27 +207,22 @@ export default {
 						title:'RL-Quote',
 						field:'ruecklaufQuote',
 						headerFilter:"input",
-						hozAlign:"left",
-						formatter:"progress",
-						formatterParams: {
-							min: 0,
-							max: 100,
-							color: function(value) {
-								return (value < 30) ? "red" : "";
-							},
-							legend: function(value) {
-								return value + "%"
-							},	// todo check later. disappears on reload. Tabulator 5.2. issue?
-							legendAlign: "right"
+						hozAlign:"right",
+						formatter: cell => {
+							const value = cell.getValue();
+							return value !== null ? `${value}%` : '-'
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc:"avg",
+						bottomCalc: values => {
+							const nums = values.filter(v => typeof v === 'number')
+							if (!nums.length) return null
+							return nums.reduce((a, b) => a + b, 0) / nums.length
+						},
 						bottomCalcFormatter: function(cell) {
 							const num = cell.getValue();
-							return isNaN(num) ? "–" : num + "%";
-						},
-						tooltip: (e, cell) => (cell.getValue() < 30) ? "Sehr geringe Rücklaufquote" : "",
+							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+						}
 					},
 					{
 						title:'LV-Evaluation',
@@ -239,29 +255,20 @@ export default {
 						width: 220
 					},
 					{
-						title:'Reviewed',
+						title:'Erledigt',
 						field:'reviewed_stg',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
 						tooltip: (e, cell) => cell.getValue() ? "erledigt" : "nicht erledigt",
 						width:120
@@ -300,7 +307,7 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		sendInfomail(){
+		submitMalve(){
 			this.$fhcAlert
 				.confirm({
 					header: 'Bitte bestätigen Sie:',
@@ -384,8 +391,17 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
-					<a type="button" class="btn btn-outline-secondary" href="#" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
+					<button class="btn btn-primary" @click="submitMalve" :disabled="isDisabledSubmitMalveBtn"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
+					<a 
+						type="button" 
+						class="btn btn-outline-secondary" 
+						:class="{ disabled: isDisabledSubmitMalveBtn }"
+						:href="site_url_opStgKvp" 
+						target="_blank"
+						:aria-disabled="isDisabledSubmitMalveBtn"
+					>
+						<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
+					</a>
 				</template>
 			</core-filter-cmpt>
 		</div>
