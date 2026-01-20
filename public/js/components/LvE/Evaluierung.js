@@ -41,7 +41,6 @@ export default {
 					})
 					.then(resultInitFragebogen => {
 						this.fbGruppen = resultInitFragebogen.data;
-						this.initializeAntworten(this.fbGruppen);
 					});
 			}
 		}
