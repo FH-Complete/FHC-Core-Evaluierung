@@ -1,6 +1,7 @@
 import FhcForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import FormValidation from "../../../../../js/components/Form/Validation.js";
+import ApiEvaluation from "../../api/evaluation";
 
 export default {
 	name: "EvaluationReflexion",
@@ -12,11 +13,25 @@ export default {
 	data() {
 		return {
 			formData: {
+				id: 1, // todo adapt
 				presenceOrSync: null,
 				resultsClear: null,
 				resultsClearTextAnswer: '',
-
 			}
+		}
+	},
+	created() {
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
+			const apiCallReflexionData = this.lvevaluierung_id
+					? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id)
+					: ApiEvaluation.getReflexionDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+
+			this.$api
+					.call(apiCallReflexionData)
+					.then(result => {
+						console.log(result.data);
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
 	computed: {
@@ -36,6 +51,9 @@ export default {
 		},
 		isDisabledSubmitBtn() {
 			return this.formData.presenceOrSync === null || this.formData.resultsClear === null;
+		},
+		isDisabledReflexion(){
+			return true; // todo make conditionally
 		}
 	},
 	methods: {
@@ -59,6 +77,7 @@ export default {
 		<h3 class="mb-4">LV-Reflexion</h3>
 		<fhc-form ref="reflexionForm" @submit.prevent="saveReflexion">
 			<form-validation></form-validation>
+			<fieldset :disabled="isDisabledReflexion">
 			<div class="row mb-3">
 				<div class="col-12 col-lg-6 mb-3">
 					<div class="card">
@@ -145,6 +164,7 @@ export default {
 					</div><!--.end card-->
 				</div><!--.end col-->
 			</div><!--.end row-->
+			</fieldset>
 		</fhc-form>
 	</div>	
 	`
