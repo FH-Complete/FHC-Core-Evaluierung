@@ -221,7 +221,7 @@ export default {
 	<div class="evaluation-evaluation-auswertung">
 		<h3 class="mb-4">Auswertung</h3>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
-			<h4 class="my-4">Auswertung Einzelfragen</h4>
+			<h4 class="mt-5 mb-3">Auswertung Einzelfragen</h4>
 			<div v-if="auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
 				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
 				
@@ -239,7 +239,7 @@ export default {
 			<div v-else class="card"><div class="card-body">Keine Daten vorhanden</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
-			<h4 class="my-5">Textantworten</h4>
+			<h4 class="mt-5 mb-3">Textantworten</h4>
 			<div v-if="textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
 				class="row-col mb-5">
 			
@@ -258,7 +258,7 @@ export default {
 			<div v-else class="card"><div class="card-body">Keine Daten vorhanden</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
-			<h4 class="my-4">Profillinien</h4>
+			<h4 class="mt-5 mb-3">Profillinien</h4>
 			<div class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">

@@ -238,10 +238,9 @@ export default {
 					</div><!--.col -->
 					</div><!--.row-->
 				
-					<div class="row text-dark">
-						<div class="col-12 pt-4">
-							<span>Status: </span>
-							<span v-if="lveLvDetail.insertamum" class="me-2">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
+					<div class="row">
+						<div class="col-12 pt-3 form-text">
+							<span v-if="lveLvDetail.insertamum">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
 							<span v-else-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 								{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}
 							</span>
