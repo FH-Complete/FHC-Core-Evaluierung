@@ -45,11 +45,11 @@ export default {
 			const d = this.evalData;
 			return `${d.stgKurzbz}-${d.semester}: ${d.bezeichnung} - ${d.orgform_kurzbz}`;
 		},
-		verpflichtend(){
+		verpflichtend() {
 			if (this.evalData.verpflichtend === null) return;
 			return this.evalData.verpflichtend ? 'Ja' : 'Nein';
 		},
-		lvAufgeteilt(){
+		lvAufgeteilt() {
 			if (this.evalData.lv_aufgeteilt === null) return;
 			return this.evalData.lv_aufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV';
 		},
@@ -66,6 +66,13 @@ export default {
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
+		},
+		showAlert() {
+			return (
+				(this.lvevaluierung_id === null && this.lvevaluierung_lehrveranstaltung_id === null) ||
+				this.evalData?.endezeit === null ||
+				Date.now() < new Date(this.evalData?.endezeit.replace(' ', 'T')).getTime()
+			)
 		}
 	},
 	created() {
@@ -127,7 +134,7 @@ export default {
 		<!-- Scrollable content -->
 		<main ref="scrollArea" class="flex-grow-1 overflow-auto px-3 pt-3">
 			<!-- Info tables -->
-			<div class="row mb-5">
+			<div class="row">
 				<!-- Left table -->
 				<div class="col-md-6">
 					<table class="table table-sm table-bordered align-middle">
@@ -218,13 +225,18 @@ export default {
 					</table>
 				</div>
 			</div>
+			<!-- Alert, only if no existing data or evaluation period still running -->
+			<div v-if="showAlert" class="alert alert-warning d-flex align-items-center" role="alert">
+				<i class="fa fa-triangle-exclamation me-2"></i>
+				<div>Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div>
+			</div>
 		  	<!-- Dynamic content -->
 			<keep-alive>
 				<component 
 					:is="selectedComponent" 
 					:lvevaluierung_id="lvevaluierung_id"
     				:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
-					class="d-block"
+					class="d-block mt-5"
 				></component>
 			</keep-alive>
 		</main>

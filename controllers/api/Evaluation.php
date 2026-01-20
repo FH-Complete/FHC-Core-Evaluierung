@@ -16,6 +16,8 @@ class Evaluation extends FHCAPI_Controller
 				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_stg:r',
 				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
 				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getReflexionDataByLve' => 'extension/lvevaluierung_stg:r',
+				'getReflexionDataByLveLv' => 'extension/lvevaluierung_stg:r',
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
@@ -163,6 +165,15 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+
+		// Return if Evaluation period is still running
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $lve->endezeit) {
+			$this->terminateWithSuccess([]);
+		}
+
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -192,6 +203,17 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		// Return if Evaluation period is still running
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$periodTimes = $this->getPeriodTimes($lves);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $periodTimes['maxEndezeit']) {
+			$this->terminateWithSuccess([]);
+		}
+
+		// Get Auswertungdata
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -220,6 +242,15 @@ class Evaluation extends FHCAPI_Controller
 	public function getTextantwortenByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+
+		// Return if Evaluation period is still running
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $lve->endezeit) {
+			$this->terminateWithSuccess([]);
+		}
+
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -237,6 +268,16 @@ class Evaluation extends FHCAPI_Controller
 	public function getTextantwortenByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		// Return if Evaluation period is still running
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$periodTimes = $this->getPeriodTimes($lves);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $periodTimes['maxEndezeit']) {
+			$this->terminateWithSuccess([]);
+		}
+
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -244,6 +285,33 @@ class Evaluation extends FHCAPI_Controller
 		$textantworten = $this->mapTextantworten($data);
 
 		$this->terminateWithSuccess($textantworten);
+	}
+
+	public function getReflexionDataByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+
+		// Return if Evaluation period is still running
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $lve->endezeit) {
+			$this->terminateWithSuccess([]);
+		}
+	}
+
+	public function getReflexionDataLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		// Return if Evaluation period is still running
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$periodTimes = $this->getPeriodTimes($lves);
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+
+		if ($now < $periodTimes['maxEndezeit']) {
+			$this->terminateWithSuccess([]);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------------------------

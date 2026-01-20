@@ -53,6 +53,24 @@ export default {
 			}
 		}
 	},
+	getReflexionDataByLve(lvevaluierung_id) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLve',
+			params: {
+				lvevaluierung_id: lvevaluierung_id
+			}
+		}
+	},
+	getReflexionDataByLveLv(lvevaluierung_lehrveranstaltung_id) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLveLv',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
 	getEntitledStgs(studiensemester_kurzbz){
 		return {
 			method: 'get',
