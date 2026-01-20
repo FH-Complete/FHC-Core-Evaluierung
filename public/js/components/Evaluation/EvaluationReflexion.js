@@ -39,7 +39,7 @@ export default {
 			switch (this.formData.resultsClear) {
 				case 'yes': return 'Welche Maßnahmen ergeben sich gegebenenfalls daraus?';
 				case 'no': return 'Warum nicht und ergeben sich daraus (trotzdem) Maßnahmen?';
-				case 'unknown': return 'Haben Sie einen konkreten Vorschlag zur Steigerung der Rücklaufquote?';
+				case 'unknown': return 'Warum nicht und ergeben sich daraus (trotzdem) Maßnahmen?';
 				default: return '';
 			}
 		},
@@ -47,10 +47,11 @@ export default {
 			return this.formData.resultsClear !== '' && this.formData.resultsClear !== null;
 		},
 		showResultsClearHelpText() {
-			return this.formData.resultsClear === 'yes' || this.formData.resultsClear === 'no';
+			return this.formData.resultsClear === 'yes' || this.formData.resultsClear === 'no' || this.formData.resultsClear === 'unknown';
 		},
 		isDisabledSubmitBtn() {
-			return this.formData.presenceOrSync === null || this.formData.resultsClear === null;
+			return true;
+			//return this.formData.presenceOrSync === null || this.formData.resultsClear === null;
 		},
 		isDisabledReflexion(){
 			return true; // todo make conditionally
@@ -77,7 +78,8 @@ export default {
 		<h3 class="mb-4">LV-Reflexion</h3>
 		<fhc-form ref="reflexionForm" @submit.prevent="saveReflexion">
 			<form-validation></form-validation>
-			<fieldset :disabled="isDisabledReflexion">
+			<!--<fieldset :disabled="isDisabledReflexion">-->
+			<fieldset>
 			<div class="row mb-3">
 				<div class="col-12 col-lg-6 mb-3">
 					<div class="card">
@@ -132,7 +134,7 @@ export default {
 									type="radio"
 									v-model="formData.resultsClear"
 									name="resultsClear"
-									label="Kann ich nicht beurteilen"
+									label="Kann ich nicht beurteilen (z.B. weil nicht genügend N)"
 									value="unknown"
 									>
 								</form-input>
