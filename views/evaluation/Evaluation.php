@@ -1,0 +1,43 @@
+<?php
+$includesArray = array(
+	'title' => 'Evaluation',
+	'vue3' => true,
+	'axios027' => true,
+	'bootstrap5' => true,
+	'fontawesome6' => true,
+	'primevue3' => true,
+	'navigationcomponent' => true,
+	'highcharts' => true,
+	'customJSs' => array('vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js'),
+	'customJSModules' => array(
+        'public/extensions/FHC-Core-Evaluierung/js/apps/evaluation/Evaluation.js'
+    ),
+	'customCSSs' => array(
+		'public/css/components/verticalsplit.css',
+        'public/css/components/primevue.css',
+		'vendor/vuejs/vuedatepicker_css/main.css',
+		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css'
+	)
+);
+
+
+$this->load->view('templates/FHC-Header', $includesArray);
+
+?>
+
+<div id="evaluation-evaluation-main"></div>
+
+<?php
+if (defined("CIS4")) {
+	$this->load->view(
+		'templates/CISVUE-Footer',
+		$includesArray
+	);
+} else {
+	$this->load->view(
+		'templates/FHC-Footer',
+		$includesArray
+	);
+}
+?>
+

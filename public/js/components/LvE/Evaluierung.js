@@ -41,7 +41,6 @@ export default {
 					})
 					.then(resultInitFragebogen => {
 						this.fbGruppen = resultInitFragebogen.data;
-						this.initializeAntworten(this.fbGruppen);
 					});
 			}
 		}
@@ -119,6 +118,8 @@ export default {
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		initializeAntworten(fbGruppen) {
+			this.fbAntworten = [];
+
 			// Build initital fbAntworten antwort objects
 			fbGruppen.forEach(gruppe => {
 				gruppe.fbFrage.forEach(frage => {
@@ -240,7 +241,7 @@ export default {
 	template: `
 	<div class="lve-evaluierung d-lg-flex flex-column min-vh-100 py-5 ps-lg-2 overflow-auto">
 	
-		<h1 class="visually-hidden">{{ $p.t('fragebogen/fragebogen') }}</h1>
+		<h1 class="visually-hidden" tabindex="0">{{ $p.t('fragebogen/fragebogen') }}</h1>
 		
 		<form-form ref="form" class="lve-evaluierung" @submit.prevent="onSubmit">
 			<!-- LV-Evaluierung-Body -->
@@ -343,6 +344,7 @@ export default {
 									data-bs-target="#collapseLvinfo" 
 									:aria-expanded="isScreenXl" 
 									aria-controls="collapseLvinfo"
+									:aria-label="'Lehrveranstaltung: ' + lvInfo.bezeichnung_by_language"
 								>
 									{{lvInfo.bezeichnung_by_language}}
 								</button>
@@ -355,21 +357,23 @@ export default {
 								data-bs-parent="#accordionLvinfo"
 							>
 								<div class="accordion-body">
-									<div class="d-flex">
-										<div class="flex-shrink-0 me-3 fw-bold">{{ $p.t('lehre/lektorInnen') }}:</div>
-										<div class="flex-fill text-start">
-											<div v-for="(lehrende, lIndex) in lvInfo.lehrende" :key="lIndex">
-												{{ lehrende.vorname }} {{lehrende.nachname}}
-											</div>
-										</div>
-									</div>
-									<div class="d-flex">
-										<div class="flex-shrink-0 me-3 fw-bold">ECTS:</div>
-										<div class="flex-fill text-start">{{lvInfo.ects}}</div>
-									</div>
+									<table class="table table-responsive w-auto align-top">
+										<tr class="align-top">
+											<th class="pe-3">{{ $p.t('lehre/lektorInnen') }}:</th>
+											<td v-html="lvInfo.lehrende?.map(l => l.vorname + ' ' + l.nachname).join('<br>')"></td>
+										</tr>
+										<tr class="align-top">
+											<th class="pe-3">ECTS:</th>
+											<td>{{lvInfo.ects}}</td>
+										</tr>
+										<tr class="align-top">
+											<th class="pe-3">Studiensemester:</th>
+											<td>{{lvInfo.studiensemester_kurzbz}}</td>
+										</tr>
+									</table>
 								</div>
 							</div>
-					  </div>
+					  	</div>
 				  	</div><!-- .accordion LV Infos -->
 			
 					<!-- Countdown DOM container for lg+ only 
@@ -384,7 +388,7 @@ export default {
 			</div><!-- .row lv-evaluierung-body -->
 			
 			<!-- LV-Evaluierung-Footer -->
-			<footer class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light">
+			<footer class="lve-evaluierung-footer row fixed-bottom px-3 py-2 bg-light" role="contentinfo">
 		
 				<!-- Countdown DOM container for sm/md only 
 					The Countdown Component is teleported here when showCountdown is true and isScreenLg is false -->

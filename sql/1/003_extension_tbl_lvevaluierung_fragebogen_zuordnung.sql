@@ -32,6 +32,13 @@ ALTER TABLE extension.tbl_lvevaluierung_fragebogen_zuordnung
     ALTER COLUMN lvevaluierung_fragebogen_zuordnung_id
     SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_fragebogen_zuordnung_lvevaluierung_fragebogen_zuordnung_id');
 
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_fragebogen_zuordnung ADD COLUMN IF NOT EXISTS lehrveranstaltung_id integer;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_fragebogen_zuordnung TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_fragebogen_zuordnung TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_fragebogen_zuordnung_lvevaluierung_fragebogen_zuordnung_id TO vilesci;

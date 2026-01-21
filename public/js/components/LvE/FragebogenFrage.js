@@ -17,6 +17,11 @@ export default {
 		'update:lvevaluierung_frage_antwort_id',
 		'update:antwort'
 	],
+	data() {
+		return {
+			selAntwort: null
+		}
+	},
 	created() {
 		this.$emit('update:lvevaluierung_frage_id', this.frage.lvevaluierung_frage_id)
 	},
@@ -34,6 +39,20 @@ export default {
 			return Number.isInteger(antwortWert) && antwortWert >= 0 && antwortWert <= 5
 				? icons[antwortWert]
 				: 'circle-question';
+		},
+		handleSelection(antwort) {
+			// deselect if same wert clicked
+			if (this.selAntwort === antwort.wert) {
+				this.selAntwort = null;
+				this.$emit('update:lvevaluierung_frage_antwort_id', null);
+				return;
+			}
+
+			// select new wert
+			this.selAntwort = antwort.wert;
+
+			// emit id instead of wert
+			this.$emit('update:lvevaluierung_frage_antwort_id', antwort.lvevaluierung_frage_antwort_id);
 		}
 	},
 	template: `  
@@ -42,31 +61,35 @@ export default {
 		<!-- Fragenbogenfrage SingleResponse -->	
 		<div v-if="frage.typ === 'singleresponse'">
 			<div class="card mb-4 text-center border-0">											
-				<div class="card-title fw-bold">
-					{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}
-				</div>
-				<div class="card-body">
-					<div 
-					class="d-flex justify-content-evenly justify-content-sm-center" 
-					role="group" 
-					aria-label="Evaluierung Antwort Option"
-					>
-					<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
+				<div 
+					class="card-body" 
+					role="radiogroup" 
+					:aria-labelledby="'frage-label-' + frage.lvevaluierung_frage_id"
+				>
+					<!-- Frage Title -->
+					<div class="card-title fw-bold mb-3" :id="'frage-label-' + frage.lvevaluierung_frage_id">
+						{{ frage.bezeichnung_by_language }}
+						<span v-if="frage.verpflichtend" aria-hidden="true"> *</span>
+						<span v-if="frage.verpflichtend" class="visually-hidden">(Pflichtfrage)</span>
+				    </div>
+				    
+				     <!-- Answer Options -->
+					<div class="d-flex justify-content-evenly justify-content-sm-center">
+						<template v-for="(antwort, index) in frage.fbFrageAntwort" :key="index">
 						<div class="px-md-2">
 						  	<div class="mb-auto">
 								<input
-								type="radio"				
-								:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
-								:value="antwort.wert"
-								:checked="lvevaluierung_frage_antwort_id == antwort.wert"
-								 @click="$emit('update:lvevaluierung_frage_antwort_id',
-								  	lvevaluierung_frage_antwort_id == antwort.wert 
-										? null 
-										: antwort.wert
-									)"
-								container-class="btn px-md-4"
-								class="btn-check antwort-radio-btn"
-							></div>
+									type="radio"
+									:name="'frage-' + frage.lvevaluierung_frage_id"				
+									:id="'antwort-' + frage.lvevaluierung_frage_id + '-' + index"
+									:value="antwort.wert"
+									:checked="selAntwort == antwort.wert"
+									@click="handleSelection(antwort)"
+									container-class="btn px-md-4"
+									class="btn-check antwort-radio-btn"
+									:aria-describedby="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
+								>
+							</div>
 						  	<div class="px-1">
 								<label
 									class="antwort-label d-flex flex-column mx-2 mx-sm-3 mx-md-4"
@@ -74,25 +97,33 @@ export default {
 									>
 									<i
 										:class="[
-											(lvevaluierung_frage_antwort_id == antwort.wert ? 'fa-solid' : 'fa-regular'),
+											(selAntwort == antwort.wert ? 'fa-solid' : 'fa-regular'),
 											'fa-' + getIcon(antwort.wert),
 											'fa-2x',
 											'antwort-icon',
 											'wert-' + antwort.wert,
-											lvevaluierung_frage_antwort_id == antwort.wert ? 'antwort-checked' : ''
+											selAntwort == antwort.wert ? 'antwort-checked' : ''
 										  ]"
-										  aria-hidden="true"
 									></i>
-									<span class="visually-hidden">{{ antwort.wert }}</span><!-- screen-reader-accessible label-->
+									<!-- Hidden accessible label -->
+								  	<span class="visually-hidden">
+										{{ antwort.bezeichnung_by_language }}
+								  	</span>
 								</label>
 							</div>
+							<!-- Visible Answer Text -->
 						  	<div class="antwort-text-wrapper mt-1">
-						  		<span class="small text-muted text-wrap">{{antwort.bezeichnung_by_language}}</span>
+						  		<span v-if="antwort.wert == 1 || antwort.wert == 5"
+						  			:id="'antwort-label-' + frage.lvevaluierung_frage_id + '-' + index"
+						  			class="small text-muted text-wrap"
+								>
+									{{antwort.bezeichnung_by_language}}
+								</span>
 							</div>
 						</div>
 				  	</template>
-				</div>
-			</div>
+					</div>
+				</div><!-- .card-body -->
 			</div><!-- .card Fragebogenfrage SingleResponse -->
 		</div><!-- .endif Fragebogenfrage SingleResponse-->
 	
@@ -107,7 +138,7 @@ export default {
 					  	:placeholder="frage.placeholder_by_language"
 						@input="$emit('update:antwort', $event.target.value)"
 					  	style="height: 100px"
-					/>
+					>
 					</form-input>
 				</div>
 			</div><!-- .card Fragebogenfrage Text -->

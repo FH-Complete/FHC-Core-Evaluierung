@@ -1,15 +1,32 @@
+:root {
+    --fhc-evaluierung-blue: var(--fhc-blue-100, #00649c);
+    --fhc-evaluierung-green: var(--fhc-green-100, #8BB31D);
+    --fhc-evaluierung-gray: var(--fhc-gray-100, #72777A);
+
+    --fhc-evaluierung-antwort-checked-wert-0: #858f97;
+    --fhc-evaluierung-antwort-checked-wert-1: #32CD32;
+    --fhc-evaluierung-antwort-checked-wert-2: #219521;
+    --fhc-evaluierung-antwort-checked-wert-3: #FFD700;
+    --fhc-evaluierung-antwort-checked-wert-4: #FF5500;
+    --fhc-evaluierung-antwort-checked-wert-5: #BE2525;
+}
+
 .fhc-bgc-blue {
-    background-color: #00649c;
+    background-color: var(--fhc-evaluierung-blue);
 }
 
 .fhc-bgc-green {
-    background-color: #8BB31D;
+    background-color: var(--fhc-evaluierung-green);
 }
 
 .fhc-bgc-grey {
-    background-color: #72777A;
+    background-color: var(--fhc-evaluierung-gray);
 }
 
+/* Align tooltip text left */
+.tooltip-left .tooltip-inner {
+    text-align: left;
+}
 
 /* Styles and animations on checked Antwort Smiley icons */
 /* -------------------------------------------------------------------------------------------------------------------*/
@@ -23,12 +40,12 @@
 }
 
 /* Style color, when Antwort is checked */
-.antwort-checked.wert-0 { color: gray; }
-.antwort-checked.wert-1 { color: #32CD32; }     /* light green */
-.antwort-checked.wert-2 { color: #219521; }     /* dark green */
-.antwort-checked.wert-3 { color: #ffd700; }     /* yellow */
-.antwort-checked.wert-4 { color: #FF5500; }     /* orange */
-.antwort-checked.wert-5 { color: #be2525; }     /* red */
+.antwort-checked.wert-0 { color: var(--fhc-evaluierung-antwort-checked-wert-0); }
+.antwort-checked.wert-1 { color: var(--fhc-evaluierung-antwort-checked-wert-1); }     /* light green */
+.antwort-checked.wert-2 { color: var(--fhc-evaluierung-antwort-checked-wert-2); }     /* dark green */
+.antwort-checked.wert-3 { color: var(--fhc-evaluierung-antwort-checked-wert-3); }     /* yellow */
+.antwort-checked.wert-4 { color: var(--fhc-evaluierung-antwort-checked-wert-4); }     /* orange */
+.antwort-checked.wert-5 { color: var(--fhc-evaluierung-antwort-checked-wert-5); }     /* red */
 
 /* Responsive scaling effect when Antwort icon is checked */
 .antwort-checked {
@@ -55,4 +72,20 @@
     30%  { transform: scale(1.7); }
     60%  { transform: scale(0.95); }
     100% { transform: scale(1); }
+}
+
+/* Auswertung Textantworten - column style
+/* -------------------------------------------------------------------------------------------------------------------*/
+/* Column style for 2 visually even-height columns of Textantworten. On mobile collapses to one column */
+.columns-1 {
+    column-count: 1;
+}
+@media (min-width: 768px) {
+    .columns-md-2 {
+        column-count: 2;
+    }
+}
+.columns-1 > .card,
+.columns-md-2 > .card {
+    break-inside: avoid;
 }
