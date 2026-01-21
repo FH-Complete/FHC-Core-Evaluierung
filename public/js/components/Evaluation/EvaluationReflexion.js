@@ -83,7 +83,7 @@ export default {
 			<div class="row mb-3">
 				<div class="col-12 col-lg-6 mb-3">
 					<div class="card">
-						<div class="card-header">LV-Reflexion von Cristina Hainberger</div>
+						<div class="card-header">LV-Reflexion</div>
 						<div class="card-body d-flex flex-column gap-4">
 							<div>
 								<div class="fw-bold mb-2">1. Die LV-Evaluierung wurde in Präsenz oder in synchroner Lehre durchgeführt.</div>
