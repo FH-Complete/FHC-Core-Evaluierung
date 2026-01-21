@@ -70,9 +70,8 @@ export default {
 	computed: {
 		selStgFullName() {
 			const stg = this.lists.stgs.find(s => s.studiengang_kz == this.selStgKz);
-			const selStudiensemester = this.selStudiensemester;
 			const selOrgform = this.selOrgform;
-			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
+			return stg ? `${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
 		},
 		site_url_opLvKvp(){
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
@@ -132,7 +131,7 @@ export default {
 						minWidth: 100
 					},
 					{
-						title:'Verpflichtend',
+						title:'Ausgewählt',
 						field:'verpflichtend',
 						formatter:"tickCross",
 						headerFilter: 'tickCross',
@@ -147,12 +146,12 @@ export default {
 							const value = cell.getValue()
 							cell.setValue(!value, true)
 						},
-						tooltip: (e, cell) => cell.getValue() ? "verpflichtend" : "nicht verpflichtend",
+						tooltip: (e, cell) => cell.getValue() ? "verbindlich" : "abgewählt",
 						minWidth: 100
 
 					},
 					{
-						title:'Evaluationseinheit',
+						title:'Evaluationsebene',
 						field:'lv_aufgeteilt',
 						formatter: (cell) => {
 							return cell.getValue()
@@ -163,13 +162,13 @@ export default {
 						headerFilterParams: {
 							values: [
 								{ value: "", label: "Alle" },
-								{ value: 0, label: "Gesamt-LV" },
-								{ value: 1, label: "Gruppenbasis" }
+								{ value: 0, label: "Evaluierung der LV auf Gesamt-Ebene" },
+								{ value: 1, label: "Evaluierung der LV auf Gruppen-Ebene" }
 							],
 							clearable: true
 						},
 						hozAlign:"center",
-						tooltip: (e, cell) => cell.getValue() ? "Gruppenbasis" : "Gesamt-LV",
+						tooltip: (e, cell) => cell.getValue() ? "Evaluierung der LV erfolgt auf Gruppen-Ebene" : "Evaluierung der LV erfolgt auf Gesamt-Ebene",
 						minWidth: 120
 					},
 					{
@@ -201,7 +200,7 @@ export default {
 						},
 						hozAlign: "right",
 						minWidth: 100,
-						tooltip: "Abgeschickte Fragebögen/Ausgesendete Codes",
+						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
 					},
 					{
 						title:'RL-Quote',
@@ -233,33 +232,45 @@ export default {
 						width: 140
 					},
 					{
-						title:'LV-Weiterentwicklung (OP)',
+						title:'MALVE-LV-Weiterentwicklung (OP)',
 						formatter(cell) {
 							const templateId = cell.getData().lehrveranstaltung_template_id;
 							if (templateId === null) {
-								return `<small class=text-muted">LV ist kein Quellkurs</small>`;
+								return `<small class=text-muted">LV mit keinem Quellkurs verknüpft</small>`;
 							}
 							else
 							{
 								const lvId = cell.getData().lehrveranstaltung_id;
 								const url = self.site_url_opLvKvp + lvId;
 								return `
-									<a href="${url}" target="_blank" role="button" class="btn btn-outline-secondary me-2">
-										<i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung
+									<a 
+										href="${url}" 
+										target="_blank" 
+										role="button" 
+										class="btn btn-outline-secondary me-2" 
+										
+									>
+										<span 
+											v-tooltip 
+											title="Schnittstelle zur Maßnahmenableitung für die einzelnen LVs in OP"
+										>
+											<i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung
+										</span>
 									</a>`
 							}
 
 						},
 						hozAlign:"center",
 						headerSort:false,
-						width: 220
+						width: 240
 					},
 					{
-						title:'Erledigt',
+						title:'Geprüft',
 						field:'reviewed_stg',
 						formatter:"tickCross",
 						headerFilter: 'tickCross',
 						headerFilterParams: {"tristate": true},
+						headerTooltip: 'Optional zur besseren persönlichen Übersicht',
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
@@ -270,7 +281,7 @@ export default {
 							const value = cell.getValue()
 							cell.setValue(!value, true)
 						},
-						tooltip: (e, cell) => cell.getValue() ? "erledigt" : "nicht erledigt",
+						tooltip: (e, cell) => cell.getValue() ? "ja" : "nein",
 						width:120
 					},
 				]
@@ -311,7 +322,7 @@ export default {
 			this.$fhcAlert
 				.confirm({
 					header: 'Bitte bestätigen Sie:',
-					message:`--TestText von IT--Ich habe alle LV-Evaluierungen des Studiengangs ${this.selStgFullName} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet. Mit Klick auf "OK" wird die nächste LVE-KVP Instanz per mail zum weiteren Review informiert.`
+					message:`Ich habe alle LV-Evaluierungen des Studiengangs - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet.`
 				})
 				.then()
 		},
@@ -333,9 +344,9 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">MALVE - Studiengang Übersicht<small class="fs-5 fw-normal text-muted"> | LV-Evaluationen & Auswertungen einsehen</small></h1>
+		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
 	 	<div class="row align-items-center mb-3">
-	 		<h4>{{ selStgFullName }}</h4>
+	 		<h4>{{selStudiensemester}} - {{ selStgFullName }}</h4>
 			<div class="col-md-12">
 				<div class="d-flex justify-content-end align-items-center">
 					<div class="me-2">
@@ -391,17 +402,31 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary" @click="submitMalve" :disabled="isDisabledSubmitMalveBtn"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
-					<a 
-						type="button" 
-						class="btn btn-outline-secondary" 
-						:class="{ disabled: isDisabledSubmitMalveBtn }"
-						:href="site_url_opStgKvp" 
-						target="_blank"
-						:aria-disabled="isDisabledSubmitMalveBtn"
+					<button 
+						class="btn btn-primary" 
+						@click="submitMalve" 
+						:disabled="isDisabledSubmitMalveBtn"
+						>
+						<i class="fa fa-envelope me-2"></i>
+						MALVE-STGL abschließen
+					</button>
+					<!-- workaround: wrap a tag with span to show tooltip also on disabled button-->
+					<span
+					  v-tooltip
+					  title="MALVE STGL: Schnittstelle zur Maßnahmenableitung für den STG in OP."
+					  :class="{ 'd-inline-block': true, 'cursor-not-allowed': isDisabledSubmitMalveBtn }"
 					>
-						<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
-					</a>
+						<a 
+							type="button" 
+							class="btn btn-outline-secondary" 
+							:class="{ disabled: isDisabledSubmitMalveBtn }"
+							:href="site_url_opStgKvp" 
+							target="_blank"
+							:aria-disabled="isDisabledSubmitMalveBtn"
+						>
+							<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
+						</a>
+					</span>
 				</template>
 			</core-filter-cmpt>
 		</div>
