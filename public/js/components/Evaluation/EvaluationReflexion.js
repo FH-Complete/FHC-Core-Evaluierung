@@ -86,7 +86,7 @@ export default {
 						<div class="card-header">LV-Reflexion</div>
 						<div class="card-body d-flex flex-column gap-4">
 							<div>
-								<div class="fw-bold mb-2">1. Die LV-Evaluierung wurde in Präsenz oder in synchroner Lehre durchgeführt.</div>
+								<div class="fw-bold mb-2">1. Wurde die LV-Evaluierung in Präsenz durchgeführt?</div>
 								<form-input
 									type="radio"
 									v-model="formData.presenceOrSync"
