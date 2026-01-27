@@ -70,12 +70,17 @@ export default {
 	computed: {
 		selStgFullName() {
 			const stg = this.lists.stgs.find(s => s.studiengang_kz == this.selStgKz);
-			const selStudiensemester = this.selStudiensemester;
 			const selOrgform = this.selOrgform;
-			return stg ? `${selStudiensemester} - ${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
+			return stg ? `${stg.kuerzel} ${stg.bezeichnung} - ${selOrgform}` : "";
 		},
 		site_url_opLvKvp(){
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
+		},
+		site_url_opStgKvp(){
+			return null;	// todo define url
+		},
+		isDisabledSubmitMalveBtn(){
+			return true;	// todo adapt conditionally
 		},
 		tabulatorOptions() {
 			const self = this;
@@ -98,13 +103,19 @@ export default {
 				resizableColumnFit: true,
 				selectable: false,
 				index: 'lvevaluierung_lehrveranstaltung_id',
+				columnDefaults: {
+					headerTooltip: true
+				},
 				columns: [
 					{
 						title:'LV-Bezeichnung',
 						field:'bezeichnung',
 						headerFilter:"input",
 						bottomCalc:"count",
-						bottomCalcFormatter:"plaintext",
+						bottomCalcFormatter: function(cell) {
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : "Anzahl: " + num;
+						},
 						widthGrow: 3
 					},
 					{
@@ -120,36 +131,27 @@ export default {
 						minWidth: 100
 					},
 					{
-						title:'Verpflichtend',
+						title:'Ausgewählt',
 						field:'verpflichtend',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "verpflichtend" },
-								{ value: false, label: "nicht verpflichtend" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
-						tooltip: (e, cell) => cell.getValue() ? "verpflichtend" : "nicht verpflichtend",
+						tooltip: (e, cell) => cell.getValue() ? "verbindlich" : "abgewählt",
 						minWidth: 100
 
 					},
 					{
-						title:'Evaluationseinheit',
+						title:'Evaluationsebene',
 						field:'lv_aufgeteilt',
 						formatter: (cell) => {
 							return cell.getValue()
@@ -160,19 +162,37 @@ export default {
 						headerFilterParams: {
 							values: [
 								{ value: "", label: "Alle" },
-								{ value: 0, label: "Gesamt-LV" },
-								{ value: 1, label: "Gruppenbasis" }
+								{ value: 0, label: "Evaluierung der LV auf Gesamt-Ebene" },
+								{ value: 1, label: "Evaluierung der LV auf Gruppen-Ebene" }
 							],
 							clearable: true
 						},
 						hozAlign:"center",
-						tooltip: (e, cell) => cell.getValue() ? "Gruppenbasis" : "Gesamt-LV",
+						tooltip: (e, cell) => cell.getValue() ? "Evaluierung der LV erfolgt auf Gruppen-Ebene" : "Evaluierung der LV erfolgt auf Gesamt-Ebene",
 						minWidth: 120
 					},
 					{
 						title: "Rücklauf",
 						field: "ruecklauf",
 						headerFilter:"input",
+						headerFilterFunc: (filterValue, rowValue, rowData) => {
+							if (filterValue === "") return true
+
+							const filter = String(filterValue)
+
+							const submitted = String(rowData.submittedCodes ?? "")
+							const issued = String(rowData.codesAusgegeben ?? "")
+
+							// match:
+							// 8  → 8/26
+							// 2  → 8/26
+							// 26 → 8/26
+							// 0  → 0/0, 13/0, 0/12
+							return (
+									submitted.includes(filter) ||
+									issued.includes(filter)
+							)
+						},
 						formatter: function(cell) {
 							const submittedCodes = cell.getData().submittedCodes;
 							const codesAusgegeben = cell.getData().codesAusgegeben;
@@ -180,33 +200,28 @@ export default {
 						},
 						hozAlign: "right",
 						minWidth: 100,
-						tooltip: "Abgeschickte Fragebögen/Ausgesendete Codes",
+						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
 					},
 					{
 						title:'RL-Quote',
 						field:'ruecklaufQuote',
 						headerFilter:"input",
-						hozAlign:"left",
-						formatter:"progress",
-						formatterParams: {
-							min: 0,
-							max: 100,
-							color: function(value) {
-								return (value < 30) ? "red" : "";
-							},
-							legend: function(value) {
-								return value + "%"
-							},	// todo check later. disappears on reload. Tabulator 5.2. issue?
-							legendAlign: "right"
+						hozAlign:"right",
+						formatter: cell => {
+							const value = cell.getValue();
+							return value !== null ? `${value}%` : '-'
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc:"avg",
+						bottomCalc: values => {
+							const nums = values.filter(v => typeof v === 'number')
+							if (!nums.length) return null
+							return nums.reduce((a, b) => a + b, 0) / nums.length
+						},
 						bottomCalcFormatter: function(cell) {
 							const num = cell.getValue();
-							return isNaN(num) ? "–" : num + "%";
-						},
-						tooltip: (e, cell) => (cell.getValue() < 30) ? "Sehr geringe Rücklaufquote" : "",
+							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+						}
 					},
 					{
 						title:'LV-Evaluation',
@@ -217,53 +232,56 @@ export default {
 						width: 140
 					},
 					{
-						title:'LV-Weiterentwicklung (OP)',
+						title:'MALVE-LV-Weiterentwicklung (OP)',
 						formatter(cell) {
 							const templateId = cell.getData().lehrveranstaltung_template_id;
 							if (templateId === null) {
-								return `<small class=text-muted">LV ist kein Quellkurs</small>`;
+								return `<small class=text-muted">LV mit keinem Quellkurs verknüpft</small>`;
 							}
 							else
 							{
 								const lvId = cell.getData().lehrveranstaltung_id;
 								const url = self.site_url_opLvKvp + lvId;
 								return `
-									<a href="${url}" target="_blank" role="button" class="btn btn-outline-secondary me-2">
-										<i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung
+									<a 
+										href="${url}" 
+										target="_blank" 
+										role="button" 
+										class="btn btn-outline-secondary me-2" 
+										
+									>
+										<span 
+											v-tooltip 
+											title="Schnittstelle zur Maßnahmenableitung für die einzelnen LVs in OP"
+										>
+											<i class="fa-solid fa-external-link me-2"></i>LV-Weiterentwicklung
+										</span>
 									</a>`
 							}
 
 						},
 						hozAlign:"center",
 						headerSort:false,
-						width: 220
+						width: 240
 					},
 					{
-						title:'Reviewed',
+						title:'Geprüft',
 						field:'reviewed_stg',
 						formatter:"tickCross",
-						headerFilter: "list",
-						headerFilterParams: {
-							values: [
-								{ value: "", label: "Alle" },
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
-							clearable: true
-						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {"tristate": true},
+						headerTooltip: 'Optional zur besseren persönlichen Übersicht',
 						hozAlign:"center",
 						formatterParams: {
 							tickElement: '<i class="fa fa-check text-success"></i>',
 							crossElement: '<i class="fa fa-xmark text-danger"></i>'
 						},
-						editor: 'list',
-						editorParams: {
-							values: [
-								{ value: true, label: "erledigt" },
-								{ value: false, label: "nicht erledigt" }
-							],
+						editable: true,
+						cellClick: (e, cell) => {
+							const value = cell.getValue()
+							cell.setValue(!value, true)
 						},
-						tooltip: (e, cell) => cell.getValue() ? "erledigt" : "nicht erledigt",
+						tooltip: (e, cell) => cell.getValue() ? "ja" : "nein",
 						width:120
 					},
 				]
@@ -300,11 +318,11 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		sendInfomail(){
+		submitMalve(){
 			this.$fhcAlert
 				.confirm({
 					header: 'Bitte bestätigen Sie:',
-					message:`--TestText von IT--Ich habe alle LV-Evaluierungen des Studiengangs ${this.selStgFullName} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet. Mit Klick auf "OK" wird die nächste LVE-KVP Instanz per mail zum weiteren Review informiert.`
+					message:`Ich habe alle LV-Evaluierungen des Studiengangs - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet.`
 				})
 				.then()
 		},
@@ -326,9 +344,9 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">MALVE - Studiengang Übersicht<small class="fs-5 fw-normal text-muted"> | LV-Evaluationen & Auswertungen einsehen</small></h1>
+		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
 	 	<div class="row align-items-center mb-3">
-	 		<h4>{{ selStgFullName }}</h4>
+	 		<h4>{{selStudiensemester}} - {{ selStgFullName }}</h4>
 			<div class="col-md-12">
 				<div class="d-flex justify-content-end align-items-center">
 					<div class="me-2">
@@ -384,8 +402,31 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button class="btn btn-primary" @click="sendInfomail"><i class="fa fa-envelope me-2"></i>MALVE-STG abschließen</button>
-					<a type="button" class="btn btn-outline-secondary" href="#" target="_blank"><i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung</a>
+					<button 
+						class="btn btn-primary" 
+						@click="submitMalve" 
+						:disabled="isDisabledSubmitMalveBtn"
+						>
+						<i class="fa fa-envelope me-2"></i>
+						MALVE-STGL abschließen
+					</button>
+					<!-- workaround: wrap a tag with span to show tooltip also on disabled button-->
+					<span
+					  v-tooltip
+					  title="MALVE STGL: Schnittstelle zur Maßnahmenableitung für den STG in OP."
+					  :class="{ 'd-inline-block': true, 'cursor-not-allowed': isDisabledSubmitMalveBtn }"
+					>
+						<a 
+							type="button" 
+							class="btn btn-outline-secondary" 
+							:class="{ disabled: isDisabledSubmitMalveBtn }"
+							:href="site_url_opStgKvp" 
+							target="_blank"
+							:aria-disabled="isDisabledSubmitMalveBtn"
+						>
+							<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
+						</a>
+					</span>
 				</template>
 			</core-filter-cmpt>
 		</div>

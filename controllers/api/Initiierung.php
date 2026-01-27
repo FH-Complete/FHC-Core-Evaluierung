@@ -70,9 +70,12 @@ class Initiierung extends FHCAPI_Controller
 			$agg = current(array_filter($rlData, function($r) use ($lveLvId) {
 				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
 			}));
-			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
-			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
-			$item->ruecklaufQuote = $agg ? (float)$agg->ruecklaufquote : 0;
+
+			$item->codesAusgegeben = $agg ? (int) $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? (int) $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float) $agg->ruecklaufquote
+				: null;
 		}
 
 		$this->terminateWithSuccess($data);

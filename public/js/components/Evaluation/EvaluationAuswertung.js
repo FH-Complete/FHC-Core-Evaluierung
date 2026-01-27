@@ -72,7 +72,21 @@ export default {
 					data: fbFragen.antworten.frequencies,
 					pointStart: fbFragen.antworten.werte[0],
 					color: "#6fcd98"
-				}],
+					},
+					//Dummy-Series ONLY for vertical Hodges-Lehmann Estimator legend
+					{
+						name: fbFragen.antworten.hodgesLehmann.actYear !== null
+								? `Hodges-Lehmann Estimator (HLE): ${fbFragen.antworten.hodgesLehmann.actYear}`
+								: "Hodges-Lehmann Estimator (HLE)",
+						type: "line",
+						data: [],                 // no data -> dummy
+						color: "orange",
+						dashStyle: "Dot",
+						lineWidth: 2,
+						marker: { enabled: false },
+						enableMouseTracking: false
+					}
+				],
 				xAxis: {
 					title: { text: "Bewertung" },
 					min: fbFragen.antworten.werte[0],
@@ -91,7 +105,8 @@ export default {
 						}
 					},
 					plotLines: [
-						{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
+						//{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
+						{ value: fbFragen.antworten.hodgesLehmann.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `HLE ${fbFragen.antworten.hodgesLehmann.actYear}` }}
 					]
 				},
 				yAxis: {
@@ -109,10 +124,12 @@ export default {
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
-				subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
+				//subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
+				subtitle: { text: 'HLE - Hodges Lehmann Estimator der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
-					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
+					//data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
+					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.hodgesLehmann[key])),
 					visible: i === 0 // only current year visible by default
 				})),
 				yAxis: {
@@ -204,7 +221,7 @@ export default {
 	<div class="evaluation-evaluation-auswertung">
 		<h3 class="mb-4">Auswertung</h3>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
-			<h4 class="my-4">Auswertung Einzelfragen</h4>
+			<h4 class="mt-5 mb-3">Auswertung Einzelfragen</h4>
 			<div v-if="auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
 				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
 				
@@ -219,10 +236,10 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden</div></div>
+			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
-			<h4 class="my-5">Textantworten</h4>
+			<h4 class="mt-5 mb-3">Textantworten</h4>
 			<div v-if="textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
 				class="row-col mb-5">
 			
@@ -238,10 +255,10 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden</div></div>
+			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
-			<h4 class="my-4">Profillinien</h4>
+			<h4 class="mt-5 mb-3">Profillinien</h4>
 			<div class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">

@@ -111,12 +111,12 @@ class EvaluierungLib
 					//Return if it was not answered
 					if ($frage->typ === 'singleresponse')
 					{
-						if (is_null($antwort['lvevaluierung_frage_antwort_id'])) return error('Pflichtantwort fehlt');
+						if (is_null($antwort['lvevaluierung_frage_antwort_id'])) return error($this->_ci->p->t('fragebogen', 'pflichtantwortFehlt'));
 					}
 
 					if ($frage->typ === 'text')
 					{
-						if (is_null($antwort['antwort'])) return error('Pflichtantwort fehlt');
+						if (is_null($antwort['antwort'])) return error($this->_ci->p->t('fragebogen', 'pflichtantwortFehlt'));
 					}
 				}
 
