@@ -284,9 +284,29 @@ class InitiierungLib
 		$lvevaluierung_id = $lve->lvevaluierung_id;
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-		$this->_ci->LehrveranstaltungModel->addSelect('bezeichnung');
+		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$this->_ci->load->model('organisation/Studiengangstyp_model', 'StudiengangstypModel');
+
+		$this->_ci->LehrveranstaltungModel->addSelect('bezeichnung, bezeichnung_english, studiengang_kz');
 		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
 		$lvBezeichnung = hasData($result) ? getData($result)[0]->bezeichnung : '';
+		$lvBezeichnungEng = hasData($result) ? getData($result)[0]->bezeichnung_english : '';
+
+		// Studiengang und Typ ermitteln
+		$resultstg = $this->_ci->StudiengangModel->load(getData($result)[0]->studiengang_kz);
+		$stg_typ = '';
+		$stg_bezeichnung = '';
+		$stg_typbezeichnung = '';
+
+		if(hasData($resultstg))
+		{
+			$stg_typ = getData($resultstg)[0]->typ;
+			$stg_bezeichnung = getData($resultstg)[0]->bezeichnung;
+
+			$resultstgtyp = $this->_ci->StudiengangstypModel->load($stg_typ);
+			if(hasData($resultstgtyp))
+				$stg_typbezeichnung = getData($resultstgtyp)[0]->bezeichnung;
+		}
 
 		$this->_ci->db->trans_begin();
 
@@ -299,6 +319,10 @@ class InitiierungLib
 			'startzeit'        => (new DateTime($lve->startzeit))->format('d.m.Y, H:i'),
 			'endezeit'         => (new DateTime($lve->endezeit))->format('d.m.Y, H:i'),
 			'lvbezeichnung' => $lvBezeichnung,
+			'lvbezeichnungenglisch' => $lvBezeichnungEng,
+			'stg_typ' => $stg_typ,
+			'stg_bezeichnung' => $stg_bezeichnung,
+			'stg_typbezeichnung' => $stg_typbezeichnung,
 			'evaluierunglink' => $url,
 		];
 
@@ -306,7 +330,7 @@ class InitiierungLib
 			'Lvevaluierung_Mail_Codeversand',
 			$mailData,
 			$student->uid . '@' . DOMAIN,
-			'Evaluieren Sie jetzt Ihre LV '. $lvBezeichnung
+			$lvBezeichnung.': Ihr Feedback gewünscht | Your feedback is requested'
 		);
 
 		if ($mailSent)
