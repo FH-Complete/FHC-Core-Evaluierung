@@ -36,12 +36,14 @@ export default {
 	},
 	computed: {
 		resultsClearTextAnswerLabel() {
+			return 'Anmerkungen zur Nachvollziehbarkeit:'
+			/*
 			switch (this.formData.resultsClear) {
 				case 'yes': return 'Welche Maßnahmen ergeben sich gegebenenfalls daraus?';
 				case 'no': return 'Warum nicht und ergeben sich daraus (trotzdem) Maßnahmen?';
 				case 'unknown': return 'Warum nicht und ergeben sich daraus (trotzdem) Maßnahmen?';
 				default: return '';
-			}
+			}*/
 		},
 		showResultsClearTextarea() {
 			return this.formData.resultsClear !== '' && this.formData.resultsClear !== null;
@@ -141,7 +143,6 @@ export default {
 							</div>
 							<div>
 								<form-input
-									v-if="showResultsClearTextarea"
 									type="textarea"
 									v-model="formData.resultsClearTextAnswer"
 									name="resultsClearTextAnswer"
@@ -149,9 +150,24 @@ export default {
 									rows="4"
 									>
 								</form-input>
-								<div v-if="showResultsClearHelpText" class="form-text">
-									<i class="fa fa-info-circle text-primary me-2"></i>Falls zutreffend: bitte zusätzlich ins Einmelde-Tool zur LV-Weiterentwicklung eintragen.
-								</div>
+							</div>
+							<div>
+								<div class="fw-bold mb-2">3. Ergeben sich daraus (trotzdem) Maßnahmen?</div>
+								<form-input
+									type="radio"
+									name="resultsMeasures"
+									label="Ja"
+									value="yes"
+									>
+								</form-input>
+								<form-input
+									type="radio"
+									v-model="formData.resultsMeasures"
+									name="resultsMeasures"
+									label="Nein"
+									value="no"
+									>
+								</form-input>
 							</div>
 							<div class="col d-flex justify-content-end">
 								<button 
@@ -162,8 +178,23 @@ export default {
 									Speichern
 								</button>
 							</div>
+
+							
 						</div><!--.end card-body-->
 					</div><!--.end card-->
+					<br />
+					<div class="col d-flex">
+								<button 
+									type="submit" 
+									class="btn btn-primary me-2" 
+									:disabled="isDisabledSubmitBtn"
+								>
+									Neue Einmeldung
+								</button>
+							</div>
+							<div class="form-text">
+									<i class="fa fa-info-circle text-primary me-2"></i>Maßnahmenableitungen aus der LV-Evaluierung direkt hier eintragen!
+							</div>
 				</div><!--.end col-->
 			</div><!--.end row-->
 			</fieldset>

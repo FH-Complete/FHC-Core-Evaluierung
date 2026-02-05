@@ -18,14 +18,14 @@ export default {
 	data(){
 		return {
 			infoEvaluierungByLv:  `
-				Die gesamte LV wird evaluiert.<br><br>
-				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
-				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
+				Die Evaluierung der LV erfolgt auf Gesamt-Ebene.<br><br>
+				Das Start- und Enddatum der LV-Evaluierung kann geändert bzw. angepasst werden, solange die Studierenden noch nicht eingeladen wurden.<br><br>
+				Der Zugriff für Studierende ist auf dieses Evaluierungszeitfenster beschränkt.
 			`,
 			infoEvaluierungByLe:  `
-				Diese LV wird auf Gruppenbasis evaluiert.<br><br>
-				Sie können die Voreinstellungen zum Start der Evaluierung und der Dauer der Evaluierung aktiv verändern/anpassen.<br><br>
-				Der Zugriff auf die Evaluierung ist für Studierende nur in diesem Zeitfenster möglich. Sie können den Zeitraum jederzeit korrigieren, solange die Evaluierung noch nicht abgeschlossen wurde.
+				Die Evaluierung der LV erfolgt auf Gruppen-Ebene. <br><br>
+				Das Start- und Enddatum der LV-Evaluierung kann geändert bzw. angepasst werden, solange die Studierenden noch nicht eingeladen wurden.<br><br>
+				Der Zugriff für Studierende ist auf dieses Evaluierungszeitfenster beschränkt.
 			`
 		}
 	},

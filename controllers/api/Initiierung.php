@@ -132,7 +132,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Only LV-Leitung can edit'];
+				$canSwitchInfo = ['Bearbeitung nur durch LV-Leitung möglich'];
 
 				// User should only see own Lehreinheiten
 				$groupedByLe = array_filter($groupedByLe, function ($item) {
@@ -175,7 +175,7 @@ class Initiierung extends FHCAPI_Controller
 			)
 			{
 				$canSwitch = false;
-				$canSwitchInfo []= 'Gruppenbasis nur verfügbar, wenn Gruppen eindeutig Lehrenden zugeordnet sind';
+				$canSwitchInfo []= 'LV-Evaluierung auf Gruppen-Ebene ist nicht verfügbar, da die Zuordnung Studierendenverband zu einer*m Lehrenden nicht eindeutig möglich.';
 			}
 		}
 
@@ -185,7 +185,7 @@ class Initiierung extends FHCAPI_Controller
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
-			$canSwitchInfo []= 'At least one Evaluierung in LV started';
+			$canSwitchInfo []= 'Entscheidung für Gesamt- oder Gruppen-Ebene kann nicht mehr verändert werden.';
 		}
 
 		// Add Editable Checks
@@ -485,7 +485,7 @@ class Initiierung extends FHCAPI_Controller
 			{
 				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
 					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Only Lector of LV can edit'];
+					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
 				}
 			}
 
@@ -496,7 +496,7 @@ class Initiierung extends FHCAPI_Controller
 
 				if ($today > $startzeit) {
 					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Cannot change. Evaluierungperiod already started'];
+					$isDisabledEvaluierungInfo = ['Evaluierungszeitfenster kann nicht mehr verändert werden, da Studierenden bereits eingeladen wurden.'];
 				}
 			}
 
@@ -513,7 +513,7 @@ class Initiierung extends FHCAPI_Controller
 			$isDisabledSendMailInfo = [];
 			if ($lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
 			{
-				$isDisabledSendMailInfo[]= 'Ready to send';
+				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
 			}
 
 //			if ($lvevaluierung_id && $item->codes_gemailt)
@@ -523,7 +523,7 @@ class Initiierung extends FHCAPI_Controller
 
 			if (count($sentByAnyEvaluierungOfLv))
 			{
-				$isDisabledSendMailInfo[]= count($sentByAnyEvaluierungOfLv). ' Emails sent';
+				$isDisabledSendMailInfo[]= count($sentByAnyEvaluierungOfLv). ' E-Mail-Einladungen versandt';
 			}
 
 			// Button disable logic

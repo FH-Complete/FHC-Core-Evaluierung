@@ -85,8 +85,9 @@ class LvevaluierungFragebogen_model extends DB_Model
 					1 AS prio, lfz.fragebogen_id, lfz.lehrveranstaltung_id, lfz.studienplan_id, lfz.oe_kurzbz
 				FROM extension.tbl_lvevaluierung_fragebogen_zuordnung lfz
 				JOIN extension.tbl_lvevaluierung_fragebogen lf USING (fragebogen_id)
-				JOIN studiensemester ss ON lf.gueltig_von BETWEEN ss.start AND ss.ende
 				WHERE lfz.lehrveranstaltung_id = ?
+				AND COALESCE(lf.gueltig_bis,'2099-01-01') >= (SELECT start FROM studiensemester) 
+				AND lf.gueltig_von <= (SELECT ende FROM studiensemester) 
 					
 				UNION ALL 
 					
@@ -95,8 +96,9 @@ class LvevaluierungFragebogen_model extends DB_Model
 					2 AS prio, lfz.fragebogen_id, lfz.lehrveranstaltung_id, lfz.studienplan_id, lfz.oe_kurzbz
 				FROM extension.tbl_lvevaluierung_fragebogen_zuordnung lfz
 				JOIN extension.tbl_lvevaluierung_fragebogen lf USING (fragebogen_id)
-				JOIN studiensemester ss ON lf.gueltig_von BETWEEN ss.start AND ss.ende
 				WHERE lfz.studienplan_id = (SELECT studienplan_id FROM studienplan)
+				AND COALESCE(lf.gueltig_bis,'2099-01-01') >= (SELECT start FROM studiensemester) 
+				AND lf.gueltig_von <= (SELECT ende FROM studiensemester) 
 				
 				UNION ALL
 					
@@ -105,8 +107,9 @@ class LvevaluierungFragebogen_model extends DB_Model
 					3 as prio, lfz.fragebogen_id, lfz.lehrveranstaltung_id, lfz.studienplan_id, lfz.oe_kurzbz
 				FROM extension.tbl_lvevaluierung_fragebogen_zuordnung lfz
 				JOIN extension.tbl_lvevaluierung_fragebogen lf USING (fragebogen_id)
-				JOIN studiensemester ss ON lf.gueltig_von BETWEEN ss.start AND ss.ende
 				WHERE lfz.oe_kurzbz = (SELECT oe_kurzbz FROM lv_oe)
+				AND COALESCE(lf.gueltig_bis,'2099-01-01') >= (SELECT start FROM studiensemester) 
+				AND lf.gueltig_von <= (SELECT ende FROM studiensemester) 
 					
 				 UNION ALL
 				
@@ -115,8 +118,10 @@ class LvevaluierungFragebogen_model extends DB_Model
 					prio, lfz.fragebogen_id, lfz.lehrveranstaltung_id, lfz.studienplan_id, lfz.oe_kurzbz
 				FROM extension.tbl_lvevaluierung_fragebogen_zuordnung lfz
 				JOIN extension.tbl_lvevaluierung_fragebogen lf USING (fragebogen_id)
-				JOIN studiensemester ss ON lf.gueltig_von BETWEEN ss.start AND ss.ende
 				JOIN alle_oes ON lfz.oe_kurzbz = alle_oes.oe_kurzbz
+				WHERE 
+				COALESCE(lf.gueltig_bis,'2099-01-01') >= (SELECT start FROM studiensemester) 
+				AND lf.gueltig_von <= (SELECT ende FROM studiensemester) 
 			)
 				
 			-- Final selection: Pick best prio, latest fragebogen_id if more with same prio and same/ Gültigkeitsperiode
