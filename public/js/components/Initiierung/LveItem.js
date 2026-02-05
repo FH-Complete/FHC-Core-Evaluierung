@@ -12,7 +12,7 @@ export default {
 	data() {
 		return {
 			infoStudierendenlink: `
-				Der Versand des Studierendenlinks ist nur einmalig möglich. Jede*r Studierende erhält einen anonymen Zugangslink per Email zugesendet.
+				Der Versand der E-Mail-Einladung zur LV-Evaluierung ist nur einmalig möglich. Jede*r Studierende*r erhält einen anonymen Zugangslink.
 			`,
 			isSendingMail: false
 		}
@@ -107,8 +107,8 @@ export default {
 		getSavedEvaluierungInfoString(lveLvDetail) {
 			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
 			return `
-				Saved on ${DateHelper.formatDate(lveLvDetail.insertamum)} 
-				by ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
+				Gespeichert am ${DateHelper.formatDate(lveLvDetail.insertamum)} 
+				von ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
 			`;
 		},
 		openEvaluationByLve(lvevaluierung_id){
@@ -129,7 +129,7 @@ export default {
 						class="btn btn-outline-secondary"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
-						<i class="fa fa-square-poll-horizontal me-2"></i>LV-Evaluation
+						<i class="fa fa-square-poll-horizontal me-2"></i>Ergebnisse LV-Evaluierung und LV-Reflexion
 					</button>
 				</div>
 			</div><!--.end card-header -->
@@ -199,7 +199,7 @@ export default {
 							</div>
 							<div class="flex-grow-1 flex-md-grow-0">
 								<form-input 
-									label="Endedatum" 
+									label="Enddatum" 
 									type="datepicker"
 									v-model="lveLvDetail.endezeit"
 									name="lveLvDetail.endezeit"
@@ -257,7 +257,7 @@ export default {
 				<div class="row gx-5">
 					<div class="col-6 col-md-5">
 						<span class="d-lg-none"><i class="fa fa-envelope"></i></span>
-						<span class="d-none d-lg-inline">Email Status:</span>
+						<span class="d-none d-lg-inline">E-Mail Status:</span>
 						<span v-if="isSendingMail"><i class="fa-solid fa-spinner fa-pulse ms-2"></i></span>
 						<span 
 							v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0" 
@@ -274,7 +274,7 @@ export default {
 							data-bs-html="true"
 							data-bs-custom-class="tooltip-left"
 						>
-							{{lveLvDetail.codes_ausgegeben }} Mailempfänger
+							{{lveLvDetail.codes_ausgegeben }} eingeladene Studierende
 							<i class="fa-solid fa-arrow-pointer ms-1"></i> 
 						</span>	
 						<span class="ms-2">
@@ -291,7 +291,7 @@ export default {
 					<div class="col-12 text-end">
 						<div class="d-grid d-md-block">
 							<button class="btn btn-success mt-3" @click="onSendLinks(lveLvDetail)">
-								Studierendenlinks versenden
+								Studierende zur LV-Evaluierung einladen
 							</button>
 						</div>
 					</div>
