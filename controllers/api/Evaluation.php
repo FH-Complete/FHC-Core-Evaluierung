@@ -10,14 +10,14 @@ class Evaluation extends FHCAPI_Controller
 		/** @noinspection PhpUndefinedClassConstantInspection */
 
 		parent::__construct(array(
-				'getEvaluationDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getAuswertungDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
-				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getReflexionDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getReflexionDataByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
