@@ -6,6 +6,7 @@ $includesArray = array(
 	'bootstrap5' => true,
 	'fontawesome6' => true,
 	'primevue3' => true,
+	'tinymce5' => true,
 	'navigationcomponent' => true,
 	'highcharts' => true,
 	'customJSs' => array('vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js'),
@@ -16,7 +17,8 @@ $includesArray = array(
 		'public/css/components/verticalsplit.css',
         'public/css/components/primevue.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
-		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css'
+		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css',
+		'public/extensions/FHC-Core-LVKVP/css/einmeldungvue.css'
 	)
 );
 
