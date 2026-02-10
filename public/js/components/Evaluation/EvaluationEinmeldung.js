@@ -35,7 +35,7 @@ export default {
 									:templateid="evalData.lehrveranstaltung_template_id"
 									:sprache="evalData.sprache"
 									source="lvevaluierung"
-									lvevalsem="evalData.studiensemester_kurzbz"
+									:lvevalsem="evalData.studiensemester_kurzbz"
 									@op_workpackage_created="$refs.opwplist.fetchWorkpackages()"
 								>
 								</create>
