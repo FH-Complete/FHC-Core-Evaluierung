@@ -90,7 +90,7 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get base data
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id, getAuthUid());
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group data by LE and add data
@@ -165,7 +165,7 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get base data
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id, getAuthUid());
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group data by LV and add data
