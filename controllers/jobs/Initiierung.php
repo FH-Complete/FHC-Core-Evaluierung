@@ -88,7 +88,10 @@ class Initiierung extends JOB_Controller
 		}
 		else
 		{
-			$maildata = array();
+			$gruppe_sent_users = array();
+			$gesamt_sent_users = array();
+
+			$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
 
 			$data = getData($result);
 			foreach($data as $row)
@@ -108,17 +111,35 @@ class Initiierung extends JOB_Controller
 						{
 							foreach($rowle->lektoren as $rowlkt)
 							{
-								if(!isset($maildata[$rowlkt['mitarbeiter_uid']]))
+								if(!in_array($rowlkt['mitarbeiter_uid'], $gruppe_sent_users))
 								{
-									$maildata[$rowlkt['mitarbeiter_uid']]['lehrendeninfo']['fullname'] = $rowlkt['fullname'];
-									
-								}
+									$gruppe_sent_users[] = $rowlkt['mitarbeiter_uid'];
+									$uid = $rowlkt['mitarbeiter_uid'];
+									//echo "\nGruppe Mail to ".$rowlkt['mitarbeiter_uid'];
+								
+									$data = [
+										'vorname' => $rowlkt['vorname'],
+										'nachname' => $rowlkt['nachname'],
+										'link'=> $link
+									];
 
-								if(!isset($maildata[$rowlkt['mitarbeiter_uid']]['lv'][$rowle->lehrveranstaltung_id]))
-								{
-									$maildata[$rowlkt['mitarbeiter_uid']]['lv'][$rowle->lehrveranstaltung_id]['lv_bezeichnung'] = $rowle->bezeichnung;
-									$maildata[$rowlkt['mitarbeiter_uid']]['lv'][$rowle->lehrveranstaltung_id]['stg_bezeichnung'] = $row->stg_bezeichnung;
-									$maildata[$rowlkt['mitarbeiter_uid']]['lv'][$rowle->lehrveranstaltung_id]['gesamt']=false;
+									$mailSent = sendSanchoMail(
+										'LVE_LEHR_TEXT_1',
+										$data,
+										$uid.'@'.DOMAIN,
+										'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster festlegen',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LEHR_TEXT_1 to '. $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LEHR_TEXT_1 to '. $uid);
+									}
 								}
 							}
 						}
@@ -140,70 +161,39 @@ class Initiierung extends JOB_Controller
 						{
 							if($rowLektor->lvleiter)
 							{
-								if(!isset($maildata[$rowLektor->uid]))
+								if(!in_array($rowLektor->uid, $gesamt_sent_users))
 								{
-									$maildata[$rowLektor->uid]['lehrendeninfo']['fullname'] = $rowLektor->vorname.' '.$rowLektor->nachname;
-								}
+									$gesamt_sent_users[] = $rowLektor->uid;
+									//echo "\nGesamt Mail to ".$rowLektor->uid;
+									$uid = $rowLektor->uid;
 
-								$maildata[$rowLektor->uid]['lv'][$row->lehrveranstaltung_id]['lv_bezeichnung'] = $row->lv_bezeichnung;
-								$maildata[$rowLektor->uid]['lv'][$row->lehrveranstaltung_id]['stg_bezeichnung'] = $row->stg_bezeichnung;
-								$maildata[$rowLektor->uid]['lv'][$row->lehrveranstaltung_id]['gesamt'] = true;
+									$data = [
+										'vorname' => $rowLektor->vorname,
+										'nachname' => $rowLektor->nachname,
+										'link'=> $link
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LVL_TEXT_3',
+										$data,
+										$uid.'@'.DOMAIN,
+										'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LVL_TEXT_3 to '. $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LVL_TEXT_3 to '. $uid);
+									}
+								}
 							}
 						}
 					}
-				}
-			}
-			
-			foreach($maildata as $uid=>$row)
-			{
-				$coursetable = '
-				<table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
-					<thead>
-						<tr style="background-color: #eee; text-align: left;">
-							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px; width: 20%;">Studiengang</th>
-							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Lehrveranstaltung</th>
-							<th style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">Art</th>
-						</tr>
-					</thead>
-					<tbody>
-				';
-				
-				foreach($row['lv'] as $lvid=>$coursecontent)
-				{
-					$coursetable .= '
-					<tr>
-						<td style="padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;">'.$coursecontent['stg_bezeichnung'].'</td>
-						<td style="padding: 10px; border: 1px solid #ddd; font-size: 13px;">
-							<strong>'.$coursecontent['lv_bezeichnung'].'</strong>
-						</td>
-						<td style="padding: 10px; border: 1px solid #ddd; font-size: 13px; vertical-align: top;">'.($coursecontent['gesamt']?'Gesamt-LV':'Gruppenbasis').'</td>
-					</tr>
-					';
-				}
-				$coursetable .= '</tbody></table>';
-
-				$url  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
-
-				$data = [
-					'fullname' => $row['lehrendeninfo']['fullname'],
-					'coursetable' => $coursetable,
-					'url'=> $url
-				];
-
-				$mailSent = sendSanchoMail(
-					'LVE_Mail_EvaluationStartInfo',
-					$data,
-					$uid.'@'.DOMAIN,
-					'Evaluierungszeitraum kann jetzt festgelegt werden'
-				);
-
-				if ($mailSent)
-				{
-					$this->logInfo('sendEvaluationStartInfo to '. $uid);
-				}
-				else
-				{
-					$this->logError('Failed to sendEvaluationStartInfo to '. $uid);
 				}
 			}
 		}
