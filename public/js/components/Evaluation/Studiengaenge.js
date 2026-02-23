@@ -305,7 +305,11 @@ export default {
 						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
 					}
 				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+				.catch(error => {
+					cell.restoreOldValue();
+					this.$fhcAlert.handleSystemError(error);
+					
+				});
 		},
 		updateReviewedLvInStg(cell)
 		{

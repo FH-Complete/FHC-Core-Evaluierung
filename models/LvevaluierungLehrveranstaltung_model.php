@@ -142,12 +142,13 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param $lvevaluierung_lehrveranstaltung_id
 	 * @return mixed
 	 */
-	public function getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id)
+	public function getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id, $uid=null)
 	{
 		$excludedLehrformen = $this->config->item('excludedLehrformen');
 
-		$uid = getAuthUid();
-		$params = [$lvevaluierung_lehrveranstaltung_id, $uid];
+		//$uid = getAuthUid();
+		//$params = [$lvevaluierung_lehrveranstaltung_id, $uid];
+		$params = [$lvevaluierung_lehrveranstaltung_id];
 
 		$qry = '
 			WITH lvevaluierung_lehrveranstaltung AS (
@@ -207,25 +208,29 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 					JOIN lvevaluierung_lehrveranstaltung 
 						ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
 						AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
-				WHERE
-					EXISTS (
-						SELECT
-							1
-						FROM
-							lehre.tbl_lehreinheit le2
-						JOIN lehre.tbl_lehreinheitmitarbeiter lema2 USING (lehreinheit_id)
-						WHERE
-							le2.lehrveranstaltung_id = lv.lehrveranstaltung_id
-							AND lema2.mitarbeiter_uid = ?
-					)';
+				WHERE 1=1';
+
+			if(!is_null($uid))
+			{
+				$params[]= $uid;
+				$qry.='
+						AND EXISTS (
+							SELECT
+								1
+							FROM
+								lehre.tbl_lehreinheit le2
+							JOIN lehre.tbl_lehreinheitmitarbeiter lema2 USING (lehreinheit_id)
+							WHERE
+								le2.lehrveranstaltung_id = lv.lehrveranstaltung_id
+								AND lema2.mitarbeiter_uid = ?
+						)';
+			}
 
 			if (is_array($excludedLehrformen) && count($excludedLehrformen) > 0)
 			{
 				$qry .= ' AND le.lehrform_kurzbz NOT IN ? ';
 				$params[]= $excludedLehrformen;
 			}
-
-			$params[]= $uid;
 
 			$qry .= '
 			-- End CTE (lve)
@@ -235,10 +240,24 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				* 
 			FROM 
 				lve
-			ORDER BY
-			 	CASE WHEN mitarbeiter_uid = ? THEN 0 ELSE 1 END,
-				nachname
 			';
+
+			if(!is_null($uid))
+			{
+				$params[]= $uid;
+				$qry.='
+				ORDER BY
+			 		CASE WHEN mitarbeiter_uid = ? THEN 0 ELSE 1 END,
+					nachname
+				';
+			}
+			else
+			{
+				$qry.='
+				ORDER BY
+					nachname
+				';
+			}
 
 		return $this->execQuery($qry, $params);
 	}
@@ -326,5 +345,30 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 		{
 			return error($this->db->error(), EXIT_DATABASE);
 		}
+	}
+
+	public function getLveLvsByStSem($studiensemester_kurzbz)
+	{
+		$qry = '
+			SELECT
+				lvelv.*,
+				tbl_lehrveranstaltung.bezeichnung as lv_bezeichnung,
+				tbl_lehrveranstaltung.semester as lv_semester,
+				tbl_lehrveranstaltung.orgform_kurzbz as lv_orgform_kurzbz,
+				tbl_studiengang.bezeichnung as stg_bezeichnung,
+				tbl_studiengang.typ as stg_typ
+			FROM		  	
+				extension.tbl_lvevaluierung_lehrveranstaltung lvelv 
+				JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
+				JOIN public.tbl_studiengang USING(studiengang_kz)
+			WHERE
+				lvelv.verpflichtend
+				AND studiensemester_kurzbz=?
+			ORDER BY
+			  stg_bezeichnung,
+			  lv_orgform_kurzbz
+		';
+
+		return $this->execQuery($qry, array($studiensemester_kurzbz));
 	}
 }

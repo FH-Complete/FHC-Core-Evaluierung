@@ -24,6 +24,7 @@ class Initiierung extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 
 		// Load language phrases
 		$this->loadPhrases([
@@ -89,7 +90,7 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get base data
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id, getAuthUid());
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group data by LE and add data
@@ -114,6 +115,13 @@ class Initiierung extends FHCAPI_Controller
 		{
 			$canSwitch = false;
 			$canSwitchInfo []= 'At least one Evaluierung in LV started';
+		}
+
+		$zeitfensteroffen = $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('typswitch',$lvevaluierung_lehrveranstaltung_id);
+		if ($zeitfensteroffen == false)
+		{
+			$canSwitch = false;
+			$canSwitchInfo []= 'Wechsel ist nicht mehr möglich da das Zeitfenster für Wechsel überschritten ist.';
 		}
 
 		// Add Editable Checks
@@ -157,7 +165,7 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get base data
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
-		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id);
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lvevaluierung_lehrveranstaltung_id, getAuthUid());
 		$data = $this->getDataOrTerminateWithError($result);
 
 		// Group data by LV and add data
@@ -186,6 +194,13 @@ class Initiierung extends FHCAPI_Controller
 		{
 			$canSwitch = false;
 			$canSwitchInfo []= 'Entscheidung für Gesamt- oder Gruppen-Ebene kann nicht mehr verändert werden.';
+		}
+
+		$zeitfensteroffen = $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('typswitch',$lvevaluierung_lehrveranstaltung_id);
+		if ($zeitfensteroffen == false)
+		{
+			$canSwitch = false;
+			$canSwitchInfo []= 'Wechsel ist nicht mehr möglich da das Zeitfenster für Wechsel überschritten ist.';
 		}
 
 		// Add Editable Checks
@@ -239,6 +254,12 @@ class Initiierung extends FHCAPI_Controller
 		if ($this->config->item('lvLeitungRequired'))
 		{
 			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		}
+
+		$zeitfensteroffen = $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('typswitch',$lvevaluierung_lehrveranstaltung_id);
+		if ($zeitfensteroffen == false)
+		{
+			$this->terminateWithError('Änderung nicht möglich. Das Zeitfenster für Änderungen wurde überschritten.');
 		}
 
 		// Return if at least one Lvevaluierung exists for this Lehrveranstaltung
