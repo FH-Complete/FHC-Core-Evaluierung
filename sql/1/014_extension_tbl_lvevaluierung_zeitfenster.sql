@@ -2,8 +2,8 @@ CREATE TABLE IF NOT EXISTS extension.tbl_lvevaluierung_zeitfenster (
     lvevaluierung_zeitfenster_id integer NOT NULL,
 	typ varchar(32),
 	studiensemester_kurzbz varchar(32),
-	startdatum timestamp without timezone,
-	endedatum timestamp without timezone
+	startdatum timestamp without time zone,
+	endedatum timestamp without time zone
 );
 
 COMMENT ON TABLE extension.tbl_lvevaluierung_zeitfenster IS 'Zeitliche Freischaltungen fuer LV Evaluierungen';
