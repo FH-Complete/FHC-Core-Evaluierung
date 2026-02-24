@@ -245,12 +245,13 @@ export default {
 						<button 
 							class="accordion-button collapsed d-flex" 
 							type="button" 
+							:disabled="!lveLv.verpflichtend"
 							data-bs-toggle="collapse" 
 							:data-bs-target="'#flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							aria-expanded="false" 
 							:aria-controls="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<!-- left icons -->
+							<!-- left icons-->
 							<div class="flex-grow-1">
 								<span>
 									<i
@@ -265,9 +266,9 @@ export default {
 								<span>
 									<i 
 										class="fa-solid me-2"
-										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-										:title="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
-										v-tooltip="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
+										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-lock text'"
+										:title="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung gesperrt durch Studiengang'"
+										v-tooltip="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung gesperrt durch Studiengang'"
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>

@@ -96,7 +96,7 @@ class LvevaluierungFragebogen_model extends DB_Model
 					2 AS prio, lfz.fragebogen_id, lfz.lehrveranstaltung_id, lfz.studienplan_id, lfz.oe_kurzbz
 				FROM extension.tbl_lvevaluierung_fragebogen_zuordnung lfz
 				JOIN extension.tbl_lvevaluierung_fragebogen lf USING (fragebogen_id)
-				WHERE lfz.studienplan_id = (SELECT studienplan_id FROM studienplan)
+				WHERE lfz.studienplan_id in (SELECT studienplan_id FROM studienplan)
 				AND COALESCE(lf.gueltig_bis,'2099-01-01') >= (SELECT start FROM studiensemester) 
 				AND lf.gueltig_von <= (SELECT ende FROM studiensemester) 
 				
