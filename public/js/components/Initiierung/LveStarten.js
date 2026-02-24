@@ -189,7 +189,7 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1 class="mb-5">LV-Evaluierung starten<small class="fs-5 fw-normal text-muted"> | Evaluierungskriterien festlegen und Codes an Studierende mailen</small></h1>
+		<h1 class="mb-5">LV-Evaluation<small class="fs-5 fw-normal text-muted"> | Übersicht LV-Leitung und Lehrende</small></h1>
 		
 		<!-- Dropdowns -->
 		<div class="row">
@@ -245,19 +245,20 @@ export default {
 						<button 
 							class="accordion-button collapsed d-flex" 
 							type="button" 
+							:disabled="!lveLv.verpflichtend"
 							data-bs-toggle="collapse" 
 							:data-bs-target="'#flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
 							aria-expanded="false" 
 							:aria-controls="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id"
 						>
-							<!-- left icons -->
+							<!-- left icons-->
 							<div class="flex-grow-1">
 								<span>
 									<i
 										class="fa-solid text-dark me-2" 
 										:class="lveLv.lv_aufgeteilt ? 'fa-expand' : 'fa-square-full'"
-										:title="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
-										v-tooltip="lveLv.lv_aufgeteilt ? 'LV wird auf Gruppenbasis evaluiert' : 'Gesamt-LV wird evaluiert'"										
+										:title="lveLv.lv_aufgeteilt ? 'Evaluierung der LV erfolgt auf Gruppen-Ebene.' : 'Evaluierung der LV erfolgt auf Gesamt-Ebene.'"										
+										v-tooltip="lveLv.lv_aufgeteilt ? 'Evaluierung der LV erfolgt auf Gruppen-Ebene.' : 'Evaluierung der LV erfolgt auf Gesamt-Ebene.'"										
 										data-bs-custom-class="tooltip-left"
 									>								
 									</i>
@@ -265,9 +266,9 @@ export default {
 								<span>
 									<i 
 										class="fa-solid me-2"
-										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-asterisk text-light'"
-										:title="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
-										v-tooltip="lveLv.verpflichtend  ? 'Evaluierung muss durchgeführt werden (verpflichtend)' : 'Evaluierung kann durchgeführt werden (nicht verpflichtend)'"							
+										:class="lveLv.verpflichtend ? 'fa-asterisk text-success' : 'fa-lock text'"
+										:title="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung gesperrt durch Studiengang'"
+										v-tooltip="lveLv.verpflichtend  ? 'LV- Evaluierung ist verbindlich vorgesehen' : 'Evaluierung gesperrt durch Studiengang'"
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -276,8 +277,8 @@ export default {
 									<i 
 										class="fa-solid me-2"
 										:class="lveLv.isAllSent ? 'fa-envelope-circle-check text-success' : 'fa-envelope text-secondary'"
-										:title="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
-										v-tooltip="lveLv.isAllSent  ? 'Alle Studierende benachrichtigt' : 'Studierende müssen noch benachrichtigt werden'"		
+										:title="lveLv.isAllSent  ? 'Alle Studierenden wurden zur LV-Evaluierung eingeladen' : 'Studierende müssen noch zur LV-Evaluierung eingeladen werden'"		
+										v-tooltip="lveLv.isAllSent  ? 'Alle Studierenden wurden zur LV-Evaluierung eingeladen' : 'Studierende müssen noch zur LV-Evaluierung eingeladen werden'"		
 										data-bs-custom-class="tooltip-left"
 									>
 									</i>
@@ -290,7 +291,7 @@ export default {
 							<div class="me-2">
 								<span 
 									class="text-secondary me-2 text-end"
-									:title="'Abgeschickete Fragebögen/Ausgesendete Codes'"				
+									:title="'Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende'"				
 									v-tooltip						
 								>
 									{{lveLv.submittedCodes}}/{{lveLv.codesAusgegeben}}

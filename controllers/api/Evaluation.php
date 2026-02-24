@@ -10,14 +10,14 @@ class Evaluation extends FHCAPI_Controller
 		/** @noinspection PhpUndefinedClassConstantInspection */
 
 		parent::__construct(array(
-				'getEvaluationDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getEvaluationDataByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getAuswertungDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getAuswertungDataByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getTextantwortenByLve' => 'extension/lvevaluierung_stg:r',
-				'getTextantwortenByLveLv' => 'extension/lvevaluierung_stg:r',
-				'getReflexionDataByLve' => 'extension/lvevaluierung_stg:r',
-				'getReflexionDataByLveLv' => 'extension/lvevaluierung_stg:r',
+				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
@@ -31,6 +31,7 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
@@ -405,6 +406,11 @@ class Evaluation extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
 		$isVerpflichtend = $this->input->post('isVerpflichtend');
 
+		if(!$this->isAllowedToSwitchVerpflichtung($lvevaluierung_lehrveranstaltung_id))
+		{
+			$this->terminateWithError("Die Verbindlichkeit darf zu diesem Zeitpunkt nicht mehr geändert werden");
+		}
+		
 		$result = $this->LvevaluierungLehrveranstaltungModel->update(
 			$lvevaluierung_lehrveranstaltung_id,
 			['verpflichtend' => $isVerpflichtend]
@@ -412,6 +418,16 @@ class Evaluation extends FHCAPI_Controller
 		$data = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Prueft ob Studiengänge LVs als verpflichtend an/abwaehlen dürfen
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return boolean
+	 */
+	private function isAllowedToSwitchVerpflichtung($lvevaluierung_lehrveranstaltung_id)
+	{
+		return $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
 	}
 
 	/**
