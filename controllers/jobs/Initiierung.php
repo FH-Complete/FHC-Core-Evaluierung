@@ -57,4 +57,147 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
 	}
+
+
+	/**
+	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
+	 *
+	 * @return void
+	 */
+	public function sendEvaluationStartInfo($studiensemester_kurzbz = null)
+	{
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			exit;
+		}
+
+		$this->logInfo('Start Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
+		
+		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+		
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$gruppe_sent_users = array();
+			$gesamt_sent_users = array();
+
+			$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			$data = getData($result);
+			foreach($data as $row)
+			{
+				if($row->lv_aufgeteilt)
+				{
+					// Bei Gruppen Evaluierung ergeht Info an die jeweiligen LektorInnen
+					$resultLES = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($row->lvevaluierung_lehrveranstaltung_id);
+					if(isSuccess($resultLES) && hasData($resultLES))
+					{
+						$dataLES = getData($resultLES);
+
+						// Group data by LE and add data
+						$groupedByLe = $this->initiierunglib->groupByLeAndAddData($dataLES, $row->lvevaluierung_lehrveranstaltung_id);
+						
+						foreach($groupedByLe as $rowle)
+						{
+							foreach($rowle->lektoren as $rowlkt)
+							{
+								if(!in_array($rowlkt['mitarbeiter_uid'], $gruppe_sent_users))
+								{
+									$gruppe_sent_users[] = $rowlkt['mitarbeiter_uid'];
+									$uid = $rowlkt['mitarbeiter_uid'];
+									//echo "\nGruppe Mail to ".$rowlkt['mitarbeiter_uid'];
+								
+									$data = [
+										'vorname' => $rowlkt['vorname'],
+										'nachname' => $rowlkt['nachname'],
+										'link'=> $link
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LEHR_TEXT_1',
+										$data,
+										$uid.'@'.DOMAIN,
+										'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster festlegen',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LEHR_TEXT_1 to '. $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LEHR_TEXT_1 to '. $uid);
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+						$this->logError('Laden der Personen einer Evaluierung fehlgeschlagen');
+					}
+				}
+				else
+				{
+					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung
+					$result_lkt = $this->_ci->LehrveranstaltungModel->getLecturersByLv($studiensemester_kurzbz, $row->lehrveranstaltung_id);
+					if(isSuccess($result_lkt) && hasData($result_lkt))
+					{
+						$dataLektor = getData($result_lkt);
+
+						foreach($dataLektor as $rowLektor)
+						{
+							if($rowLektor->lvleiter)
+							{
+								if(!in_array($rowLektor->uid, $gesamt_sent_users))
+								{
+									$gesamt_sent_users[] = $rowLektor->uid;
+									//echo "\nGesamt Mail to ".$rowLektor->uid;
+									$uid = $rowLektor->uid;
+
+									$data = [
+										'vorname' => $rowLektor->vorname,
+										'nachname' => $rowLektor->nachname,
+										'link'=> $link
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LVL_TEXT_3',
+										$data,
+										$uid.'@'.DOMAIN,
+										'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LVL_TEXT_3 to '. $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LVL_TEXT_3 to '. $uid);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+	}
 }

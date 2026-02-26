@@ -188,6 +188,7 @@ export default {
 									v-model="lveLvDetail.startzeit"
 									name="lveLvDetail.startzeit"
 									locale="de"
+									text-input
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
@@ -204,6 +205,7 @@ export default {
 									v-model="lveLvDetail.endezeit"
 									name="lveLvDetail.endezeit"
 									locale="de"
+									text-input
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
