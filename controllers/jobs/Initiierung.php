@@ -217,7 +217,7 @@ class Initiierung extends JOB_Controller
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 
 		// Get all Evaluierungen with startzeit tomorrow
-		$result = $this->_ci->LvevaluierungModel->getLvesWithStartzeitIn('+1 day');
+		$result = $this->_ci->LvevaluierungModel->getLvesWithStartzeitIn(); // todo +1 day
 
 		if (isError($result))
 		{
