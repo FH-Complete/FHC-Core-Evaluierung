@@ -37,6 +37,7 @@ class EvaluationLib
 			tbl_lehrveranstaltung.bezeichnung_english,
 			tbl_lehrveranstaltung.studiengang_kz,
 			tbl_lehrveranstaltung.semester,
+			tbl_lehrveranstaltung.sprache,
 			tbl_lehrveranstaltung.orgform_kurzbz,
 			tbl_lehrveranstaltung.lehrveranstaltung_template_id,
 			UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz",

@@ -33,6 +33,11 @@ export default {
 			}
 		}
 	},
+	provide() {
+		return { 
+			evalData:Vue.computed(()=>this.evalData)
+		}
+	},
 	computed: {
 		selectedComponent() {
 			if (this.selectedView === 'auswertung') return 'Evaluation-Auswertung'
