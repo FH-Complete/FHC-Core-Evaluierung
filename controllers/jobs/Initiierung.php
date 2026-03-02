@@ -200,4 +200,147 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('End Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
 	}
+
+	/**
+	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
+	 *
+	 * @return void
+	 */
+	public function sendEvaluierungStartReminder(){
+
+		$this->logInfo('Start Job sendEvaluierungStartReminder');
+
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
+
+		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+
+		// Get all Evaluierungen with startzeit tomorrow
+		$result = $this->_ci->LvevaluierungModel->getLvesWithStartzeitIn(); // todo +1 day
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$gruppe_sent_users = array();
+			$gesamt_sent_users = array();
+
+			$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			$data = hasData($result) ? getData($result) : [];
+
+			foreach($data as $row)
+			{
+//				var_dump($row->lvevaluierung_id);
+//				var_dump($row->lvevaluierung_lehrveranstaltung_id);
+//				var_dump($row->lv_bezeichnung);
+//				var_dump($row->lv_aufgeteilt ? 'Gruppe; Mail an Lektor' : 'Gesamt-LV; Mail an LVLeitungen');
+
+				// Gruppen Evaluierung
+				if($row->lv_aufgeteilt)
+				{
+					// Bei Gruppen Evaluierung ergeht Info an die jeweiligen LektorInnen
+					$result = $this->_ci->LehreinheitmitarbeiterModel->getLektorenByLe($row->lehreinheit_id);
+					if (hasData($result))
+					{
+						$lektoren = getData($result);
+
+						foreach($lektoren as $lektor)
+						{
+							if (!in_array($lektor->mitarbeiter_uid, $gruppe_sent_users))
+							{
+								$gruppe_sent_users[] = $lektor->mitarbeiter_uid;
+								$uid = $lektor->mitarbeiter_uid;
+								//echo "\nGruppe Mail to ".$lektor->mitarbeiter_uid."\n";
+
+								$data = [
+									'vorname' => $lektor->vorname,
+									'nachname' => $lektor->nachname,
+									'lv_bezeichnung' => $row->lv_bezeichnung,
+									'startzeit' => (new DateTime($row->startzeit))->format("d.m.Y"),
+									'endezeit' => (new DateTime($row->endezeit))->format("d.m.Y"),
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LEHR_TEXT_2',
+									$data,
+									$uid.'@'.DOMAIN,
+									'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster startet bald',
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LEHR_TEXT_2 to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LEHR_TEXT_2 to '. $uid);
+								}
+							}
+						}
+					}
+					else
+					{
+						$this->logError('Laden der Lektoren der Evaluierungs-Lehreinheit '. $row->lehreinheit_id. ' fehlgeschlagen');
+					}
+				}
+				// Gesamt-LV Evaluierung
+				else
+				{
+					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung
+					$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($row->lehrveranstaltung_id, $row->studiensemester_kurzbz);
+					if(hasData($result))
+					{
+						$lvLeitungen = getData($result);
+
+						foreach($lvLeitungen as $lvLeitung)
+						{
+							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
+							{
+								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
+								echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
+								$uid = $lvLeitung->mitarbeiter_uid;
+
+								$data = [
+									'vorname' => $lvLeitung->vorname,
+									'nachname' => $lvLeitung->nachname,
+									'lv_bezeichnung' => $row->lv_bezeichnung,
+									'startzeit' => (new DateTime($row->startzeit))->format("d.m.Y"),
+									'endezeit' => (new DateTime($row->endezeit))->format("d.m.Y"),
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LVL_TEXT_4',
+									$data,
+									$uid.'@'.DOMAIN,
+									'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster startet bald',
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LVL_TEXT_4 to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LVL_TEXT_4 to '. $uid);
+								}
+
+						}
+						}
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluierungStartReminder');
+	}
 }
