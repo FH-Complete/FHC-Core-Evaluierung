@@ -1,7 +1,7 @@
 import FhcForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import FormValidation from "../../../../../js/components/Form/Validation.js";
-import ApiEvaluation from "../../api/evaluation";
+import ApiEvaluation from "../../api/evaluation.js";
 
 export default {
 	name: "EvaluationReflexion",

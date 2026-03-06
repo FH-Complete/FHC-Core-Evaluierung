@@ -2,7 +2,7 @@ import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import FhcChart from "../../../../../js/components/Chart/FhcChart.js";
 import ChartHelper from "../../helpers/ChartHelper.js";
-import ApiEvaluation from "../../api/evaluation";
+import ApiEvaluation from "../../api/evaluation.js";
 
 export default {
 	name: "EvaluationAuswertung",
