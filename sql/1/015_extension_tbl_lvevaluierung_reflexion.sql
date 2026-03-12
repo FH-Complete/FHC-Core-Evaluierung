@@ -121,3 +121,10 @@ ON CONFLICT (nachvollziehbar_kurzbz) DO NOTHING;
 
 ALTER TABLE extension.tbl_lvevaluierung_reflexion
     ALTER COLUMN insertamum SET DEFAULT NOW();
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_reflexion ADD COLUMN IF NOT EXISTS verpflichtend boolean DEFAULT TRUE;
+COMMENT ON COLUMN extension.tbl_lvevaluierung_reflexion.verpflichtend IS 'True wenn Reflexion verpflichtend durchgeführt werden muss';
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
