@@ -32,9 +32,11 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
+		$this->_reflexionZeitfensterDauer = $this->config->item('reflexionZeitfensterDauer');
 	}
 
 	/**
@@ -288,31 +290,111 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($textantworten);
 	}
 
+	// -----------------------------------------------------------------------------------------------------------------
+	// LV-REFLEXION
+	// -----------------------------------------------------------------------------------------------------------------
 	public function getReflexionDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
 
-		// Return if Evaluation period is still running
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		if ($now < $lve->endezeit) {
-			$this->terminateWithSuccess([]);
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+
+		// Get Reflexion
+		$reflexion = null;
+		// User must be lector of Evaluierung, or KFL or STGL.
+		if ($lve->insertvon === $this->_uid || $isKfl ||  $isStgl)
+		{
+			$result = $this->LvevaluierungReflexionModel->loadWhere(['lvevaluierung_id' => $lve->lvevaluierung_id]);
+			if (hasData($result))
+			{
+				$reflexion =  getData($result)[0];
+			}
 		}
+
+		// Check Zeitfenster for Reflexion and possible Sperren
+		$check = $this->checkBearbeitungOffenForReflexion($lve);
+
+		$this->load->model('person/Person_model', 'PersonModel');
+		$result = $this->PersonModel->getByUid($lve->insertvon);
+		$person = hasData($result) ? getData($result)[0] : '';
+
+		$display = [
+			'showSaveButton' => true,
+			'showEinmeldungButton' => true,
+		];
+
+		// Extras for KFL or STGL (only if not is lector of Evaluierung)
+		if (($isKfl || $isStgl) && $lve->insertvon !== $this->_uid)
+		{
+			$check['isBearbeitungOffen'] = false;
+			$display['showSaveButton'] = false;
+			$display['showEinmeldungButton'] = false;
+		}
+
+		$data = [
+			'reflexion' => $reflexion,
+			'isBearbeitungOffen' => $check['isBearbeitungOffen'],
+			'sperreGrund' => $check['sperreGrund'],
+			'zeitfensterVon' => $check['zeitfensterVon'],
+			'zeitfensterBis' => $check['zeitfensterBis'],
+			'vorname' => $person->vorname,
+			'nachname' => $person->nachname,
+			'display' => $display
+		];
+
+		$this->terminateWithSuccess($data);
 	}
 
-	public function getReflexionDataLveLv()
+	public function checkBearbeitungOffenForReflexion($lve)
 	{
-		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
-
-		// Return if Evaluation period is still running
-		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$periodTimes = $this->getPeriodTimes($lves);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
-
-		if ($now < $periodTimes['maxEndezeit']) {
-			$this->terminateWithSuccess([]);
+		if (!$this->_reflexionZeitfensterDauer)
+		{
+			$this->terminateWithError('Missing config entry zeitfensterDauerReflexion');
 		}
+
+		// Get Start- and Endedatum of Reflexionszeitraum
+		$zeitfenster = $this->calculateReflexionZeitfenster($lve);
+
+		// Check Sperren
+		$sperreGrund = [];
+		// Check 1: Evaluierungcodes ausgegeben
+		if ($lve->codes_ausgegeben === false) {
+			$sperreGrund[] = 'Keine Evaluierungscodes verschickt';
+		}
+		// Check 2: Zeitfenster offen
+		if ($this->evaluationlib->isZeitfensterOffen($zeitfenster['von'], $zeitfenster['bis']) === false)
+		{
+			$sperreGrund[] = 'Nicht im Bearbeitungszeitraum';
+		}
+
+		// If Sperre found, close Bearbeitung
+		$isBearbeitungOffen = empty($sperreGrund);
+
+		return [
+			'isBearbeitungOffen' => $isBearbeitungOffen,
+			'sperreGrund' => $sperreGrund,
+			'zeitfensterVon' => $zeitfenster['von']->format('d.m.Y'),
+			'zeitfensterBis' => $zeitfenster['bis']->format('d.m.Y')
+		];
+	}
+	public function calculateReflexionZeitfenster($lve)
+	{
+		$endedatum = new DateTime($lve->endezeit);
+
+		$zeitfensterVon = clone $endedatum;
+		$zeitfensterVon->modify('+1 day');	// Endedatum noch für Evaluierung offen, deshalb +1
+
+		$zeitfensterBis = clone ($zeitfensterVon);
+		$zeitfensterBis->modify($this->_reflexionZeitfensterDauer);
+
+		return [
+			'von' => $zeitfensterVon,
+			'bis' => $zeitfensterBis
+		];
 	}
 
 	//------------------------------------------------------------------------------------------------------------------
