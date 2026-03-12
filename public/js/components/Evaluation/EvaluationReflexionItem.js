@@ -113,10 +113,10 @@ export default {
 	 		if (this.$refs.reflexionForm){
 	 			const reflexion = {...this.reflexion.reflexion};
 
-	 			// this.$api
-	 			// 	.call(ApiEvaluation.saveOrUpdateReflexion(this.lvevaluierung_id, reflexion))
-	 			// 	.then(() => this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert')))
-	 			// 	.catch(this.$fhcAlert.handleSystemError);
+	 			this.$api
+	 				.call(ApiEvaluation.saveOrUpdateReflexion(this.lvevaluierung_id, reflexion))
+	 				.then(() => this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert')))
+	 				.catch(this.$fhcAlert.handleSystemError);
 			}
 		}
 	},

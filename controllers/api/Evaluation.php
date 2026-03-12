@@ -17,7 +17,7 @@ class Evaluation extends FHCAPI_Controller
 				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'saveOrUpdateReflexion' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
@@ -397,6 +397,55 @@ class Evaluation extends FHCAPI_Controller
 		];
 	}
 
+	public function saveOrUpdateReflexion()
+	{
+		$lvevaluierung_id = $this->input->post('lvevaluierung_id');
+		$data = $this->input->post('data');
+
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// If Gesamt-LV Evaluierung
+		if ($lveLv->lv_aufgeteilt === false)
+		{
+			// Reflexion is optional for lectors that are not LV-Leitung
+			$isLvLeitung = $this->evaluationlib->isLvLeitung(
+				$this->_uid,
+				$lveLv->lehrveranstaltung_id,
+				$lveLv->studiensemester_kurzbz
+			);
+
+			if($isLvLeitung === false)
+			{
+				$data['verpflichtend'] = false;
+			}
+		}
+
+		// Insert / Update Selbstreflexion
+		if (empty($data['lvevaluierung_reflexion_id']))
+		{
+			unset($data['lvevaluierung_reflexion_id']);
+			$data['lvevaluierung_id'] = $lvevaluierung_id;
+			$data['mitarbeiter_uid'] = $this->_uid;
+			$data['insertvon'] = $this->_uid;
+
+			$result = $this->LvevaluierungReflexionModel->insert($data);
+		}
+		else
+		{
+			$data['updatevon'] = $this->_uid;
+			$data['updateamum'] = 'NOW()';
+
+			$result = $this->LvevaluierungReflexionModel->update(
+				$data['lvevaluierung_reflexion_id'],
+				$data
+			);
+		}
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data[0]);
+	}
 	//------------------------------------------------------------------------------------------------------------------
 	// Evaluation Studiengaenge
 	//------------------------------------------------------------------------------------------------------------------
@@ -509,7 +558,7 @@ class Evaluation extends FHCAPI_Controller
 	 */
 	private function isAllowedToSwitchVerpflichtung($lvevaluierung_lehrveranstaltung_id)
 	{
-		return $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
+		return $this->LvevaluierungZeitfensterModel->isBearbeitungOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
 	}
 
 	/**
@@ -673,6 +722,10 @@ class Evaluation extends FHCAPI_Controller
 		if (isError($result))
 		{
 			$this->terminateWithError($result);
+		}
+		elseif (!hasData($result))
+		{
+			$this->terminateWithError('EvaluierungID ' . $lvevaluierung_id. ' does not exist');
 		}
 
 		return getData($result)[0];
