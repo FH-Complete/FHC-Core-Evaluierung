@@ -19,6 +19,67 @@ class EvaluationLib
 		$this->_ci =& get_instance();
 	}
 
+	public function isLvLeitung($uid, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		// Check for LV-Leitung
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz);
+
+		// If LV-Leitung exist
+		if (hasData($result))
+		{
+			// check if user is LV-Leitung
+			return getData($result)[0]->mitarbeiter_uid === $uid;
+		}
+		else
+			return false;
+	}
+
+	public function isKFL($uid, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$lv = hasData($result) ? getData($result)[0] : null;
+
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+		$result = $this->_ci->BenutzerfunktionModel->getBenutzerFunktionByUidInStdsem(
+			$uid,
+			$studiensemester_kurzbz,
+			'Leitung',
+			$lv->oe_kurzbz,
+			'Kompetenzfeld'
+		);
+
+		return hasData($result);
+	}
+
+	public function isSTGL($uid, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$lv = hasData($result) ? getData($result)[0] : null;
+
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+		$result = $this->_ci->BenutzerfunktionModel->getBenutzerFunktionByUidInStdsem(
+			$uid,
+			$studiensemester_kurzbz,
+			'Leitung',
+			$lv->oe_kurzbz,
+			'Studiengang'
+		);
+
+		return hasData($result);
+	}
+
+	public function isZeitfensterOffen($startDate, $endDate)
+	{
+		$start = is_string($startDate) ? new DateTime($startDate) : $startDate;
+		$ende = is_string($endDate) ? new DateTime($endDate) : $endDate;
+		$now = new DateTime();
+
+		return $now >= $start && $now <= $ende;
+	}
+
 	/**
 	 * Get Lehrveranstaltung Infos.
 	 *
