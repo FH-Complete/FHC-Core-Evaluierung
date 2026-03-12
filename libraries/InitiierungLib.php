@@ -33,6 +33,7 @@ class InitiierungLib
 
 		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
 
 		foreach ($data as $item)
 		{
