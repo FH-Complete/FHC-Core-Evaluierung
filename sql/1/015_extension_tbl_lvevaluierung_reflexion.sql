@@ -31,6 +31,7 @@ CREATE SEQUENCE IF NOT EXISTS extension.seq_tbl_lvevaluierung_reflexion_lvevalui
 	 CACHE 1;
 ALTER TABLE extension.tbl_lvevaluierung_reflexion
     ALTER COLUMN lvevaluierung_reflexion_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_reflexion_lvevaluierung_reflexion_id');
+GRANT SELECT, INSERT, UPDATE ON extension.seq_tbl_lvevaluierung_reflexion_lvevaluierung_reflexion_id TO vilesci;
 
 DO $$
 BEGIN
@@ -117,3 +118,6 @@ INSERT INTO "extension".tbl_lvevaluierung_reflexion_antwort_nachvollziehbar (nac
 ('nein', '{"Nein, wenig nachvollziehbar","Nein, wenig nachvollziehbar"}'),
 ('unknown', '{"Kann ich nicht beurteilen (z.B. weil nicht genügend N)","Kann ich nicht beurteilen (z.B. weil nicht genügend N)"}')
 ON CONFLICT (nachvollziehbar_kurzbz) DO NOTHING;
+
+ALTER TABLE extension.tbl_lvevaluierung_reflexion
+    ALTER COLUMN insertamum SET DEFAULT NOW();
