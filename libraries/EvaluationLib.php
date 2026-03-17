@@ -46,8 +46,7 @@ class EvaluationLib
 			$uid,
 			$studiensemester_kurzbz,
 			'Leitung',
-			$lv->oe_kurzbz,
-			'Kompetenzfeld'
+			$lv->oe_kurzbz
 		);
 
 		return hasData($result);
@@ -59,16 +58,16 @@ class EvaluationLib
 		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
 		$lv = hasData($result) ? getData($result)[0] : null;
 
-		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
-		$result = $this->_ci->BenutzerfunktionModel->getBenutzerFunktionByUidInStdsem(
-			$uid,
-			$studiensemester_kurzbz,
-			'Leitung',
-			$lv->oe_kurzbz,
-			'Studiengang'
-		);
+		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->_ci->StudiengangModel->getLeitung($lv->studiengang_kz);
+		$leitung = hasData($result) ? getData($result) : [];
 
-		return hasData($result);
+		if (!empty($leitung))
+		{
+			return in_array($uid, array_column($leitung, 'uid'));
+		}
+
+		return false;
 	}
 
 	public function isZeitfensterOffen($startDate, $endDate)
