@@ -10,7 +10,7 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id'],
+	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id', 'selected_view'],
 	data() {
 		return {
 			evalData: {
@@ -25,7 +25,7 @@ export default {
 				startzeit: null,
 				endezeit: null,
 			},
-			selectedView: 'auswertung',
+			selectedView: this.selected_view || 'auswertung',
 			scrollPositions: {
 				auswertung: 0,
 				reflexion: 0,

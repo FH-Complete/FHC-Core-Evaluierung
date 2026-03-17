@@ -18,7 +18,8 @@ const router = VueRouter.createRouter({
 						: null,
 				lvevaluierung_lehrveranstaltung_id: route.query.lvevaluierung_lehrveranstaltung_id && route.query.lvevaluierung_lehrveranstaltung_id !== 'null'
 						? Number(route.query.lvevaluierung_lehrveranstaltung_id)
-						: null
+						: null,
+				selected_view: route.query.selected_view || null
 			})
 		}
 	]
