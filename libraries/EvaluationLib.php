@@ -35,24 +35,26 @@ class EvaluationLib
 			return false;
 	}
 
-	public function isKFL($uid, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function isKFL($uid, $lehrveranstaltung_id)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
 		$lv = hasData($result) ? getData($result)[0] : null;
 
 		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
-		$result = $this->_ci->BenutzerfunktionModel->getBenutzerFunktionByUidInStdsem(
-			$uid,
-			$studiensemester_kurzbz,
-			'Leitung',
-			$lv->oe_kurzbz
-		);
+		$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
 
-		return hasData($result);
+		if (hasData($result))
+		{
+			$leitungen = getData($result);
+
+			return in_array($lv->oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+		}
+
+		return false;
 	}
 
-	public function isSTGL($uid, $lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function isSTGL($uid, $lehrveranstaltung_id)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
@@ -60,11 +62,12 @@ class EvaluationLib
 
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$result = $this->_ci->StudiengangModel->getLeitung($lv->studiengang_kz);
-		$leitung = hasData($result) ? getData($result) : [];
 
-		if (!empty($leitung))
+		if (hasData($result))
 		{
-			return in_array($uid, array_column($leitung, 'uid'));
+			$leitungen = getData($result);
+
+			return in_array($uid, array_column($leitungen, 'uid'));
 		}
 
 		return false;
