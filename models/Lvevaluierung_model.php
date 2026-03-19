@@ -17,6 +17,8 @@ class Lvevaluierung_model extends DB_Model
 	 */
 	public function insertLvevaluierung($lvevaluierung)
 	{
+		unset($lvevaluierung['lvevaluierung_id']);
+
 		$lvevaluierung['insertvon'] = getAuthUID();
 		$lvevaluierung['codes_gemailt'] = isset($lvevaluierung['codes_gemailt'])
 			? $lvevaluierung['codes_gemailt']

@@ -327,12 +327,24 @@ class Initiierung extends FHCAPI_Controller
 
 		// Add Fragebogen ID to insert/update data
 		$data['fragebogen_id']	= getData($result)[0]->fragebogen_id;
-		
+
+		// Check if Evaluierung exists for given LveLv ID and Le ID combi, then update existing instead of inserting new
+		if (empty($data['lvevaluierung_id']) && !is_null($data['lehreinheit_id']))
+		{
+			$result = $this->LvevaluierungModel->loadWhere([
+				'lvevaluierung_lehrveranstaltung_id' => $data['lvevaluierung_lehrveranstaltung_id'],
+				'lehreinheit_id' => $data['lehreinheit_id']
+			]);
+
+			if (hasData($result))
+			{
+				$data['lvevaluierung_id'] = getData($result)[0]->lvevaluierung_id;
+			}
+		}
 
 		// Insert / Update Lvevaluierung
 		if (empty($data['lvevaluierung_id']))
 		{
-			unset($data['lvevaluierung_id']);
 			$result = $this->LvevaluierungModel->insertLvevaluierung($data);
 		}
 		else
