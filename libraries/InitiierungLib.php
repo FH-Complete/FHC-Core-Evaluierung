@@ -389,6 +389,7 @@ class InitiierungLib
 
 	/**
 	 * Checks if Lehrveranstaltung has:
+	 *  - duplicate Spezialgruppen
 	 *  - duplicate Studierendengruppen (BBE-2A1 <-> BBE-2A1)
 	 *  - duplicate combination of Studierendengruppen
 	 *    (BBE-2A1, BBE-2A2 <-> BBE-2A1, BBE-2A2)
@@ -400,6 +401,7 @@ class InitiierungLib
 	public function hasHierarchicalDuplicateGruppen($data)
 	{
 		$gruppenPerLe = [];
+		$spzgrps = [];
 
 		// Skip row check if...
 		foreach ($data as $row) {
@@ -407,8 +409,16 @@ class InitiierungLib
 			if (empty($row->lehreinheit_id)) {
 				continue;
 			}
-			//...is Spezialgruppe
+
+			//...return true if double Spezialgruppe
 			if (!empty($row->gruppe_kurzbz)) {
+				if(in_array($spzgrps, $row->gruppe_kurzbz))
+				{
+					return true;
+				}
+				else
+					$spzgrps[] = $row->gruppe_kurzbz;
+
 				continue;
 			}
 
