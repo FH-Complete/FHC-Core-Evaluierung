@@ -67,7 +67,9 @@ export default {
 			method: 'post',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveOrUpdateReflexion',
 			params: {
+				lvevaluierung_reflexion_id: lvevaluierung_reflexion_id,
 				lvevaluierung_id: lvevaluierung_id,
+				mitarbeiter_uid: mitarbeiter_uid,
 				data: data
 			}
 		}

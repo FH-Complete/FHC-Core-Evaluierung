@@ -399,30 +399,17 @@ class Evaluation extends FHCAPI_Controller
 
 	public function saveOrUpdateReflexion()
 	{
+		$lvevaluierung_reflexion_id = $this->input->post('lvevaluierung_reflexion_id');
 		$lvevaluierung_id = $this->input->post('lvevaluierung_id');
 		$data = $this->input->post('data');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		// If Gesamt-LV Evaluierung
-		if ($lveLv->lv_aufgeteilt === false)
-		{
-			// Reflexion is optional for lectors that are not LV-Leitung
-			$isLvLeitung = $this->evaluationlib->isLvLeitung(
-				$this->_uid,
-				$lveLv->lehrveranstaltung_id,
-				$lveLv->studiensemester_kurzbz
-			);
-
-			if($isLvLeitung === false)
-			{
-				$data['verpflichtend'] = false;
-			}
-		}
+		$data['verpflichtend'] = $this->isReflexionVerpflichtendForUid($lveLv, $this->_uid);
 
 		// Insert / Update Selbstreflexion
-		if (empty($data['lvevaluierung_reflexion_id']))
+		if (!$lvevaluierung_reflexion_id)
 		{
 			unset($data['lvevaluierung_reflexion_id']);
 			$data['lvevaluierung_id'] = $lvevaluierung_id;
