@@ -75,8 +75,14 @@ class EvaluationLib
 
 	public function isZeitfensterOffen($startDate, $endDate)
 	{
+		// Start ab Mitternacht
 		$start = is_string($startDate) ? new DateTime($startDate) : $startDate;
+		$start->setTime(0, 0, 0);
+
+		// Ende bis Mitternacht
 		$ende = is_string($endDate) ? new DateTime($endDate) : $endDate;
+		$ende->setTime(23, 59, 59);
+
 		$now = new DateTime();
 
 		return $now >= $start && $now <= $ende;
