@@ -38,6 +38,18 @@ export default {
 			evalData:Vue.computed(()=>this.evalData)
 		}
 	},
+	created() {
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
+			const apiCall = this.lvevaluierung_id
+				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id)
+				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+
+			this.$api
+				.call(apiCall)
+				.then(result => this.evalData = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		}
+	},
 	computed: {
 		selectedComponent() {
 			if (this.selectedView === 'auswertung') return 'Evaluation-Auswertung'
@@ -79,18 +91,6 @@ export default {
 				Date.now() < new Date(this.evalData?.endezeit.replace(' ', 'T')).getTime() ||
 				this.evalData?.codes_ausgegeben === null
 			)
-		}
-	},
-	created() {
-		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
-			const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id)
-				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
-
-			this.$api
-				.call(apiCall)
-				.then(result => this.evalData = result.data)
-				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
 	methods: {
