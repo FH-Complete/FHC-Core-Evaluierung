@@ -76,7 +76,8 @@ export default {
 			return (
 				(this.lvevaluierung_id === null && this.lvevaluierung_lehrveranstaltung_id === null) ||
 				this.evalData?.endezeit === null ||
-				Date.now() < new Date(this.evalData?.endezeit.replace(' ', 'T')).getTime()
+				Date.now() < new Date(this.evalData?.endezeit.replace(' ', 'T')).getTime() ||
+				this.evalData?.codes_ausgegeben === null
 			)
 		}
 	},

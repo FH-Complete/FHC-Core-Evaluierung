@@ -311,6 +311,12 @@ class Evaluation extends FHCAPI_Controller
 		);
 		$lvLeitung = hasData($result) ? getData($result)[0] : null;
 
+		// Return if students did not get codes yet
+		if ($lve->codes_ausgegeben === null)
+		{
+			$this->terminateWithSuccess([]);
+		}
+
 		// Build Reflexionen by Lehrende
 		$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
 
@@ -350,6 +356,12 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionenByLveLv = [];
 		foreach ($lves as $lve)
 		{
+			// Skip if students did not get codes yet
+			if ($lve->codes_ausgegeben === null)
+			{
+				continue;
+			}
+
 			// Build Reflexionen
 			$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
 
@@ -477,7 +489,6 @@ class Evaluation extends FHCAPI_Controller
 		return $verpflichtend;
 	}
 	private function buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung){
-
 		// Get Lehrende
 		$lektoren = [];
 		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
