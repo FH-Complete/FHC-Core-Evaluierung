@@ -1,10 +1,10 @@
-import EvaluationReflexionItem from "./EvaluationReflexionItem.js";
+import EvaluationReflexionForm from "./EvaluationReflexionForm.js";
 import ApiEvaluation from "../../api/evaluation";
 
 export default {
 	name: "EvaluationReflexion",
 	components: {
-		EvaluationReflexionItem,
+		EvaluationReflexionForm,
 	},
 	props:  {
 		lvevaluierung_id: {
@@ -18,17 +18,20 @@ export default {
 	},
 	data() {
 		return {
-			lvevaluierungIds: [],
+			reflexionen: []
 		}
 	},
 	created() {
-		if (this.lvevaluierung_id) {
-			this.lvevaluierungIds.push(this.lvevaluierung_id);
-		}
+		const apiCall = this.lvevaluierung_id
+				? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id)
+				: ApiEvaluation.getReflexionDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
-		if (this.lvevaluierung_lehrveranstaltung_id) {
-			// todo
-		}
+		this.$api
+			.call(apiCall)
+			.then(result => {
+				this.reflexionen = result.data;
+			})
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
 	computed: {
 
@@ -41,13 +44,14 @@ export default {
 		<h3 class="mb-4">LV-Reflexion</h3>
 		<!-- Abschnitt Reflexionen der Lehrenden -->
 		<div class="evaluation-evaluation-reflexion-formulare mb-3">
-			<h4 class="mt-5 mb-3">LV-Reflexionen der Lehrenden</h4>
-			<div v-if="lvevaluierungIds.length > 0" class="row py-4 mb-3 gy-3 bg-light">
+			<h4 class="mt-5 mb-3">LV-Reflexionen</h4>
+			<div v-if="reflexionen.length > 0" class="row py-4 mb-3 gy-3 bg-light">
 				<div 
-					v-for="lvevaluierungId in lvevaluierungIds"
-					:key="lvevaluierungId"
-					class="col-lg-6 col-xl-4">
-						<evaluation-reflexion-item :lvevaluierung_id="lvevaluierungId"></evaluation-reflexion-item>
+					v-for="(reflexion, index) in reflexionen"
+					:key="reflexion.lvevaluierung_id + '-' + index"
+					class="col-lg-6 col-xl-4"
+				>
+					<evaluation-reflexion-form :reflexion="reflexion"></evaluation-reflexion-form>
 				</div>
 			</div>
 			<div v-else class="card"><div class="card-body">Keine Daten vorhanden.</div></div>

@@ -62,7 +62,16 @@ export default {
 			}
 		}
 	},
-	saveOrUpdateReflexion(lvevaluierung_id, data) {
+	getReflexionDataByLveLv(lvevaluierung_lehrveranstaltung_id) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLveLv',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+	saveOrUpdateReflexion(lvevaluierung_reflexion_id, lvevaluierung_id, mitarbeiter_uid, data) {
 		return {
 			method: 'post',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveOrUpdateReflexion',

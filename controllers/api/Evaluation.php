@@ -17,6 +17,7 @@ class Evaluation extends FHCAPI_Controller
 				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'saveOrUpdateReflexion' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
@@ -33,6 +34,8 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
@@ -300,103 +303,73 @@ class Evaluation extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$result = $this->LehrveranstaltungModel->getLvLeitung(
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
+		);
+		$lvLeitung = hasData($result) ? getData($result)[0] : null;
 
-		// Get Reflexion
-		$reflexion = null;
-		// User must be lector of Evaluierung, or KFL or STGL.
-		if ($lve->insertvon === $this->_uid || $isKfl ||  $isStgl)
-		{
-			$result = $this->LvevaluierungReflexionModel->loadWhere(['lvevaluierung_id' => $lve->lvevaluierung_id]);
-			if (hasData($result))
-			{
-				$reflexion =  getData($result)[0];
-			}
-		}
+		// Build Reflexionen by Lehrende
+		$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
 
-		// Check Zeitfenster for Reflexion and possible Sperren
-		$check = $this->checkBearbeitungOffenForReflexion($lve);
+		// Filter Reflexionen (nicht alle dürfen alle Reflexionen sehen)
+		$filteredReflexionen = $this->filterReflexionenByPermission(
+			$reflexionen,
+			$lveLv,
+			$lvLeitung->mitarbeiter_uid
+		);
 
-		$this->load->model('person/Person_model', 'PersonModel');
-		$result = $this->PersonModel->getByUid($lve->insertvon);
-		$person = hasData($result) ? getData($result)[0] : '';
+		$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
+			$filteredReflexionen,
+			$lve,
+			$lveLv,
+			$isKfl,
+			$isStgl,
+			$lvLeitung->mitarbeiter_uid
+		);
 
-		$display = [
-			'showSaveButton' => true,
-			'showEinmeldungButton' => true,
-		];
-
-		// Extras for KFL or STGL (only if not is lector of Evaluierung)
-		if (($isKfl || $isStgl) && $lve->insertvon !== $this->_uid)
-		{
-			$check['isBearbeitungOffen'] = false;
-			$display['showSaveButton'] = false;
-			$display['showEinmeldungButton'] = false;
-		}
-
-		$data = [
-			'reflexion' => $reflexion,
-			'isBearbeitungOffen' => $check['isBearbeitungOffen'],
-			'sperreGrund' => $check['sperreGrund'],
-			'zeitfensterVon' => $check['zeitfensterVon'],
-			'zeitfensterBis' => $check['zeitfensterBis'],
-			'vorname' => $person->vorname,
-			'nachname' => $person->nachname,
-			'display' => $display
-		];
-
-		$this->terminateWithSuccess($data);
+		$this->terminateWithSuccess($checkedReflexionen);
 	}
-
-	public function checkBearbeitungOffenForReflexion($lve)
+	public function getReflexionDataByLveLv()
 	{
-		if (!$this->_reflexionZeitfensterDauer)
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$result = $this->LehrveranstaltungModel->getLvLeitung(
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
+		);
+		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+
+		$reflexionenByLveLv = [];
+		foreach ($lves as $lve)
 		{
-			$this->terminateWithError('Missing config entry zeitfensterDauerReflexion');
+			// Build Reflexionen
+			$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
+
+			$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
+				$reflexionen,
+				$lve,
+				$lveLv,
+				$isKfl,
+				$isStgl,
+				$lvLeitung->mitarbeiter_uid
+			);
+
+			$reflexionenByLveLv = array_merge(
+				$reflexionenByLveLv,
+				$checkedReflexionen
+			);
 		}
 
-		// Get Start- and Endedatum of Reflexionszeitraum
-		$zeitfenster = $this->calculateReflexionZeitfenster($lve);
-
-		// Check Sperren
-		$sperreGrund = [];
-		// Check 1: Evaluierungcodes ausgegeben
-		if ($lve->codes_ausgegeben === false) {
-			$sperreGrund[] = 'Keine Evaluierungscodes verschickt';
-		}
-		// Check 2: Zeitfenster offen
-		if ($this->evaluationlib->isZeitfensterOffen($zeitfenster['von'], $zeitfenster['bis']) === false)
-		{
-			$sperreGrund[] = 'Nicht im Bearbeitungszeitraum';
-		}
-
-		// If Sperre found, close Bearbeitung
-		$isBearbeitungOffen = empty($sperreGrund);
-
-		return [
-			'isBearbeitungOffen' => $isBearbeitungOffen,
-			'sperreGrund' => $sperreGrund,
-			'zeitfensterVon' => $zeitfenster['von']->format('d.m.Y'),
-			'zeitfensterBis' => $zeitfenster['bis']->format('d.m.Y')
-		];
+		$this->terminateWithSuccess($reflexionenByLveLv);
 	}
-	public function calculateReflexionZeitfenster($lve)
-	{
-		$endedatum = new DateTime($lve->endezeit);
-
-		$zeitfensterVon = clone $endedatum;
-		$zeitfensterVon->modify('+1 day');	// Endedatum noch für Evaluierung offen, deshalb +1
-
-		$zeitfensterBis = clone ($zeitfensterVon);
-		$zeitfensterBis->modify($this->_reflexionZeitfensterDauer);
-
-		return [
-			'von' => $zeitfensterVon,
-			'bis' => $zeitfensterBis
-		];
-	}
-
 	public function saveOrUpdateReflexion()
 	{
 		$lvevaluierung_reflexion_id = $this->input->post('lvevaluierung_reflexion_id');
@@ -432,6 +405,221 @@ class Evaluation extends FHCAPI_Controller
 		$data = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($data[0]);
+	}
+	private function checkBearbeitungOffenForReflexion($lve)
+	{
+		if (!$this->_reflexionZeitfensterDauer)
+		{
+			$this->terminateWithError('Missing config entry zeitfensterDauerReflexion');
+		}
+
+		// Get Start- and Endedatum of Reflexionszeitraum
+		$zeitfenster = $this->calculateReflexionZeitfenster($lve);
+
+		$sperreGrund = [];
+
+		// Evaluierungcodes ausgegeben
+		if ($lve->codes_ausgegeben === null)
+		{
+			$sperreGrund[] = 'Keine Evaluierungscodes verschickt';
+		}
+		// Zeitfenster offen
+		if ($this->evaluationlib->isZeitfensterOffen($zeitfenster['von'], $zeitfenster['bis']) === false)
+		{
+			$sperreGrund[] = 'Nicht im Bearbeitungszeitraum';
+		}
+
+		// Bearbeitung sperren, wenn es einen Fehler gibt
+		$isBearbeitungOffen = empty($sperreGrund);
+
+		return [
+			'isBearbeitungOffen' => $isBearbeitungOffen,
+			'sperreGrund' => $sperreGrund,
+			'zeitfensterVon' => $zeitfenster['von']->format('d.m.Y'),
+			'zeitfensterBis' => $zeitfenster['bis']->format('d.m.Y')
+		];
+	}
+	private function calculateReflexionZeitfenster($lve)
+	{
+		$endedatum = new DateTime($lve->endezeit);
+
+		$zeitfensterVon = clone $endedatum;
+		$zeitfensterVon->modify('+1 day');	// Endedatum noch für Evaluierung offen, deshalb +1
+
+		$zeitfensterBis = clone ($zeitfensterVon);
+		$zeitfensterBis->modify($this->_reflexionZeitfensterDauer);
+
+		return [
+			'von' => $zeitfensterVon,
+			'bis' => $zeitfensterBis
+		];
+	}
+	private function isReflexionVerpflichtendForUid($lveLv, $uid)
+	{
+		$verpflichtend = true;
+
+		// If Gesamt-LV Evaluierung
+		if ($lveLv->lv_aufgeteilt === false)
+		{
+			// Reflexion is optional for lectors that are not LV-Leitung
+			$isLvLeitung = $this->evaluationlib->isLvLeitung(
+				$uid,
+				$lveLv->lehrveranstaltung_id,
+				$lveLv->studiensemester_kurzbz
+			);
+
+			if($isLvLeitung === false)
+			{
+				$verpflichtend = false;
+			}
+		}
+
+		return $verpflichtend;
+	}
+	private function buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung){
+
+		// Get Lehrende
+		$lektoren = [];
+		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
+		{
+			// Aufgrund Gruppen Logik sollte hier nur ein Lektor zurückgegeben werden
+			$result = $this->LehreinheitmitarbeiterModel->getLektorenByLe($lve->lehreinheit_id);	// Must be only one because of Gruppen logic
+			$lektoren = hasData($result) ? array(getData($result)[0]) : [];	// todo Fallback erster im array noch ändern
+		}
+		else // Gesamt-LV
+		{
+			// Alle Lektoren (LV-Leitung Pflicht, andere optional)
+			$result = $this->LehrveranstaltungModel->getLecturersByLv(
+				$lveLv->studiensemester_kurzbz,
+				$lveLv->lehrveranstaltung_id
+			);
+
+			$lektoren = hasData($result) ? getData($result) : [];
+
+			// LV-Leitung ergänzen, falls nicht Lehrender ist
+			if (!in_array($lvLeitung->mitarbeiter_uid, array_column($lektoren, 'uid')))
+			{
+				$lektoren[]= $lvLeitung;
+			}
+		}
+
+		// ReflexionData
+		$data = [];
+		foreach ($lektoren as $lektor) {
+			$lektorUid = isset($lektor->uid) ? $lektor->uid : $lektor->mitarbeiter_uid;
+
+			$isVerpflichtend = $this->isReflexionVerpflichtendForUid($lveLv, $lektorUid);
+
+			// Get Reflexion
+			$result = $this->LvevaluierungReflexionModel->loadWhere([
+				'lvevaluierung_id' => $lve->lvevaluierung_id,
+				'mitarbeiter_uid' => $lektorUid,
+			]);
+			$reflexion = hasData($result) ? getData($result)[0] : null;
+
+			// ReflexionData immer zurückgeben mit Lektoren Info.
+			// Eigentliche LV-Reflexion kann null sein -> frontend bildet dann leeres Formular zum Bearbeiten
+			$data[] = [
+				'lvevaluierung_reflexion_id' => !is_null($reflexion) ? $reflexion->lvevaluierung_reflexion_id : null,
+				'lvevaluierung_id' => $lve->lvevaluierung_id,
+				'mitarbeiter_uid' => $lektorUid,
+				'lveReflexion' => $reflexion, // kann null sein
+				'vorname' => $lektor->vorname,
+				'nachname' => $lektor->nachname,
+				'isVerpflichtend' => $isVerpflichtend,
+				'isLvLeitung' => $lvLeitung->mitarbeiter_uid === $lektorUid
+			];
+		}
+
+			// Sort: LV-Leitung first
+			usort($data, function($a, $b) {
+				if ($a['isLvLeitung'] === $b['isLvLeitung']) return 0;
+				return $a['isLvLeitung'] ? -1 : 1;
+			});
+
+		return $data;
+
+	}
+	private function filterReflexionenByPermission(
+		$reflexionen,
+		$lveLv,
+		$lvLeitungUid
+	)
+	{
+		$data = [];
+
+		foreach ($reflexionen as $reflexion) {
+			// Gruppen-Evaluierung: nur eigene Reflexion sichtbar
+			if ($lveLv->lv_aufgeteilt && $reflexion['mitarbeiter_uid'] === $this->_uid) {
+				$data[] = $reflexion;
+				continue;
+			}
+
+			// Gesamt-LV Evaluierung
+			if (!$lveLv->lv_aufgeteilt) {
+
+				// Eigene Reflexion sichtbar
+				if ($reflexion['mitarbeiter_uid'] === $this->_uid) {
+					$data[] = $reflexion;
+				}
+
+				// Wenn nicht LV-Leitung: auch Reflexion von LV-Leitung sichtbar
+				if ($this->_uid !== $lvLeitungUid &&
+					$reflexion['mitarbeiter_uid'] === $lvLeitungUid)
+				{
+					$data[] = $reflexion;
+
+				}
+			}
+		}
+		return $data;
+	}
+	private function addZeitfensterAndBearbeitungsChecks(
+		$reflexionen,
+		$lve,
+		$lveLv,
+		$isKfl,
+		$isStgl,
+		$lvLeitungUid
+	)
+	{
+		$data = [];
+
+		$check = $this->checkBearbeitungOffenForReflexion($lve);
+
+		foreach ($reflexionen as $reflexion)
+		{
+			$reflexion['isBearbeitungOffen'] = $check['isBearbeitungOffen'];
+			$reflexion['sperreGrund'] = $check['sperreGrund'];
+			$reflexion['zeitfensterVon'] = $check['zeitfensterVon'];
+			$reflexion['zeitfensterBis'] = $check['zeitfensterBis'];
+
+			$reflexion['display'] = [
+				'showSaveButton' => true,
+				'showEinmeldungButton' => true,
+			];
+
+			// KFL / STGL, aber nur wenn nicht selbst Bearbeiter der Reflexion ist
+			if (($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid)
+			{
+				$reflexion['isBearbeitungOffen'] = false;
+				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
+			}
+
+			// Gesamt LV + fremde LV Leitung Reflexion
+			if (
+				!$lveLv->lv_aufgeteilt
+				&& $this->_uid !== $lvLeitungUid
+				&& $reflexion['mitarbeiter_uid'] === $lvLeitungUid
+			) {
+				$reflexion['isBearbeitungOffen'] = false;
+				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
+			}
+
+			$data[] = $reflexion;
+		}
+
+		return $data;
 	}
 	//------------------------------------------------------------------------------------------------------------------
 	// Evaluation Studiengaenge
