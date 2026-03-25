@@ -393,7 +393,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$data['verpflichtend'] = $this->isReflexionVerpflichtendForUid($lveLv, $this->_uid);
 
-		// Insert / Update Selbstreflexion
+		// Insert / Update Reflexion
 		if (!$lvevaluierung_reflexion_id)
 		{
 			unset($data['lvevaluierung_reflexion_id']);
@@ -401,17 +401,25 @@ class Evaluation extends FHCAPI_Controller
 			$data['mitarbeiter_uid'] = $this->_uid;
 			$data['insertvon'] = $this->_uid;
 
+			// Insert
 			$result = $this->LvevaluierungReflexionModel->insert($data);
 		}
 		else
 		{
-			$data['updatevon'] = $this->_uid;
-			$data['updateamum'] = 'NOW()';
+			$result = $this->LvevaluierungReflexionModel->load($lvevaluierung_reflexion_id);
+			$reflexion = hasData($result) ? getData($result)[0] : null;
 
-			$result = $this->LvevaluierungReflexionModel->update(
-				$data['lvevaluierung_reflexion_id'],
-				$data
-			);
+			// Update only if user is owner of Reflexion
+			if ($reflexion && $reflexion->mitarbeiter_uid === $this->_uid)
+			{
+				$data['updatevon'] = $this->_uid;
+				$data['updateamum'] = 'NOW()';
+
+				$result = $this->LvevaluierungReflexionModel->update(
+					$data['lvevaluierung_reflexion_id'],
+					$data
+				);
+			}
 		}
 
 		$data = $this->getDataOrTerminateWithError($result);
