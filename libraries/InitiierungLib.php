@@ -412,7 +412,7 @@ class InitiierungLib
 
 			//...return true if double Spezialgruppe
 			if (!empty($row->gruppe_kurzbz)) {
-				if(in_array($spzgrps, $row->gruppe_kurzbz))
+				if (in_array($row->gruppe_kurzbz, $spzgrps))
 				{
 					return true;
 				}
