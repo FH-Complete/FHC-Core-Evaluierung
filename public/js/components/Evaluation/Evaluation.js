@@ -32,8 +32,8 @@ export default {
 				einmeldung: 0
 			},
 			evaluationView: {
-				open: false,
-				msg: 'Keine Daten vorhanden'
+				open: null,
+				msg: ''
 			}
 		}
 	},
@@ -56,6 +56,13 @@ export default {
 					this.evaluationView.msg = this.evalData.evaluationView.msg
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
+		}
+		else {
+			// If no Lve ID or LveLv ID
+			this.evaluationView = {
+				open: false,
+				msg: 'Keine Daten vorhanden'
+			}
 		}
 	},
 	computed: {
@@ -232,7 +239,7 @@ export default {
 				</div>
 			</div>
 			<!-- Alert, only if no existing data or evaluation period still running -->
-			<div v-if="!evaluationView.open" class="alert alert-warning d-flex align-items-center mt-3" role="alert">
+			<div v-if="evaluationView.open === false" class="alert alert-warning d-flex align-items-center mt-3" role="alert">
 				<i class="fa fa-triangle-exclamation me-2"></i>
 				<div>{{ evaluationView.msg }}</div>
 			</div>
