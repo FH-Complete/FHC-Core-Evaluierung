@@ -30,6 +30,10 @@ export default {
 				auswertung: 0,
 				reflexion: 0,
 				einmeldung: 0
+			},
+			evaluationView: {
+				open: false,
+				msg: 'Keine Daten vorhanden'
 			}
 		}
 	},
@@ -46,7 +50,11 @@ export default {
 
 			this.$api
 				.call(apiCall)
-				.then(result => this.evalData = result.data)
+				.then(result => {
+					this.evalData = result.data;
+					this.evaluationView.open = this.evalData.evaluationView.open;
+					this.evaluationView.msg = this.evalData.evaluationView.msg
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
@@ -83,14 +91,6 @@ export default {
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
-		},
-		showAlert() {
-			return (
-				(this.lvevaluierung_id === null && this.lvevaluierung_lehrveranstaltung_id === null) ||
-				this.evalData?.endezeit === null ||
-				Date.now() < new Date(this.evalData?.endezeit.replace(' ', 'T')).getTime() ||
-				this.evalData?.codes_ausgegeben === null
-			)
 		}
 	},
 	methods: {
@@ -232,9 +232,9 @@ export default {
 				</div>
 			</div>
 			<!-- Alert, only if no existing data or evaluation period still running -->
-			<div v-if="showAlert" class="alert alert-warning d-flex align-items-center" role="alert">
+			<div v-if="!evaluationView.open" class="alert alert-warning d-flex align-items-center mt-3" role="alert">
 				<i class="fa fa-triangle-exclamation me-2"></i>
-				<div>Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div>
+				<div>{{ evaluationView.msg }}</div>
 			</div>
 		  	<!-- Dynamic content -->
 			<keep-alive>

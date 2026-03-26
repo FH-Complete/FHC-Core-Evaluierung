@@ -88,6 +88,24 @@ class Evaluation extends FHCAPI_Controller
 		// For min/max duration
 		$durations = $this->getDurations($submittedLveCodes);
 
+		// Permission check
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+
+		// Evaluation open check
+		$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
+		$isEvaluationViewOpenMsg = null;
+
+		if (!$isEvaluationViewOpen)
+		{
+			$lektorOfLve = $this->getLehrendeByLve($lve, $lveLv);
+			$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
+
+			$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
+				? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
+				: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+		}
+
 		$data = array_merge(
 			(array) $lveLv,
 			(array) $lvData,
@@ -99,7 +117,12 @@ class Evaluation extends FHCAPI_Controller
 			['startzeit' => $lve->startzeit],
 			['endezeit' => $lve->endezeit],
 			['minDuration' => $durations ? min($durations) : 0],
-			['maxDuration' => $durations ? max($durations) : 0]
+			['maxDuration' => $durations ? max($durations) : 0],
+			['evaluationView' => [
+				'open' => $isEvaluationViewOpen,
+				'msg' => $isEvaluationViewOpenMsg,
+				]
+			]
 		);
 
 		$this->terminateWithSuccess($data);
@@ -145,6 +168,42 @@ class Evaluation extends FHCAPI_Controller
 		// Min startzeit / max endezeit overall Evaluierungen
 		$periodTimes = $this->getPeriodTimes($lves);
 
+		// Permission check
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+
+		// Evaluation open check
+		$isEvaluationViewOpen = true;
+		$now = new DateTime();
+
+		if (empty($lves))
+		{
+			$isEvaluationViewOpen = false;
+		}
+
+		// Prüfe: irgendeine LVE hat keine Codes oder kein Endezeit
+		foreach ($lves as $lve) {
+			if ($lve->codes_ausgegeben === null || $lve->codes_ausgegeben === 0 || $lve->endezeit === null)
+			{
+				$isEvaluationViewOpen = false;
+				break;
+			}
+		}
+
+		// Prüfe: irgendeine Evaluierungsperiode ist noch nicht abgeschlossen
+		$maxEndezeit = new DateTime($periodTimes['maxEndezeit']);
+		if ($isEvaluationViewOpen && $now < $maxEndezeit) {
+			$isEvaluationViewOpen = false;
+		}
+
+		// Evaluation Open Message
+		$isEvaluationViewOpenMsg = null;
+		if (!$isEvaluationViewOpen) {
+			$isEvaluationViewOpenMsg = ($isKfl || $isStgl)
+				? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
+				: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+		}
+
 		$data = array_merge(
 			(array) $lveLv,
 			(array) $lvData,
@@ -156,7 +215,12 @@ class Evaluation extends FHCAPI_Controller
 			['startzeit' => $periodTimes['minStartzeit']],
 			['endezeit' => $periodTimes['maxEndezeit']],
 			['minDuration' => $durations ? min($durations) : 0],
-			['maxDuration' => $durations ? max($durations) : 0]
+			['maxDuration' => $durations ? max($durations) : 0],
+			['evaluationView' => [
+				'open' => $isEvaluationViewOpen,
+				'msg' => $isEvaluationViewOpenMsg
+				]
+			]
 		);
 
 		$this->terminateWithSuccess($data);
@@ -172,11 +236,11 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
 
-		// Return if Evaluation period is still running
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
 
-		if ($now < $lve->endezeit) {
+		// Return if Evaluation not accessible
+		if (!$this->isEvaluationViewOpen($lve))
+		{
 			$this->terminateWithSuccess([]);
 		}
 
@@ -210,12 +274,19 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
-		// Return if Evaluation period is still running
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		// Return if Evaluation period is still running
 		$periodTimes = $this->getPeriodTimes($lves);
 		$now = (new DateTime())->format('Y-m-d H:i:s');
+		if ($now < $periodTimes['maxEndezeit'])
+		{
+			$this->terminateWithSuccess([]);
+		}
 
-		if ($now < $periodTimes['maxEndezeit']) {
+		// Return if students did not get codes yet
+		$codes = array_column($lves, 'codes_ausgegeben');
+		if (in_array(null, $codes, true)) {
 			$this->terminateWithSuccess([]);
 		}
 
@@ -311,8 +382,8 @@ class Evaluation extends FHCAPI_Controller
 		);
 		$lvLeitung = hasData($result) ? getData($result)[0] : null;
 
-		// Return if students did not get codes yet
-		if ($lve->codes_ausgegeben === null)
+		// Skip if Evaluation period is still running or students did not get codes yet
+		if (!$this->isEvaluationViewOpen($lve))
 		{
 			$this->terminateWithSuccess([]);
 		}
@@ -356,8 +427,8 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionenByLveLv = [];
 		foreach ($lves as $lve)
 		{
-			// Skip if students did not get codes yet
-			if ($lve->codes_ausgegeben === null)
+			// Skip if Evaluation period is still running or students did not get codes yet
+			if (!$this->isEvaluationViewOpen($lve))
 			{
 				continue;
 			}
@@ -438,11 +509,6 @@ class Evaluation extends FHCAPI_Controller
 
 		$sperreGrund = [];
 
-		// Evaluierungcodes ausgegeben
-		if ($lve->codes_ausgegeben === null)
-		{
-			$sperreGrund[] = 'Keine Evaluierungscodes verschickt';
-		}
 		// Zeitfenster offen
 		if ($this->evaluationlib->isZeitfensterOffen($zeitfenster['von'], $zeitfenster['bis']) === false)
 		{
@@ -789,7 +855,7 @@ class Evaluation extends FHCAPI_Controller
 		{
 			$this->terminateWithError("Die Verbindlichkeit darf zu diesem Zeitpunkt nicht mehr geändert werden");
 		}
-		
+
 		$result = $this->LvevaluierungLehrveranstaltungModel->update(
 			$lvevaluierung_lehrveranstaltung_id,
 			['verpflichtend' => $isVerpflichtend]
@@ -830,6 +896,32 @@ class Evaluation extends FHCAPI_Controller
 	// -----------------------------------------------------------------------------------------------------------------
 	// Helper methods
 	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Return if Evaluation has not been ended yet, Evaluation period is still running or codes were not even sent.
+	 *
+	 * @param $lve
+	 * @return bool
+	 */
+	private function isEvaluationViewOpen($lve)
+	{
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+
+		// Für KFL und STGL Evaluierungsansicht öffnen, wenn LV-Reflexionszeitraum abgeschlossen
+		if ($isKfl || $isStgl)
+		{
+			// todo zeitraum berechnen!!!
+		}
+
+		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitraum abgeschlossen
+		$now = (new DateTime())->format('Y-m-d H:i:s');
+		return !(
+			$lve->codes_ausgegeben === null ||
+			$lve->endezeit === null ||
+			$now < $lve->endezeit
+		);
+	}
 	/**
 	 * Calculate all durations in minutes.
 	 *

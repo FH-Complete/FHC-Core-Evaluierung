@@ -236,7 +236,7 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
 			<h4 class="mt-5 mb-3">Textantworten</h4>
@@ -255,11 +255,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-3">Profillinien</h4>
-			<div class="row align-items-stretch g-3">
+			<div v-if="auswertungData.length > 0" class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">
 						<div class="card-body">
@@ -275,6 +275,7 @@ export default {
 					</div>
 				</div>
 			</div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
 		</div>
 	</div>	
 	`

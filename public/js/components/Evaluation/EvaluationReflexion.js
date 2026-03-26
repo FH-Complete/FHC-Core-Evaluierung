@@ -54,7 +54,7 @@ export default {
 					<evaluation-reflexion-form :reflexion="reflexion"></evaluation-reflexion-form>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
 		</div>
 	</div>	
 	`
