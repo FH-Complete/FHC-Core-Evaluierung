@@ -914,7 +914,7 @@ class Evaluation extends FHCAPI_Controller
 			// todo zeitraum berechnen!!!
 		}
 
-		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitraum abgeschlossen
+		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitfenster abgeschlossen
 		$now = (new DateTime())->format('Y-m-d H:i:s');
 		return !(
 			$lve->codes_ausgegeben === null ||

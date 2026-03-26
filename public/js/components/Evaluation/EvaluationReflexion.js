@@ -44,7 +44,7 @@ export default {
 		<h3 class="mb-4">LV-Reflexion</h3>
 		<!-- Abschnitt Reflexionen der Lehrenden -->
 		<div class="evaluation-evaluation-reflexion-formulare mb-3">
-			<h4 class="mt-5 mb-3">LV-Reflexionen</h4>
+			<h4 class="mt-5 mb-4">LV-Reflexionen</h4>
 			<div v-if="reflexionen.length > 0" class="row py-4 mb-3 gy-3 bg-light">
 				<div 
 					v-for="(reflexion, index) in reflexionen"
