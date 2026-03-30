@@ -122,11 +122,11 @@ export default {
 	template: `
 		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 			<!-- Card title -->
-			<div class="card-header d-flex justify-content-between align-items-center">
+			<div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
-						class="btn btn-outline-secondary"
+						class="btn btn-outline-secondary w-100 w-md-auto"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
 						<i class="fa fa-square-poll-horizontal me-2"></i>Ergebnisse LV-Evaluierung und LV-Reflexion
