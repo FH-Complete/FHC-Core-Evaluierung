@@ -10,7 +10,7 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id', 'selected_view'],
+	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id', 'lehrveranstaltung_template_id', 'selected_view'],
 	data() {
 		return {
 			evalData: {
@@ -66,6 +66,14 @@ export default {
 		}
 	},
 	computed: {
+		lvTemplateId() {
+			if (this.lehrveranstaltung_template_id){
+				return this.lehrveranstaltung_template_id;
+			}
+			else if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
+				return this.evalData.lehrveranstaltung_template_id;
+			}
+		},
 		selectedComponent() {
 			if (this.selectedView === 'auswertung') return 'Evaluation-Auswertung'
 			if (this.selectedView === 'reflexion') return 'Evaluation-Reflexion'
@@ -260,6 +268,7 @@ export default {
 					:is="selectedComponent" 
 					:lvevaluierung_id="lvevaluierung_id"
     				:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
+    				:lvevaluierung_template_id="lvTemplateId"
 					@open-einmeldung="changeView('einmeldung')"
 					class="d-block mt-5"
 				></component>
