@@ -60,6 +60,12 @@ export default {
 		},
 		chartOptionsLvImZeitverlauf() {
 			return this.createTimelineChart(this.auswertungData);
+		},
+		openAuswertungHelpUrl() {
+			// todo link to CIS
+			const link = FHC_JS_DATA_STORAGE_OBJECT.app_root
+					+ 'cis/'
+			window.open(link, '_blank')
 		}
 	},
 	methods: {
@@ -256,7 +262,13 @@ export default {
 	},
 	template: `
 	<div class="evaluation-evaluation-auswertung">
-		<h3 class="mb-4">Ergebnisse LV-Evaluierung</h3>
+		<div class="d-flex flex-column flex-sm-row align-items-baseline gap-md-3">
+			<h3 class="mb-4">Ergebnisse LV-Evaluierung</h3>
+<!--			<a href="#" class="" @click.prevent="openAuswertungHelpUrl()">-->
+<!--				<i class="fa fa-external-link"></i>-->
+<!--				Erläuterungen Ergebnisse-->
+<!--			</a>-->
+		</div>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
 			<h4 class="mt-5 mb-4">1. Auswertung Einzelfragen</h4>
 			<div v-if="auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
