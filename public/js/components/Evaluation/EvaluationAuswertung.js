@@ -155,7 +155,6 @@ export default {
 			}
 		},
 		createTimelineChart(fbGruppen) {
-			console.log(fbGruppen);
 			const yearKeys = ["actYear", "actYearMin1", "actYearMin2"];
 			const yearNames = ["Aktuelles Jahr", "Letztes Jahr", "Vor 2 Jahren"];
 			return {
