@@ -115,7 +115,7 @@ export default {
 					<!-- Badge Reflexion verpflichtend/optional -->
 					<div class="d-flex justify-content-end">
 <!--						<span class="badge" :class="reflexion.isVerpflichtend ? 'bg-primary' : 'border border-1 border-secondary-subtle text-secondary'">-->
-						<span class="badge border border-1 border-secondary-subtle text-secondary"">
+						<span class="badge border border-1 border-secondary-subtle text-secondary">
 							{{ reflexion.isVerpflichtend ? 'Reflexion verpflichtend' : 'Reflexion optional' }}
 						</span>
 					</div>
