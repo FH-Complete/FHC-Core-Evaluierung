@@ -16,6 +16,7 @@ export default {
 			required: true
 		}
 	},
+	emits: ['openEinmeldung'],
 	data() {
 		return {
 		}
@@ -103,6 +104,9 @@ export default {
 	 				.then(() => this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert')))
 	 				.catch(this.$fhcAlert.handleSystemError);
 			}
+		},
+		openEinmeldung(){
+			this.$emit('openEinmeldung');
 		}
 	},
 	template: `
@@ -260,6 +264,7 @@ export default {
 					type="submit" 
 					class="btn btn-primary me-2 w-100" 
 					:disabled="isDisabledSubmitBtn"
+					@click.prevent="openEinmeldung()"
 				>
 					Neue Einmeldung
 				</button>

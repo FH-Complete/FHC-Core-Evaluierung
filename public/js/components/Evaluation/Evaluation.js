@@ -260,6 +260,7 @@ export default {
 					:is="selectedComponent" 
 					:lvevaluierung_id="lvevaluierung_id"
     				:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
+					@open-einmeldung="changeView('einmeldung')"
 					class="d-block mt-5"
 				></component>
 			</keep-alive>

@@ -16,6 +16,7 @@ export default {
 			default: null
 		}
 	},
+	emits: ['openEinmeldung'],
 	data() {
 		return {
 			reflexionen: []
@@ -37,7 +38,9 @@ export default {
 
 	},
 	methods: {
-
+		openEinmeldung() {
+			this.$emit('openEinmeldung');
+		},
 	},
 	template: `
 	<div class="evaluation-evaluation-reflexion">
@@ -51,7 +54,11 @@ export default {
 					:key="reflexion.lvevaluierung_id + '-' + index"
 					class="col-lg-6 col-xl-4"
 				>
-					<evaluation-reflexion-form :reflexion="reflexion"></evaluation-reflexion-form>
+					<evaluation-reflexion-form 
+						:reflexion="reflexion"
+						@open-einmeldung="openEinmeldung"
+					>
+					</evaluation-reflexion-form>
 				</div>
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
