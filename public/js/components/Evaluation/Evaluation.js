@@ -244,7 +244,7 @@ export default {
 								<td>{{ formattedEvalPeriod }}</td>
 							</tr>
 							<tr>
-								<th>Durchführungszeitraum (in min)</th>
+								<th>Bearbeitungszeit (in min)</th>
 								<td>
 									<div class="d-flex justify-content-between">
 										<span>Ø {{ avgDuration }}</span>
