@@ -660,7 +660,7 @@ class Initiierung extends FHCAPI_Controller
 	{
 		if (!$lvevaluierung_id)
 		{
-			$this->terminateWithError('Evaluierung needs to be initialised by saving Start- end Endzeit.');
+			$this->terminateWithError('Missing Lvevaluierung ID');
 		}
 
 		$result = $this->LvevaluierungModel->load($lvevaluierung_id);
