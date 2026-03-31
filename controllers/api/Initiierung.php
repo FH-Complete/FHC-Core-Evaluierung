@@ -602,8 +602,8 @@ class Initiierung extends FHCAPI_Controller
 
 		if (isEmptyString($startzeit)) return true; // 'required' rule handles missing field
 
-		$nowDate   = (new DateTime())->format('Y-m-d');
-		$startDate = (new DateTime($startzeit))->format('Y-m-d');
+		$nowDate   = new DateTime();
+		$startDate = new DateTime($startzeit);
 
 		return $nowDate <= $startDate;
 	}
