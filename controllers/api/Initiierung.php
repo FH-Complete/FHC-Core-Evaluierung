@@ -349,7 +349,12 @@ class Initiierung extends FHCAPI_Controller
 		}
 		else
 		{
-			$this->exitIfStartzeitPassed($data['lvevaluierung_id']);
+			$lve = $this->getLvevaluierungOrFail($data['lvevaluierung_id']);
+
+			if ($lve->codes_gemailt)
+			{
+				$this->terminateWithError('Cannot update after LV-Evaluierung was already sent to students.');
+			}
 
 			$result = $this->LvevaluierungModel->updateLvevaluierung($data);
 		}
@@ -522,19 +527,15 @@ class Initiierung extends FHCAPI_Controller
 				}
 			}
 
-			// Case: Evaluierung bereits gestartet: Update nicht mehr möglich
-			if ($lvevaluierung_id && !empty($item->startzeit)) {
-				$today = new DateTime('today');
-				$startzeit = new DateTime(date('Y-m-d', strtotime($item->startzeit)));
+			// Case: Evaluierungscodes bereits versendet: Update nicht mehr möglich
+			if ($item->codes_gemailt && $item->codes_ausgegeben !== null && $item->codes_ausgegeben > 0) {
 
-				if ($today > $startzeit) {
-					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Evaluierungszeitfenster kann nicht mehr verändert werden, da Studierenden bereits eingeladen wurden.'];
-				}
+				$isDisabledEvaluierung = true;
+				$isDisabledEvaluierungInfo = ['Evaluierungszeitfenster kann nicht mehr verändert werden, da Studierenden bereits eingeladen wurden.'];
+
 			}
 
-			// Case: Evaluierung was not started, but all students were mailed by other Evaluierung
-			//if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
+			// Case: Evaluierungscodes bereits durch diese oder andere Evaluierung versendet: Update nicht mehr möglich
 			if (count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
 			{
 				$isDisabledEvaluierung = true;
