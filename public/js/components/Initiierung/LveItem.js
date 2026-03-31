@@ -233,18 +233,16 @@ export default {
 									Speichern
 								</button>
 							</div>
-<!--							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	-->
-<!--								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>-->
-<!--								<i -->
-<!--									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"-->
-<!--									class="fa fa-ban fa-lg text-muted" -->
-<!--									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
-<!--									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
-<!--									data-bs-html="true"-->
-<!--									data-bs-custom-class="tooltip-left">-->
-<!--								</i>-->
-<!--								&lt;!&ndash; span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>&ndash;&gt;-->
-<!--							</div>-->
+							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	
+								<i 
+									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"
+									class="fa fa-ban fa-lg text-muted" 
+									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									data-bs-html="true"
+									data-bs-custom-class="tooltip-left">
+								</i>
+							</div>
 						</div><!--.d-flex -->
 					</div><!--.col -->
 					</div><!--.row-->
