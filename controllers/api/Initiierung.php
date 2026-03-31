@@ -461,9 +461,10 @@ class Initiierung extends FHCAPI_Controller
 		$this->form_validation->set_rules(
 			'endezeit',
 			'Endezeit',
-			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']'
+			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitNotPast[' . $data['lvevaluierung_id'] . ']'
 		);
 		$this->form_validation->set_message('checkEndezeitAfterStartzeit', $this->p->t('ui', 'datumEndeVorDatumStart'));
+		$this->form_validation->set_message('checkEndezeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
 
 		// If Evaluierung is done by Lehreinheit
 		$lv_aufgeteilt = $this->initiierunglib->isLvAufgeteilt($data['lvevaluierung_lehrveranstaltung_id']);
@@ -614,15 +615,17 @@ class Initiierung extends FHCAPI_Controller
 	 * @return void
 	 * @throws DateMalformedStringException
 	 */
-	public function exitIfStartzeitPassed($lvevaluierung_id)
+	public function checkEndezeitNotPast($endezeit, $lvevaluierung_id)
 	{
-		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$nowDate   = (new DateTime())->format('Y-m-d');
-		$startDate = (new DateTime($lve->startzeit))->format('Y-m-d');
-		if ($nowDate > $startDate)
-		{
-			$this->terminateWithError('Cannot update after LV-Evaluierung has already startet.');
-		}
+		// Return if Evaluierung already exist
+		if (is_numeric($lvevaluierung_id)) return true;
+
+		if (isEmptyString($endezeit)) return true; // 'required' rule handles missing field
+
+		$nowDate   = new DateTime();
+		$endDate = new DateTime($endezeit);
+
+		return $nowDate <= $endDate;
 	}
 
 	/**
