@@ -219,15 +219,15 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Only LV-Leitung can edit'];
+				$canSwitchInfo = ['Bearbeitung nur durch LV-Leitung möglich'];
 
 				// User cannot start Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Only LV-Leitung can edit'];
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Bearbeitung nur durch LV-Leitung möglich'];
 
 				// User cannot send mails for Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Only LV-Leitung can send'];
+				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Versenden nur durch LV-Leitung möglich'];
 			}
 		}
 
