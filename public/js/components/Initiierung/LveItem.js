@@ -40,8 +40,10 @@ export default {
 				.then(result => {
 					if (result.data?.lvevaluierung_id) {
 						lveLvDetail.lvevaluierung_id = result.data.lvevaluierung_id;
-						lveLvDetail.insertamum = DateHelper.formatDate(result.data.insertamum);
-						lveLvDetail.insertvon = result.data.insertvon;
+						lveLvDetail.insertamum = result.data.insertamum;
+						lveLvDetail.insertvonFullName = result.data.insertvonFullName;
+						lveLvDetail.updateamum = result.data.updateamum;
+						lveLvDetail.updatevonFullName = result.data.updatevonFullName;
 
 						this.$emit('update-editable-checks');
 
@@ -105,11 +107,17 @@ export default {
 			return stundenplan.map(s => DateHelper.formatDate(s.datum)).join('<br>');
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
-			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
-			return `
-				Gespeichert am ${DateHelper.formatDate(lveLvDetail.insertamum)} 
-				von ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
-			`;
+			const isUpdate = lveLvDetail.updateamum != null;
+
+			const lektor = isUpdate
+					? lveLvDetail.updatevonFullName
+					: lveLvDetail.insertvonFullName;
+
+			const date = isUpdate
+					? lveLvDetail.updateamum
+					: lveLvDetail.insertamum;
+
+			return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +

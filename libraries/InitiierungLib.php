@@ -205,6 +205,27 @@ class InitiierungLib
 				$item->codes_ausgegeben = $evalMatch->codes_ausgegeben;
 				$item->insertvon        = $evalMatch->insertvon;
 				$item->insertamum       = $evalMatch->insertamum;
+				$item->updatevon        = $evalMatch->updatevon;
+				$item->updateamum       = $evalMatch->updateamum;
+
+				$item->insertvonFullName = '';
+				$item->updatevonFullName = '';
+				if ($evalMatch->insertvon || $evalMatch->updatevon)
+				{
+					$this->_ci->load->model('person/Person_model', 'PersonModel');
+					if ($evalMatch->insertvon)
+					{
+
+						$result = $this->_ci->PersonModel->getFullName($evalMatch->insertvon);
+						$item->insertvonFullName = hasData($result) ? getData($result) : '';
+					}
+
+					if ($evalMatch->updatevon)
+					{
+						$result = $this->_ci->PersonModel->getFullName($evalMatch->updatevon);
+						$item->updatevonFullName = hasData($result) ? getData($result) : '';
+					}
+				}
 			}
 			else
 			{
@@ -220,6 +241,10 @@ class InitiierungLib
 				$item->codes_ausgegeben = 0;
 				$item->insertvon        = '';
 				$item->insertamum       = '';
+				$item->updatevon        = '';
+				$item->updateamum       = '';
+				$item->insertvonFullName = '';
+				$item->updatevonFullName = '';
 			}
 		}
 
