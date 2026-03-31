@@ -54,7 +54,7 @@ export default {
 							:href="'#' + collapseId" 
 							role="button" aria-expanded="false" 
 							:aria-controls="collapseId"
-						>Mehr Infos anzeigen <!-- todo: english -->
+						>Mehr Infos anzeigen
 						</a>
 					</div>
 					<div class="collapse mt-2" :id="collapseId">

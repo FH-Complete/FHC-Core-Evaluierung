@@ -279,7 +279,6 @@ class InitiierungLib
 		}
 		else
 		{
-			// todo check mit Ösi: config ok?
 			if ($this->_ci->config->item('lvLeitungRequired'))
 			{
 				return error('No LV-Leitung assigned for this LV.');
