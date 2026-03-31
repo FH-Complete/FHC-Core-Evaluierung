@@ -134,6 +134,7 @@ export default {
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
+						v-if="lveLvDetail.editableCheck.isRenderedBtnAuswertung"
 						class="btn btn-outline-secondary w-100 w-md-auto"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>

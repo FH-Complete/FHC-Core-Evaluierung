@@ -500,6 +500,8 @@ class Initiierung extends FHCAPI_Controller
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
 
+			$isRenderedBtnAuswertung = true;
+
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
 			if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) < count($studenten))
 			{
@@ -519,15 +521,6 @@ class Initiierung extends FHCAPI_Controller
 				$isDisabledEvaluierung = true;
 			}
 
-			// Case: LV aufgeteilt: nur Lektor darf bearbeiten
-			if ($item->lv_aufgeteilt)
-			{
-				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
-					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
-				}
-			}
-
 			// Case: Evaluierungscodes bereits versendet: Update nicht mehr möglich
 			if ($item->codes_gemailt && $item->codes_ausgegeben !== null && $item->codes_ausgegeben > 0) {
 
@@ -541,6 +534,18 @@ class Initiierung extends FHCAPI_Controller
 			{
 				$isDisabledEvaluierung = true;
 				$isDisabledEvaluierungInfo []= 'Students were mailed by other Evaluierung of this LV';
+			}
+
+			// Case: LV aufgeteilt: nur Lektor darf bearbeiten (alle vorherigen Meldungen überschreiben)
+			if ($item->lv_aufgeteilt)
+			{
+				if (!in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
+					$isDisabledEvaluierung = true;
+					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
+
+					// NOTE: verhindert dass LV-Leitung auf Auswertung einer Gruppe sehen kann, wenn nicht selbst Lektor
+					$isRenderedBtnAuswertung = false;
+				}
 			}
 
 
@@ -569,7 +574,8 @@ class Initiierung extends FHCAPI_Controller
 				'isDisabledEvaluierung' => $isDisabledEvaluierung,
 				'isDisabledEvaluierungInfo' => $isDisabledEvaluierungInfo,
 				'isDisabledSendMail' => $isDisabledSendMail,
-				'isDisabledSendMailInfo' => $isDisabledSendMailInfo
+				'isDisabledSendMailInfo' => $isDisabledSendMailInfo,
+				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung
 			];
 		}
 
