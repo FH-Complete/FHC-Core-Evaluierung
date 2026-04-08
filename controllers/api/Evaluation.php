@@ -196,6 +196,14 @@ class Evaluation extends FHCAPI_Controller
 			$isEvaluationViewOpen = false;
 		}
 
+		if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')))
+		{
+			$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForAllLvesInLveLv($lvevaluierung_lehrveranstaltung_id);
+			if (!$isReflexionszeitRaumAbgeschlossen)
+			{
+				$isEvaluationViewOpen = false;
+			}
+		}
 		// Evaluation Open Message
 		$isEvaluationViewOpenMsg = null;
 		if (!$isEvaluationViewOpen) {
@@ -897,7 +905,11 @@ class Evaluation extends FHCAPI_Controller
 		// Für KFL und STGL Evaluierungsansicht öffnen, wenn LV-Reflexionszeitraum abgeschlossen
 		if ($isKfl || $isStgl)
 		{
-			// todo zeitraum berechnen!!!
+			$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
+			if (!$isReflexionszeitRaumAbgeschlossen)
+			{
+				return false;
+			}
 		}
 
 		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitfenster abgeschlossen
