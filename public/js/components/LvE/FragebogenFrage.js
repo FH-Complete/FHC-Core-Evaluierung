@@ -71,6 +71,7 @@ export default {
 						{{ frage.bezeichnung_by_language }}
 						<span v-if="frage.verpflichtend" aria-hidden="true"> *</span>
 						<span v-if="frage.verpflichtend" class="visually-hidden">(Pflichtfrage)</span>
+						<span v-else class="visually-hidden">(optional)</span>
 				    </div>
 				    
 				     <!-- Answer Options -->
