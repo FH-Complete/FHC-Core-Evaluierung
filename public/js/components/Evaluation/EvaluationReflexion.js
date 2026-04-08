@@ -14,6 +14,9 @@ export default {
 		lvevaluierung_lehrveranstaltung_id: {
 			type: [String, Number],
 			default: null
+		},
+		evaluationViewOpen: {
+			type: Boolean,
 		}
 	},
 	emits: ['openEinmeldung'],
@@ -48,7 +51,7 @@ export default {
 		<!-- Abschnitt Reflexionen der Lehrenden -->
 		<div class="evaluation-evaluation-reflexion-formulare mb-3">
 			<h4 class="mt-5 mb-4">LV-Reflexionen</h4>
-			<div v-if="reflexionen.length > 0" class="row py-4 mb-3 gy-3 bg-light">
+			<div v-if="evaluationViewOpen && reflexionen.length > 0" class="row py-4 mb-3 gy-3 bg-light">
 				<div 
 					v-for="(reflexion, index) in reflexionen"
 					:key="reflexion.lvevaluierung_id + '-' + index"

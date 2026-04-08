@@ -19,6 +19,11 @@ export default {
 
 		}
 	},
+	props:  {
+		evaluationViewOpen: {
+			type: Boolean,
+		}
+	},
 	computed: {
 	},
 	methods: {
@@ -26,7 +31,7 @@ export default {
 	template: `
 	<div class="evaluation-evaluation-einmeldung">
 		<h3 class="mb-4">Einmeldung LV Weiterentwicklung</h3>
-		<div class="row mb-3">
+		<div v-if="evaluationViewOpen" class="row mb-3">
 			<div class="col-12 mb-3">
 				<div class="card">
 						<div class="card-body d-flex">
@@ -51,6 +56,7 @@ export default {
 				</div>
 			</div>
 		</div>
+		<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
 	</div>	
 	`
 }

@@ -81,61 +81,73 @@ class Evaluation extends FHCAPI_Controller
 		$lehrende = hasData($result) ? getData($result) : [];
 
 		if (
-			!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) &&
-			!in_array($this->_uid, array_column($lehrende, 'uid')) &&
-			!$isKfl &&
-			!$isStgl
-		)
+			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			$isKfl ||
+			$isStgl
+		) {
+
+			// Abgeschickte Frageboegen, Ruecklaufquote
+			$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLve($lve->lvevaluierung_id);
+			$submittedLveCodes = hasData($result) ? getData($result) : [];
+			$countSubmitted = count($submittedLveCodes);
+			$ruecklaufquote = null;
+			if ($lve->codes_ausgegeben !== null && $lve->codes_ausgegeben > 0) {
+				$ruecklaufquote = round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2);
+			}
+
+			// For min/max duration
+			$durations = $this->getDurations($submittedLveCodes);
+
+			// Evaluation open check
+			$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
+			$isEvaluationViewOpenMsg = null;
+
+			if (!$isEvaluationViewOpen) {
+				$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv);
+				$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
+
+				$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
+					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
+					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+			}
+
+			$data = array_merge(
+				(array)$lveLv,
+				(array)$lvData,
+				['lvLeitungen' => $lvLeitungen],
+				['lehrende' => $lehrende],
+				['codes_ausgegeben' => $lve->codes_ausgegeben],
+				['countSubmitted' => $countSubmitted],
+				['ruecklaufquote' => $ruecklaufquote],
+				['startzeit' => $lve->startzeit],
+				['endezeit' => $lve->endezeit],
+				['minDuration' => $durations ? min($durations) : 0],
+				['maxDuration' => $durations ? max($durations) : 0]
+			);
+
+			$response = [
+				'data' => $data,
+				'evaluationView' => [
+					'open' => $isEvaluationViewOpen,
+					'msg'  => $isEvaluationViewOpenMsg,
+				],
+			];
+
+			$this->terminateWithSuccess($response);
+		}
+		else
 		{
-			$this->terminateWithError('Keine Berechtigung zur Ansicht dieser Evaluation');
+			$response = [
+				'data' => null,
+				'evaluationView' => [
+					'open' => false,
+					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation'
+				],
+			];
+
+			$this->terminateWithSuccess($response);
 		}
-
-		// Abgeschickte Frageboegen, Ruecklaufquote
-		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLve($lve->lvevaluierung_id);
-		$submittedLveCodes = hasData($result) ? getData($result) : [];
-		$countSubmitted = count($submittedLveCodes);
-		$ruecklaufquote = null;
-		if ($lve->codes_ausgegeben !== null && $lve->codes_ausgegeben > 0) {
-			$ruecklaufquote = round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2);
-		}
-
-		// For min/max duration
-		$durations = $this->getDurations($submittedLveCodes);
-
-		// Evaluation open check
-		$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
-		$isEvaluationViewOpenMsg = null;
-
-		if (!$isEvaluationViewOpen)
-		{
-			$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv);
-			$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
-
-			$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
-				? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-				: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
-		}
-
-		$data = array_merge(
-			(array) $lveLv,
-			(array) $lvData,
-			['lvLeitungen' => $lvLeitungen],
-			['lehrende' => $lehrende],
-			['codes_ausgegeben' => $lve->codes_ausgegeben],
-			['countSubmitted' => $countSubmitted],
-			['ruecklaufquote' => $ruecklaufquote],
-			['startzeit' => $lve->startzeit],
-			['endezeit' => $lve->endezeit],
-			['minDuration' => $durations ? min($durations) : 0],
-			['maxDuration' => $durations ? max($durations) : 0],
-			['evaluationView' => [
-				'open' => $isEvaluationViewOpen,
-				'msg' => $isEvaluationViewOpenMsg,
-				]
-			]
-		);
-
-		$this->terminateWithSuccess($data);
 	}
 
 	/**
@@ -168,90 +180,99 @@ class Evaluation extends FHCAPI_Controller
 		$lehrende = hasData($result) ? getData($result) : [];
 
 		if (
-			!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) &&
-			!in_array($this->_uid, array_column($lehrende, 'uid')) &&
-			!$isKfl &&
-			!$isStgl
-		)
-		{
-			$this->terminateWithError('Keine Berechtigung zur Ansicht dieser Evaluation');
-		}
+			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			$isKfl ||
+			$isStgl
+		) {
 
-		// Abgeschickte Frageboegen, Ruecklaufquote
-		$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
-		$countSubmitted = count($submittedLveCodes);
-		$codesAusgegeben = (array_sum(array_column($lves, 'codes_ausgegeben')));
-		$ruecklaufquote = null;
-		if ($codesAusgegeben !== null && $codesAusgegeben > 0) {
-			$ruecklaufquote = round(($countSubmitted / $codesAusgegeben) * 100, 2);
-		}
-
-		// For min/max duration
-		$durations = $this->getDurations($submittedLveCodes);
-
-		// Min startzeit / max endezeit overall Evaluierungen
-		$periodTimes = $this->getPeriodTimes($lves);
-
-		// Evaluation open check
-		$isEvaluationViewOpen = true;
-		$now = new DateTime();
-
-		if (empty($lves))
-		{
-			$isEvaluationViewOpen = false;
-		}
-
-		// Prüfe: irgendeine LVE hat keine Codes oder kein Endezeit
-		foreach ($lves as $lve) {
-			if ($lve->codes_ausgegeben === null || $lve->codes_ausgegeben === 0 || $lve->endezeit === null)
-			{
-				$isEvaluationViewOpen = false;
-				break;
+			// Abgeschickte Frageboegen, Ruecklaufquote
+			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
+			$countSubmitted = count($submittedLveCodes);
+			$codesAusgegeben = (array_sum(array_column($lves, 'codes_ausgegeben')));
+			$ruecklaufquote = null;
+			if ($codesAusgegeben !== null && $codesAusgegeben > 0) {
+				$ruecklaufquote = round(($countSubmitted / $codesAusgegeben) * 100, 2);
 			}
-		}
 
-		// Prüfe: irgendeine Evaluierungsperiode ist noch nicht abgeschlossen
-		$maxEndezeit = new DateTime($periodTimes['maxEndezeit']);
-		if ($isEvaluationViewOpen && $now < $maxEndezeit) {
-			$isEvaluationViewOpen = false;
-		}
+			// For min/max duration
+			$durations = $this->getDurations($submittedLveCodes);
 
-		if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')))
-		{
-			$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForAllLvesInLveLv($lvevaluierung_lehrveranstaltung_id);
-			if (!$isReflexionszeitRaumAbgeschlossen)
-			{
+			// Min startzeit / max endezeit overall Evaluierungen
+			$periodTimes = $this->getPeriodTimes($lves);
+
+			// Evaluation open check
+			$isEvaluationViewOpen = true;
+			$now = new DateTime();
+
+			if (empty($lves)) {
 				$isEvaluationViewOpen = false;
 			}
-		}
-		// Evaluation Open Message
-		$isEvaluationViewOpenMsg = null;
-		if (!$isEvaluationViewOpen) {
-			$isEvaluationViewOpenMsg = ($isKfl || $isStgl)
-				? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-				: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
-		}
 
-		$data = array_merge(
-			(array) $lveLv,
-			(array) $lvData,
-			['lvLeitungen' => $lvLeitungen],
-			['lehrende' => $lehrende],
-			['codes_ausgegeben' => $codesAusgegeben],
-			['countSubmitted' => $countSubmitted],
-			['ruecklaufquote' => $ruecklaufquote],
-			['startzeit' => $periodTimes['minStartzeit']],
-			['endezeit' => $periodTimes['maxEndezeit']],
-			['minDuration' => $durations ? min($durations) : 0],
-			['maxDuration' => $durations ? max($durations) : 0],
-			['evaluationView' => [
-				'open' => $isEvaluationViewOpen,
-				'msg' => $isEvaluationViewOpenMsg
-				]
-			]
-		);
+			// Prüfe: irgendeine LVE hat keine Codes oder kein Endezeit
+			foreach ($lves as $lve) {
+				if ($lve->codes_ausgegeben === null || $lve->codes_ausgegeben === 0 || $lve->endezeit === null) {
+					$isEvaluationViewOpen = false;
+					break;
+				}
+			}
 
-		$this->terminateWithSuccess($data);
+			// Prüfe: irgendeine Evaluierungsperiode ist noch nicht abgeschlossen
+			$maxEndezeit = new DateTime($periodTimes['maxEndezeit']);
+			if ($isEvaluationViewOpen && $now < $maxEndezeit) {
+				$isEvaluationViewOpen = false;
+			}
+
+			if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid'))) {
+				$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForAllLvesInLveLv($lvevaluierung_lehrveranstaltung_id);
+				if (!$isReflexionszeitRaumAbgeschlossen) {
+					$isEvaluationViewOpen = false;
+				}
+			}
+			// Evaluation Open Message
+			$isEvaluationViewOpenMsg = null;
+			if (!$isEvaluationViewOpen) {
+				$isEvaluationViewOpenMsg = ($isKfl || $isStgl)
+					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
+					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+			}
+
+			$data = array_merge(
+				(array)$lveLv,
+				(array)$lvData,
+				['lvLeitungen' => $lvLeitungen],
+				['lehrende' => $lehrende],
+				['codes_ausgegeben' => $codesAusgegeben],
+				['countSubmitted' => $countSubmitted],
+				['ruecklaufquote' => $ruecklaufquote],
+				['startzeit' => $periodTimes['minStartzeit']],
+				['endezeit' => $periodTimes['maxEndezeit']],
+				['minDuration' => $durations ? min($durations) : 0],
+				['maxDuration' => $durations ? max($durations) : 0]
+			);
+
+			$response = [
+				'data' => $data,
+				'evaluationView' => [
+					'open' => $isEvaluationViewOpen,
+					'msg'  => $isEvaluationViewOpenMsg,
+				],
+			];
+
+			$this->terminateWithSuccess($response);
+		}
+		else
+		{
+			$response = [
+				'data' => null,
+				'evaluationView' => [
+					'open' => false,
+					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation'
+				],
+			];
+
+			$this->terminateWithSuccess($response);
+		}
 	}
 
 	/**

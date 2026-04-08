@@ -51,9 +51,10 @@ export default {
 			this.$api
 				.call(apiCall)
 				.then(result => {
-					this.evalData = result.data;
-					this.evaluationView.open = this.evalData.evaluationView.open;
-					this.evaluationView.msg = this.evalData.evaluationView.msg
+					this.evalData = result.data.data;
+
+					this.evaluationView.open = result.data.evaluationView.open;
+					this.evaluationView.msg  = result.data.evaluationView.msg;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
