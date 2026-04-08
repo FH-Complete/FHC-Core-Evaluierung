@@ -387,7 +387,7 @@ class Initiierung extends JOB_Controller
 				// Get Start- and Endedatum of Reflexionszeitraum
 				$zeitfenster = $this->_ci->evaluationlib->calculateReflexionZeitfenster($row->endezeit);
 				$reflexionBis = $zeitfenster['bis']->format("d.m.Y");
-				var_dump($zeitfenster['bis']->format("d.m.Y"));
+				// var_dump($zeitfenster['bis']->format("d.m.Y"));
 
 				// Link zu Ergebnissen der LV
 				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/?lvevaluierung_id='. $row->lvevaluierung_id;
@@ -500,8 +500,8 @@ class Initiierung extends JOB_Controller
 					if(hasData($result))
 					{
 						$lektoren = getData($result);
-						var_dump('lektoren');
-						var_dump($lektoren);
+					//	var_dump('lektoren');
+					//	var_dump($lektoren);
 
 						foreach($lektoren as $lektor)
 						{
