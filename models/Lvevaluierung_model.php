@@ -58,12 +58,12 @@ class Lvevaluierung_model extends DB_Model
 	}
 
 	/**
-	 * Get Evaluierungen whose start date matches the given day offset, related to the current date.
+	 * Get Evaluierungen, that were sent and whose start date matches the given day offset, related to the current date.
 	 *
 	 * @param int|string $offsetDays	e.g.: 0|0 day = today. -1|-1 day = yesterday, +14|+14 day = in two weeks
 	 * @return mixed
 	 */
-	public function getLvesWithStartzeitIn($offsetDays = 0){
+	public function getLvesStartingIn($offsetDays = 0){
 
 		if (is_int($offsetDays))
 		{
@@ -79,15 +79,17 @@ class Lvevaluierung_model extends DB_Model
 				tbl_lehrveranstaltung.semester as lv_semester,
 				tbl_lehrveranstaltung.orgform_kurzbz as lv_orgform_kurzbz,
 				tbl_studiengang.bezeichnung as stg_bezeichnung,
-				tbl_studiengang.typ as stg_typ
+				UPPER(tbl_studiengang.typ || tbl_studiengang.kurzbz) AS stg_typ_kurzbz	
 			FROM		  	
 				extension.tbl_lvevaluierung lve
 				JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lvevaluierung_lehrveranstaltung_id)
 				JOIN lehre.tbl_lehrveranstaltung USING(lehrveranstaltung_id)
 				JOIN public.tbl_studiengang USING(studiengang_kz)
 			WHERE
-			-- startzeit eingeschränkt auf das gewünschte Tagesdatum
-			lve.startzeit >= CURRENT_DATE + INTERVAL ?
+			    -- nur wenn codes versendet wurden
+				lve.codes_gemailt
+				-- startzeit eingeschränkt auf das gewünschte Tagesdatum
+				AND lve.startzeit >= CURRENT_DATE + INTERVAL ?
 				AND lve.startzeit < CURRENT_DATE + INTERVAL ? + INTERVAL \'1 day\'
 			ORDER BY
 			  stg_bezeichnung,
