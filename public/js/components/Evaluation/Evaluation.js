@@ -51,7 +51,10 @@ export default {
 			this.$api
 				.call(apiCall)
 				.then(result => {
-					this.evalData = result.data.data;
+					if (result.data?.data !== null)
+					{
+						this.evalData = result.data.data;
+					}
 
 					this.evaluationView.open = result.data.evaluationView.open;
 					this.evaluationView.msg  = result.data.evaluationView.msg;
