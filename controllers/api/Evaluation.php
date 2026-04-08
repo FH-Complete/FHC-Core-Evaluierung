@@ -98,7 +98,7 @@ class Evaluation extends FHCAPI_Controller
 
 		if (!$isEvaluationViewOpen)
 		{
-			$lektorOfLve = $this->getLehrendeByLve($lve, $lveLv);
+			$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv);
 			$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
 
 			$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
@@ -505,7 +505,7 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Start- and Endedatum of Reflexionszeitraum
-		$zeitfenster = $this->calculateReflexionZeitfenster($lve);
+		$zeitfenster = $this->evaluationlib->calculateReflexionZeitfenster($lve->endezeit);
 
 		$sperreGrund = [];
 
@@ -523,21 +523,6 @@ class Evaluation extends FHCAPI_Controller
 			'sperreGrund' => $sperreGrund,
 			'zeitfensterVon' => $zeitfenster['von']->format('d.m.Y'),
 			'zeitfensterBis' => $zeitfenster['bis']->format('d.m.Y')
-		];
-	}
-	private function calculateReflexionZeitfenster($lve)
-	{
-		$endedatum = new DateTime($lve->endezeit);
-
-		$zeitfensterVon = clone $endedatum;
-		$zeitfensterVon->modify('+1 day');	// Endedatum noch für Evaluierung offen, deshalb +1
-
-		$zeitfensterBis = clone ($zeitfensterVon);
-		$zeitfensterBis->modify($this->_reflexionZeitfensterDauer);
-
-		return [
-			'von' => $zeitfensterVon,
-			'bis' => $zeitfensterBis
 		];
 	}
 	private function isReflexionVerpflichtendForUid($lveLv, $uid)
@@ -565,7 +550,7 @@ class Evaluation extends FHCAPI_Controller
 	private function buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung){
 
 		// Get Lehrende
-		$lektoren = $this->getLehrendeByLve($lve, $lveLv, $lvLeitung, true);
+		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, $lvLeitung, true);
 
 		// ReflexionData
 		$data = [];
@@ -603,81 +588,82 @@ class Evaluation extends FHCAPI_Controller
 
 	}
 
-	/**
-	 * Get Lehrende depending on Gesamt or GruppenEvaluierung.
-	 * Add optionale Lehrende for reflexion.
-	 *
-	 * @param $lve
-	 * @param $lveLv
-	 * @param $lvLeitung
-	 * @param $addOptionale
-	 * @return array
-	 */
-	private function getLehrendeByLve($lve, $lveLv, $lvLeitung = null, $addOptionale = false)
-	{
-		if (is_null($lvLeitung))
-		{
-			$result = $this->LehrveranstaltungModel->getLvLeitung(
-				$lveLv->lehrveranstaltung_id,
-				$lveLv->studiensemester_kurzbz
-			);
-			$lvLeitung = hasData($result) ? getData($result)[0] : null;
-		}
-
-		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
-		{
-			// Aufgrund Gruppen Logik sollte hier nur ein Lektor zurückgegeben werden
-			$result = $this->LehreinheitmitarbeiterModel->getLektorenByLe($lve->lehreinheit_id);	// Must be only one because of Gruppen logic
-			$lektoren = hasData($result) ? array(getData($result)[0]) : [];	// todo Fallback erster im array noch ändern
-		}
-		else // Gesamt-LV
-		{
-			if ($addOptionale === true)
-			{
-				// Alle Lektoren (LV-Leitung Pflicht, andere optional)
-				$result = $this->LehrveranstaltungModel->getLecturersByLv(
-					$lveLv->studiensemester_kurzbz,
-					$lveLv->lehrveranstaltung_id
-				);
-
-				$lektoren = hasData($result) ? getData($result) : [];
-
-				// LV-Leitung ergänzen, falls nicht Lehrender ist
-				if (!in_array($lvLeitung->mitarbeiter_uid, array_column($lektoren, 'uid')))
-				{
-					$lektoren[]= $lvLeitung;
-				}
-			}
-			else
-			{
-				// Reflexion nur für LV-Leitung verpflichtend
-				$lektoren = array($lvLeitung);
-			}
-		}
-
-		// Result data vereinheitlichen
-		$result = [];
-		foreach ($lektoren as $lektor)
-		{
-			$isLvLeitung = null;
-			if(isset($lektor->lehrfunktion_kurzbz))
-			{
-				$isLvLeitung = $lektor->lehrfunktion_kurzbz === 'LV-Leitung' ? true : false;
-			}
-			elseif (isset($lektor->lvleiter))
-			{
-				$isLvLeitung = $lektor->lvleiter;
-			}
-			$result[]= (object) [
-				'vorname' => $lektor->vorname,
-				'nachname' => $lektor->nachname,
-				'uid' => isset($lektor->mitarbeiter_uid) ? $lektor->mitarbeiter_uid : $lektor->uid,
-				'isLvLeitung' => $isLvLeitung
-			];
-		}
-
-		return $result;
-	}
+	// todo check. moved to library
+//	/**
+//	 * Get Lehrende depending on Gesamt or GruppenEvaluierung.
+//	 * Add optionale Lehrende for reflexion.
+//	 *
+//	 * @param $lve
+//	 * @param $lveLv
+//	 * @param $lvLeitung
+//	 * @param $addOptionale
+//	 * @return array
+//	 */
+//	private function getLehrendeByLve($lve, $lveLv, $lvLeitung = null, $addOptionale = false)
+//	{
+//		if (is_null($lvLeitung))
+//		{
+//			$result = $this->LehrveranstaltungModel->getLvLeitung(
+//				$lveLv->lehrveranstaltung_id,
+//				$lveLv->studiensemester_kurzbz
+//			);
+//			$lvLeitung = hasData($result) ? getData($result)[0] : null;
+//		}
+//
+//		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
+//		{
+//			// Aufgrund Gruppen Logik sollte hier nur ein Lektor zurückgegeben werden
+//			$result = $this->LehreinheitmitarbeiterModel->getLektorenByLe($lve->lehreinheit_id);	// Must be only one because of Gruppen logic
+//			$lektoren = hasData($result) ? array(getData($result)[0]) : [];	// todo Fallback erster im array noch ändern
+//		}
+//		else // Gesamt-LV
+//		{
+//			if ($addOptionale === true)
+//			{
+//				// Alle Lektoren (LV-Leitung Pflicht, andere optional)
+//				$result = $this->LehrveranstaltungModel->getLecturersByLv(
+//					$lveLv->studiensemester_kurzbz,
+//					$lveLv->lehrveranstaltung_id
+//				);
+//
+//				$lektoren = hasData($result) ? getData($result) : [];
+//
+//				// LV-Leitung ergänzen, falls nicht Lehrender ist
+//				if (!in_array($lvLeitung->mitarbeiter_uid, array_column($lektoren, 'uid')))
+//				{
+//					$lektoren[]= $lvLeitung;
+//				}
+//			}
+//			else
+//			{
+//				// Reflexion nur für LV-Leitung verpflichtend
+//				$lektoren = array($lvLeitung);
+//			}
+//		}
+//
+//		// Result data vereinheitlichen
+//		$result = [];
+//		foreach ($lektoren as $lektor)
+//		{
+//			$isLvLeitung = null;
+//			if(isset($lektor->lehrfunktion_kurzbz))
+//			{
+//				$isLvLeitung = $lektor->lehrfunktion_kurzbz === 'LV-Leitung' ? true : false;
+//			}
+//			elseif (isset($lektor->lvleiter))
+//			{
+//				$isLvLeitung = $lektor->lvleiter;
+//			}
+//			$result[]= (object) [
+//				'vorname' => $lektor->vorname,
+//				'nachname' => $lektor->nachname,
+//				'uid' => isset($lektor->mitarbeiter_uid) ? $lektor->mitarbeiter_uid : $lektor->uid,
+//				'isLvLeitung' => $isLvLeitung
+//			];
+//		}
+//
+//		return $result;
+//	}
 
 	private function filterReflexionenByPermission(
 		$reflexionen,
