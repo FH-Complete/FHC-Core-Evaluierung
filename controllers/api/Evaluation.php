@@ -55,6 +55,10 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
+		// Permission check
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+
 		// LV-Leitungen, if required
 		$lvLeitungen = [];
 		if ($this->_lvLeitungRequired)
@@ -76,6 +80,16 @@ class Evaluation extends FHCAPI_Controller
 		}
 		$lehrende = hasData($result) ? getData($result) : [];
 
+		if (
+			!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) &&
+			!in_array($this->_uid, array_column($lehrende, 'uid')) &&
+			!$isKfl &&
+			!$isStgl
+		)
+		{
+			$this->terminateWithError('Keine Berechtigung zur Ansicht dieser Evaluation');
+		}
+
 		// Abgeschickte Frageboegen, Ruecklaufquote
 		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLve($lve->lvevaluierung_id);
 		$submittedLveCodes = hasData($result) ? getData($result) : [];
@@ -87,10 +101,6 @@ class Evaluation extends FHCAPI_Controller
 
 		// For min/max duration
 		$durations = $this->getDurations($submittedLveCodes);
-
-		// Permission check
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 
 		// Evaluation open check
 		$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
@@ -141,6 +151,10 @@ class Evaluation extends FHCAPI_Controller
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
+		// Permission check
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+
 		// LV-Leitungen, if required
 		$lvLeitungen = [];
 		if ($this->_lvLeitungRequired)
@@ -152,6 +166,16 @@ class Evaluation extends FHCAPI_Controller
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
+
+		if (
+			!in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) &&
+			!in_array($this->_uid, array_column($lehrende, 'uid')) &&
+			!$isKfl &&
+			!$isStgl
+		)
+		{
+			$this->terminateWithError('Keine Berechtigung zur Ansicht dieser Evaluation');
+		}
 
 		// Abgeschickte Frageboegen, Ruecklaufquote
 		$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
@@ -167,10 +191,6 @@ class Evaluation extends FHCAPI_Controller
 
 		// Min startzeit / max endezeit overall Evaluierungen
 		$periodTimes = $this->getPeriodTimes($lves);
-
-		// Permission check
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 
 		// Evaluation open check
 		$isEvaluationViewOpen = true;
