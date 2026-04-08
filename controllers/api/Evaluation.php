@@ -80,6 +80,11 @@ class Evaluation extends FHCAPI_Controller
 		}
 		$lehrende = hasData($result) ? getData($result) : [];
 
+/*		$this->addMeta('this uid', $this->_uid);
+		$this->addMeta('$lvLeitungen', $lvLeitungen);
+		$this->addMeta('$lehrende', $lehrende);
+		$this->addMeta('$isKfl', $isKfl);
+		$this->addMeta('$isStgl', $isStgl);*/
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
 			in_array($this->_uid, array_column($lehrende, 'uid')) ||
@@ -529,7 +534,7 @@ class Evaluation extends FHCAPI_Controller
 			$this->terminateWithError('Nicht berechtigt zum Speichern oder Ändern dieser LV-Reflexion');
 		}
 
-		// Insert / Update Reflexion
+		// Alternativ sicher gehen, ob Reflexion existiert
 		if (!$lvevaluierung_reflexion_id)
 		{
 			$result = $this->LvevaluierungReflexionModel->loadWhere([
@@ -539,9 +544,13 @@ class Evaluation extends FHCAPI_Controller
 
 			if (hasData($result))
 			{
-				$this->terminateWithError('LV-Reflexion existiert schon');
+				$lvevaluierung_reflexion_id = getData($result)[0]->lvevaluierung_reflexion_id;
 			}
+		}
 
+		// Insert / Update Reflexion
+		if (!$lvevaluierung_reflexion_id)
+		{
 			unset($data['lvevaluierung_reflexion_id']);
 			$data['lvevaluierung_id'] = $lvevaluierung_id;
 			$data['mitarbeiter_uid'] = $this->_uid;
