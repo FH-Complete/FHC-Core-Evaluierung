@@ -128,3 +128,10 @@ ALTER TABLE extension.tbl_lvevaluierung_reflexion ADD COLUMN IF NOT EXISTS verpf
 COMMENT ON COLUMN extension.tbl_lvevaluierung_reflexion.verpflichtend IS 'True wenn Reflexion verpflichtend durchgeführt werden muss';
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_reflexion
+    ADD CONSTRAINT uq_lvevaluierung_id_mitarbeiter_uid UNIQUE (lvevaluierung_id, mitarbeiter_uid);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
