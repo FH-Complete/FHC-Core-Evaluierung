@@ -216,7 +216,7 @@ class Initiierung extends JOB_Controller
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 
 		// Get all Evaluierungen that start tomorrow
-		$result = $this->_ci->LvevaluierungModel->getLvesStartingIn('+1 day');
+		$result = $this->_ci->LvevaluierungModel->getLvesStartingIn('+1 day', false);
 
 		if (isError($result))
 		{
@@ -360,7 +360,7 @@ class Initiierung extends JOB_Controller
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended yesterday
-		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-1 day');
+		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-1 day', true);
 
 		if (isError($result))
 		{

@@ -63,7 +63,7 @@ class Lvevaluierung_model extends DB_Model
 	 * @param int|string $offsetDays	e.g.: 0|0 day = today. -1|-1 day = yesterday, +14|+14 day = in two weeks
 	 * @return mixed
 	 */
-	public function getLvesStartingIn($offsetDays = 0){
+	public function getLvesStartingIn($offsetDays = 0, $codesGemailt = true){
 
 		if (is_int($offsetDays))
 		{
@@ -87,7 +87,7 @@ class Lvevaluierung_model extends DB_Model
 				JOIN public.tbl_studiengang USING(studiengang_kz)
 			WHERE
 			    -- nur wenn codes versendet wurden
-				lve.codes_gemailt
+				lve.codes_gemailt = ?
 				-- startzeit eingeschränkt auf das gewünschte Tagesdatum
 				AND lve.startzeit >= CURRENT_DATE + INTERVAL ?
 				AND lve.startzeit < CURRENT_DATE + INTERVAL ? + INTERVAL \'1 day\'
@@ -96,7 +96,7 @@ class Lvevaluierung_model extends DB_Model
 			  lv_orgform_kurzbz
 		';
 
-		return $this->execQuery($qry, [$offsetDays, $offsetDays]);
+		return $this->execQuery($qry, [$codesGemailt, $offsetDays, $offsetDays]);
 	}
 
 	/**
@@ -105,7 +105,7 @@ class Lvevaluierung_model extends DB_Model
 	 * @param int|string $offsetDays	e.g.: 0|0 day = today. -1|-1 day = yesterday, +14|+14 day = in two weeks
 	 * @return mixed
 	 */
-	public function getLvesEndingIn($offsetDays = 0){
+	public function getLvesEndingIn($offsetDays = 0, $codesGemailt = true){
 
 		if (is_int($offsetDays))
 		{
@@ -129,7 +129,7 @@ class Lvevaluierung_model extends DB_Model
 				JOIN public.tbl_studiengang USING(studiengang_kz)
 			WHERE
 			    -- nur wenn codes versendet wurden
-				lve.codes_gemailt
+				lve.codes_gemailt = ?
 				-- endezeit eingeschränkt auf das gewünschte Tagesdatum
 				AND lve.endezeit >= CURRENT_DATE + INTERVAL ?
 				AND lve.endezeit < CURRENT_DATE + INTERVAL ? + INTERVAL \'1 day\'
@@ -138,7 +138,7 @@ class Lvevaluierung_model extends DB_Model
 			  lv_orgform_kurzbz
 		';
 
-		return $this->execQuery($qry, [$offsetDays, $offsetDays]);
+		return $this->execQuery($qry, [$codesGemailt, $offsetDays, $offsetDays]);
 	}
 
 
