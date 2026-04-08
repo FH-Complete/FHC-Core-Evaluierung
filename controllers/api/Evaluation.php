@@ -18,7 +18,7 @@ class Evaluation extends FHCAPI_Controller
 				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'saveOrUpdateReflexion' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'saveOrUpdateReflexion' => 'extension/lvevaluierung_init:r',
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
@@ -485,6 +485,7 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$lvevaluierung_reflexion_id = $this->input->post('lvevaluierung_reflexion_id');
 		$lvevaluierung_id = $this->input->post('lvevaluierung_id');
+		$mitarbeiterUid = $this->input->post('mitarbeiter_uid');
 		$data = $this->input->post('data');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
@@ -492,9 +493,34 @@ class Evaluation extends FHCAPI_Controller
 
 		$data['verpflichtend'] = $this->isReflexionVerpflichtendForUid($lveLv, $this->_uid);
 
+		if ($data['mitarbeiter_uid'] !== null &&
+			($mitarbeiterUid != $data['mitarbeiter_uid'] || $mitarbeiterUid != $this->_uid)
+		)
+		{
+			$this->terminateWithError('Nicht berechtigt zum Speichern oder Ändern dieser LV-Reflexion');
+		}
+
+
+		$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+		if (!in_array($this->_uid, array_column($lektorOfLve, 'uid')) ||
+			$mitarbeiterUid != $this->_uid)
+		{
+			$this->terminateWithError('Nicht berechtigt zum Speichern oder Ändern dieser LV-Reflexion');
+		}
+
 		// Insert / Update Reflexion
 		if (!$lvevaluierung_reflexion_id)
 		{
+			$result = $this->LvevaluierungReflexionModel->loadWhere([
+				'lvevaluierung_id' => $lvevaluierung_id,
+				'mitarbeiter_uid' => $this->_uid
+			]);
+
+			if (hasData($result))
+			{
+				$this->terminateWithError('LV-Reflexion existiert schon');
+			}
+
 			unset($data['lvevaluierung_reflexion_id']);
 			$data['lvevaluierung_id'] = $lvevaluierung_id;
 			$data['mitarbeiter_uid'] = $this->_uid;
@@ -518,6 +544,10 @@ class Evaluation extends FHCAPI_Controller
 					$data['lvevaluierung_reflexion_id'],
 					$data
 				);
+			}
+			else
+			{
+				$this->terminateWithError('Keine Berechtigung für diese LV-Reflexion');
 			}
 		}
 
