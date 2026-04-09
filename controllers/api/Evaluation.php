@@ -1067,6 +1067,7 @@ class Evaluation extends FHCAPI_Controller
 					'bezeichnung' => $item->fbFrageBezeichnung,
 					'typ' => $item->fbFrageTyp,
 					'sort' => $item->fbFrageSort,
+					'verpflichtend' => $item->fbFrageVerpflichtend,
 					'antworten' => [
 						'werte' => [],
 						'frequencies' => [],

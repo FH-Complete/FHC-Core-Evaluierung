@@ -276,9 +276,9 @@ export default {
 			<h4 class="mt-5 mb-4">1. Auswertung Einzelfragen</h4>
 			<div v-if="evaluationView.open && auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
 				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
-				
-				<h5 class="mb-3">{{ gruppe.bezeichnung }}</h5>
- 
+				<h5 class="mb-3">{{ gruppe.bezeichnung }} 
+					<span v-if="gruppe.fbFragen.every(fbFrage => !fbFrage.verpflichtend)">(optional)</span>
+				</h5>
 				<div v-for="frage in gruppe.fbFragen" :key="frage.lvevaluierung_frage_id"
 					class="col-md-6 col-lg-4 col-xl-3">
 					<div class="card h-100">

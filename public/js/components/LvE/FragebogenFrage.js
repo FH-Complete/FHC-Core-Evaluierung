@@ -70,8 +70,6 @@ export default {
 					<div class="card-title fw-bold mb-3" :id="'frage-label-' + frage.lvevaluierung_frage_id">
 						{{ frage.bezeichnung_by_language }}
 						<span v-if="frage.verpflichtend" aria-hidden="true"> *</span>
-						<span v-if="frage.verpflichtend" class="visually-hidden">(Pflichtfrage)</span>
-						<span v-else class="visually-hidden">(optional)</span>
 				    </div>
 				    
 				     <!-- Answer Options -->
@@ -132,7 +130,9 @@ export default {
 		<div v-if="frage.typ === 'text'">
 			<div class="card mb-4 px-0 px-md-1 d-flex text-center border-0">
 				<div class="card-body">
-					<label class="fw-bold mb-3" :id="frage.lvevaluierung_frage_id">{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : ''}}</label>
+					<label class="fw-bold mb-3" :id="frage.lvevaluierung_frage_id">
+						{{ frage.bezeichnung_by_language }} {{ frage.verpflichtend ? ' *' : '(optional)'}}
+					</label>
 					<form-input
 						:aria-labelledby="frage.lvevaluierung_frage_id"
 				  		type="textarea"
