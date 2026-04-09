@@ -87,7 +87,7 @@ class Evaluation extends FHCAPI_Controller
 		$this->addMeta('$isStgl', $isStgl);*/
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')) ||
 			$isKfl ||
 			$isStgl
 		) {
@@ -186,7 +186,7 @@ class Evaluation extends FHCAPI_Controller
 
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')) ||
 			$isKfl ||
 			$isStgl
 		) {
