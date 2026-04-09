@@ -267,16 +267,19 @@ export default {
 				<div>{{ evaluationView.msg }}</div>
 			</div>
 		  	<!-- Dynamic content -->
-			<keep-alive>
-				<component 
-					:is="selectedComponent" 
-					:lvevaluierung_id="lvevaluierung_id"
-    				:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
-    				:lvevaluierung_template_id="lvTemplateId"
-					@open-einmeldung="changeView('einmeldung')"
-					class="d-block mt-5"
-				></component>
-			</keep-alive>
+		  	<div v-else>
+				<keep-alive>
+					<component
+						:evaluationView="evaluationView" 
+						:is="selectedComponent" 
+						:lvevaluierung_id="lvevaluierung_id"
+						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
+						:lvevaluierung_template_id="lvTemplateId"
+						@open-einmeldung="changeView('einmeldung')"
+						class="d-block mt-5"
+					></component>
+				</keep-alive>
+			</div><!--.end v-else-->
 		</main>
 	</div>
 	`

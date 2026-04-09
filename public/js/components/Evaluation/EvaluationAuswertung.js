@@ -20,8 +20,8 @@ export default {
 			type: [String, Number],
 			default: null
 		},
-		evaluationViewOpen: {
-			type: Boolean,
+		evaluationView: {
+			type: Object,
 		}
 	},
 	data() {
@@ -274,7 +274,7 @@ export default {
 		</div>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
 			<h4 class="mt-5 mb-4">1. Auswertung Einzelfragen</h4>
-			<div v-if="evaluationViewOpen && auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
+			<div v-if="evaluationView.open && auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
 				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
 				
 				<h5 class="mb-3">{{ gruppe.bezeichnung }}</h5>
@@ -288,11 +288,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
 			<h4 class="mt-5 mb-4">2. Textantworten</h4>
-			<div v-if="evaluationViewOpen && textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
+			<div v-if="evaluationView.open && textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
 				class="row-col mb-5">
 			
 				<h5 class="mb-3">{{ frage.bezeichnung }}</h5>
@@ -307,11 +307,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
-			<div v-if="evaluationViewOpen && auswertungData.length > 0" class="row align-items-stretch g-3">
+			<div v-if="evaluationView.open && auswertungData.length > 0" class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">
 						<div class="card-body">
@@ -327,7 +327,7 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder noch nicht zur Ansicht verfügbar.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 	</div>	
 	`
