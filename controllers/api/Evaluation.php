@@ -14,6 +14,7 @@ class Evaluation extends FHCAPI_Controller
 				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungHelpUrl' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
@@ -28,6 +29,7 @@ class Evaluation extends FHCAPI_Controller
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
+		$this->load->config('extensions/FHC-Core-Evaluierung/initiierung');
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
@@ -360,6 +362,23 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess($auswertungData);
+	}
+
+	/**
+	 * Get the Auswertung help document URL ('Erläuterung Ergebnisse') from config
+	 *
+	 * @return string|null URL if configured, otherwise null
+	 */
+	public function getAuswertungHelpUrl()
+	{
+		$url = $this->config->item('auswertungHelpUrl');
+
+		if ($url === null || $url === false || $url == '')
+		{
+			$this->terminateWithSuccess(null);
+		}
+
+		$this->terminateWithSuccess($url);
 	}
 
 	/**

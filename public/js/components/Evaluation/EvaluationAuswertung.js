@@ -27,7 +27,8 @@ export default {
 	data() {
 		return {
 			auswertungData: [],
-			textantworten: []
+			textantworten: [],
+			auswertungHelpUrl: null
 		}
 	},
 	created() {
@@ -46,7 +47,11 @@ export default {
 					return this.$api.call(apiCallTextantworten)
 				})
 				.then(result => {
-					this.textantworten = result.data
+					this.textantworten = result.data;
+					return this.$api.call(ApiEvaluation.getAuswertungHelpUrl())
+				})
+				.then(result => {
+					this.auswertungHelpUrl = result.data;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
@@ -64,12 +69,6 @@ export default {
 		chartOptionsLvImZeitverlauf() {
 			return this.createTimelineChart(this.auswertungData);
 		},
-		openAuswertungHelpUrl() {
-			// todo link to CIS
-			const link = FHC_JS_DATA_STORAGE_OBJECT.app_root
-					+ 'cis/'
-			window.open(link, '_blank')
-		}
 	},
 	methods: {
 		createEinzelfrageChart(fbFragen){
@@ -267,10 +266,13 @@ export default {
 	<div class="evaluation-evaluation-auswertung">
 		<div class="d-flex flex-column flex-sm-row align-items-baseline gap-md-3">
 			<h3 class="mb-4">Ergebnisse LV-Evaluierung</h3>
-<!--			<a href="#" class="" @click.prevent="openAuswertungHelpUrl()">-->
-<!--				<i class="fa fa-external-link"></i>-->
-<!--				Erläuterungen Ergebnisse-->
-<!--			</a>-->
+			<a  
+				v-if="auswertungHelpUrl"
+  				:href="auswertungHelpUrl"
+  			>
+				<i class="fa fa-external-link"></i>
+				Erläuterungen Ergebnisse
+			</a>
 		</div>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
 			<h4 class="mt-5 mb-4">1. Auswertung Einzelfragen</h4>

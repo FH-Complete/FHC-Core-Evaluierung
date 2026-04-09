@@ -133,4 +133,10 @@ export default {
 			}
 		}
 	},
+	getAuswertungHelpUrl(){
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungHelpUrl',
+		}
+	}
 }

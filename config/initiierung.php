@@ -11,3 +11,5 @@ $config['filterLehreinheitenByUniqueLectorAndGruppen'] = true;
 
 // Define time window in which the lector is allowed to process the LV-Reflexion
 $config['reflexionZeitfensterDauer'] = '2 weeks';
+
+$config['auswertungHelpUrl'] = APP_ROOT. 'cms/dms.php?id=389985';
