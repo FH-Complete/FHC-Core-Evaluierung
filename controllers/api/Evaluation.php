@@ -68,26 +68,17 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Lehrende
-		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id))
-		{
-			$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-			$result = $this->LehreinheitmitarbeiterModel->getLektorenByLe($lve->lehreinheit_id);
-		}
-		else
-		{
-			$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-			$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
-		}
-		$lehrende = hasData($result) ? getData($result) : [];
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
 
-/*		$this->addMeta('this uid', $this->_uid);
-		$this->addMeta('$lvLeitungen', $lvLeitungen);
-		$this->addMeta('$lehrende', $lehrende);
-		$this->addMeta('$isKfl', $isKfl);
-		$this->addMeta('$isStgl', $isStgl);*/
+//		$this->addMeta('this uid', $this->_uid);
+//		$this->addMeta('$lvLeitungen', $lvLeitungen);
+//		$this->addMeta('$lehrende', $lehrende);
+//		$this->addMeta('$isKfl', $isKfl);
+//		$this->addMeta('$isStgl', $isStgl);
+
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'uid')) ||
 			$isKfl ||
 			$isStgl
 		) {
@@ -184,9 +175,15 @@ class Evaluation extends FHCAPI_Controller
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
+//		$this->addMeta('this uid', $this->_uid);
+//		$this->addMeta('$lvLeitungen', $lvLeitungen);
+//		$this->addMeta('$lehrende', $lehrende);
+//		$this->addMeta('$isKfl', $isKfl);
+//		$this->addMeta('$isStgl', $isStgl);
+
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid')) ||
+			in_array($this->_uid, array_column($lehrende, 'uid')) ||
 			$isKfl ||
 			$isStgl
 		) {
