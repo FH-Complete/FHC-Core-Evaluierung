@@ -567,11 +567,18 @@ class Evaluation extends FHCAPI_Controller
 			// Update only if user is owner of Reflexion
 			if ($reflexion && $reflexion->mitarbeiter_uid === $this->_uid)
 			{
+				// todo: refactor code. now workaround: aktuell wird beim speichern das $data object nicht im frontend aktualisiert.
+				// --> wenn direkt nach dem speichern (ohne reload) die Reflexion geändert wird (update), dann werden
+				// hier null values übergeben.----------------
+				unset($data['lvevaluierung_reflexion_id']);
+				$data['lvevaluierung_id'] = $lvevaluierung_id;
+				$data['mitarbeiter_uid'] = $this->_uid;
+				// -------------------------------------------
 				$data['updatevon'] = $this->_uid;
 				$data['updateamum'] = 'NOW()';
 
 				$result = $this->LvevaluierungReflexionModel->update(
-					$data['lvevaluierung_reflexion_id'],
+					$reflexion->lvevaluierung_reflexion_id,
 					$data
 				);
 			}
