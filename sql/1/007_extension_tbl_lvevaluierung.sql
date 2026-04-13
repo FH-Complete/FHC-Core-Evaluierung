@@ -65,3 +65,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung TO vil
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung TO web;
 GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_lvevaluierung_id TO vilesci;
 GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_lvevaluierung_id TO web;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung
+    ADD CONSTRAINT uq_lehrveranstaltung_id_lehreinheit_id UNIQUE (lvevaluierung_lehrveranstaltung_id, lehreinheit_id);
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

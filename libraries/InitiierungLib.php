@@ -33,6 +33,7 @@ class InitiierungLib
 
 		$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
 		$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
 
 		foreach ($data as $item)
 		{
@@ -204,6 +205,27 @@ class InitiierungLib
 				$item->codes_ausgegeben = $evalMatch->codes_ausgegeben;
 				$item->insertvon        = $evalMatch->insertvon;
 				$item->insertamum       = $evalMatch->insertamum;
+				$item->updatevon        = $evalMatch->updatevon;
+				$item->updateamum       = $evalMatch->updateamum;
+
+				$item->insertvonFullName = '';
+				$item->updatevonFullName = '';
+				if ($evalMatch->insertvon || $evalMatch->updatevon)
+				{
+					$this->_ci->load->model('person/Person_model', 'PersonModel');
+					if ($evalMatch->insertvon)
+					{
+
+						$result = $this->_ci->PersonModel->getFullName($evalMatch->insertvon);
+						$item->insertvonFullName = hasData($result) ? getData($result) : '';
+					}
+
+					if ($evalMatch->updatevon)
+					{
+						$result = $this->_ci->PersonModel->getFullName($evalMatch->updatevon);
+						$item->updatevonFullName = hasData($result) ? getData($result) : '';
+					}
+				}
 			}
 			else
 			{
@@ -219,6 +241,10 @@ class InitiierungLib
 				$item->codes_ausgegeben = 0;
 				$item->insertvon        = '';
 				$item->insertamum       = '';
+				$item->updatevon        = '';
+				$item->updateamum       = '';
+				$item->insertvonFullName = '';
+				$item->updatevonFullName = '';
 			}
 		}
 
@@ -253,7 +279,6 @@ class InitiierungLib
 		}
 		else
 		{
-			// todo check mit Ösi: config ok?
 			if ($this->_ci->config->item('lvLeitungRequired'))
 			{
 				return error('No LV-Leitung assigned for this LV.');
@@ -388,6 +413,7 @@ class InitiierungLib
 
 	/**
 	 * Checks if Lehrveranstaltung has:
+	 *  - duplicate Spezialgruppen
 	 *  - duplicate Studierendengruppen (BBE-2A1 <-> BBE-2A1)
 	 *  - duplicate combination of Studierendengruppen
 	 *    (BBE-2A1, BBE-2A2 <-> BBE-2A1, BBE-2A2)
@@ -399,6 +425,7 @@ class InitiierungLib
 	public function hasHierarchicalDuplicateGruppen($data)
 	{
 		$gruppenPerLe = [];
+		$spzgrps = [];
 
 		// Skip row check if...
 		foreach ($data as $row) {
@@ -406,8 +433,16 @@ class InitiierungLib
 			if (empty($row->lehreinheit_id)) {
 				continue;
 			}
-			//...is Spezialgruppe
+
+			//...return true if double Spezialgruppe
 			if (!empty($row->gruppe_kurzbz)) {
+				if (in_array($row->gruppe_kurzbz, $spzgrps))
+				{
+					return true;
+				}
+				else
+					$spzgrps[] = $row->gruppe_kurzbz;
+
 				continue;
 			}
 

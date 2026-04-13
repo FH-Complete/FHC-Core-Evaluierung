@@ -30,12 +30,15 @@ export default {
 		}
 	},
 	methods: {
-		updateLvAufgeteilt(newVal) {
+		onSwitch() {
+			this.$emit('onUpdateLvAufgeteilt', this.selLveLv.lv_aufgeteilt);
+		},
+		updateLvAufgeteilt() {
 			if (!this.canSwitch) return;
 
 			this.$api
-				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, newVal))
-				.then(() => this.$emit('onUpdateLvAufgeteilt', newVal))
+				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, this.selLveLv.lv_aufgeteilt))
+				.then(() => this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert')))
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		getLektorenInfoString(lektoren) {
@@ -51,10 +54,10 @@ export default {
 				<span class="me-2 fw-bolder">LV-Leitung:</span>
 				<span v-html="getLektorenInfoString(lvLeitungen)"></span>
 			</div>
-			<!-- Switch Radio Buttons -->	
+			<!-- Switch Radio Buttons -->
 			<fieldset :disabled="!canSwitch">
-				<div class="d-flex flex-wrap justify-content-md-between align-items-center">
-					<div class="flex-grow-1 flex-md-grow-0">
+				<div class="d-flex flex-wrap flex-md-nowrap gap-2 align-items-start">
+					<div class="flex-grow-1 flex-md-grow-0 d-flex flex-wrap gap-2 align-items-center">
 						<div class="form-check form-check-inline ps-0">
 							<form-input
 								label="Gesamt-LV evaluieren"
@@ -62,7 +65,7 @@ export default {
 								type="radio"
 								:value="false"
 								v-model="selLveLv.lv_aufgeteilt"
-								 @update:modelValue="updateLvAufgeteilt"
+								 @change="onSwitch"
 							>
 							</form-input>
 						</div>
@@ -73,12 +76,21 @@ export default {
 								type="radio"
 								:value="true"
 								v-model="selLveLv.lv_aufgeteilt"
-								@update:modelValue="updateLvAufgeteilt"
+								 @change="onSwitch"
 							>
 							</form-input>
 						</div>
+						<div class="flex-grow-1 flex-md-grow-0 align-self-end">
+							<button 
+							  type="button" 
+							  class="btn btn-primary mt-2 mt-md-0 ms-md-2 w-100 w-md-auto"
+							  @click="updateLvAufgeteilt()"
+							>
+							  Speichern
+							</button>
+						</div>
 					</div>
-					<div class="flex-md-grow-0 ms-auto">
+					<div class="flex-md-grow-0 ms-auto mt-2 mt-md-0 d-flex align-items-center">
 						<span v-if="canSwitchInfo.length > 0">
 							<i 
 								class="fa fa-ban fa-lg text-muted" 

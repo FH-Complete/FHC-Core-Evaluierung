@@ -40,8 +40,10 @@ export default {
 				.then(result => {
 					if (result.data?.lvevaluierung_id) {
 						lveLvDetail.lvevaluierung_id = result.data.lvevaluierung_id;
-						lveLvDetail.insertamum = DateHelper.formatDate(result.data.insertamum);
-						lveLvDetail.insertvon = result.data.insertvon;
+						lveLvDetail.insertamum = result.data.insertamum;
+						lveLvDetail.insertvonFullName = result.data.insertvonFullName;
+						lveLvDetail.updateamum = result.data.updateamum;
+						lveLvDetail.updatevonFullName = result.data.updatevonFullName;
 
 						this.$emit('update-editable-checks');
 
@@ -105,11 +107,17 @@ export default {
 			return stundenplan.map(s => DateHelper.formatDate(s.datum)).join('<br>');
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
-			const lektor = lveLvDetail.lektoren.find(l => l.mitarbeiter_uid == lveLvDetail.insertvon);
-			return `
-				Gespeichert am ${DateHelper.formatDate(lveLvDetail.insertamum)} 
-				von ${lektor ? `${lektor.vorname} ${lektor.nachname}` : lveLvDetail.insertvon}
-			`;
+			const isUpdate = lveLvDetail.updateamum != null;
+
+			const lektor = isUpdate
+					? lveLvDetail.updatevonFullName
+					: lveLvDetail.insertvonFullName;
+
+			const date = isUpdate
+					? lveLvDetail.updateamum
+					: lveLvDetail.insertamum;
+
+			return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +
@@ -122,11 +130,12 @@ export default {
 	template: `
 		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 			<!-- Card title -->
-			<div class="card-header d-flex justify-content-between align-items-center">
+			<div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
 				<div>LV-Evaluierung</div>
 				<div>
 					<button 
-						class="btn btn-outline-secondary"
+						v-if="lveLvDetail.editableCheck.isRenderedBtnAuswertung"
+						class="btn btn-outline-secondary w-100 w-md-auto"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
 						<i class="fa fa-square-poll-horizontal me-2"></i>Ergebnisse LV-Evaluierung und LV-Reflexion
@@ -224,18 +233,16 @@ export default {
 									Speichern
 								</button>
 							</div>
-<!--							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	-->
-<!--								<div v-if="lveLvDetail.insertamum" class="small">{{getSavedEvaluierungInfoString(lveLvDetail)}}</div>-->
-<!--								<i -->
-<!--									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"-->
-<!--									class="fa fa-ban fa-lg text-muted" -->
-<!--									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
-<!--									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"-->
-<!--									data-bs-html="true"-->
-<!--									data-bs-custom-class="tooltip-left">-->
-<!--								</i>-->
-<!--								&lt;!&ndash; span v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}</span>&ndash;&gt;-->
-<!--							</div>-->
+							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	
+								<i 
+									v-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0"
+									class="fa fa-ban fa-lg text-muted" 
+									:title="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									v-tooltip="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')"
+									data-bs-html="true"
+									data-bs-custom-class="tooltip-left">
+								</i>
+							</div>
 						</div><!--.d-flex -->
 					</div><!--.col -->
 					</div><!--.row-->

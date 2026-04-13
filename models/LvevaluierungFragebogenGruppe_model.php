@@ -69,6 +69,7 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				fbfr.typ AS "fbFrageTyp",
 				fbfr.bezeichnung[('. $langIndex. ')] AS "fbFrageBezeichnung",
 				fbfr.sort AS "fbFrageSort",
+				fbfr.verpflichtend AS "fbFrageVerpflichtend",
 				
 				fbfrantw.lvevaluierung_frage_antwort_id,
 			  	fbfrantw.bezeichnung[('. $langIndex. ')]AS "fbFrageAntwortBezeichnung",
@@ -140,6 +141,7 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				fbfr.typ AS "fbFrageTyp",
 				fbfr.bezeichnung[('. $langIndex. ')] AS "fbFrageBezeichnung",
 				fbfr.sort AS "fbFrageSort",
+				fbfr.verpflichtend AS "fbFrageVerpflichtend",
 			
 				fbfrantw.lvevaluierung_frage_antwort_id,
 				fbfrantw.bezeichnung[('. $langIndex. ')] AS "fbFrageAntwortBezeichnung",

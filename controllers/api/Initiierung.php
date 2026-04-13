@@ -219,15 +219,15 @@ class Initiierung extends FHCAPI_Controller
 			{
 				// User cannot switch evaulation for Gesamt-LV or Gruppenbasis
 				$canSwitch = false;
-				$canSwitchInfo = ['Only LV-Leitung can edit'];
+				$canSwitchInfo = ['Bearbeitung nur durch LV-Leitung möglich'];
 
 				// User cannot start Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledEvaluierung'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Only LV-Leitung can edit'];
+				$groupedByLv[0]->editableCheck['isDisabledEvaluierungInfo']= ['Bearbeitung nur durch LV-Leitung möglich'];
 
 				// User cannot send mails for Lvevaluierung
 				$groupedByLv[0]->editableCheck['isDisabledSendMail'] = true;
-				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Only LV-Leitung can send'];
+				$groupedByLv[0]->editableCheck['isDisabledSendMailInfo']= ['Versenden nur durch LV-Leitung möglich'];
 			}
 		}
 
@@ -327,17 +327,34 @@ class Initiierung extends FHCAPI_Controller
 
 		// Add Fragebogen ID to insert/update data
 		$data['fragebogen_id']	= getData($result)[0]->fragebogen_id;
-		
+
+		// Check if Evaluierung exists for given LveLv ID and Le ID combi, then update existing instead of inserting new
+		if (empty($data['lvevaluierung_id']) && !is_null($data['lehreinheit_id']))
+		{
+			$result = $this->LvevaluierungModel->loadWhere([
+				'lvevaluierung_lehrveranstaltung_id' => $data['lvevaluierung_lehrveranstaltung_id'],
+				'lehreinheit_id' => $data['lehreinheit_id']
+			]);
+
+			if (hasData($result))
+			{
+				$data['lvevaluierung_id'] = getData($result)[0]->lvevaluierung_id;
+			}
+		}
 
 		// Insert / Update Lvevaluierung
 		if (empty($data['lvevaluierung_id']))
 		{
-			unset($data['lvevaluierung_id']);
 			$result = $this->LvevaluierungModel->insertLvevaluierung($data);
 		}
 		else
 		{
-			$this->exitIfStartzeitPassed($data['lvevaluierung_id']);
+			$lve = $this->getLvevaluierungOrFail($data['lvevaluierung_id']);
+
+			if ($lve->codes_gemailt)
+			{
+				$this->terminateWithError('Cannot update after LV-Evaluierung was already sent to students.');
+			}
 
 			$result = $this->LvevaluierungModel->updateLvevaluierung($data);
 		}
@@ -444,9 +461,10 @@ class Initiierung extends FHCAPI_Controller
 		$this->form_validation->set_rules(
 			'endezeit',
 			'Endezeit',
-			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']'
+			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitNotPast[' . $data['lvevaluierung_id'] . ']'
 		);
 		$this->form_validation->set_message('checkEndezeitAfterStartzeit', $this->p->t('ui', 'datumEndeVorDatumStart'));
+		$this->form_validation->set_message('checkEndezeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
 
 		// If Evaluierung is done by Lehreinheit
 		$lv_aufgeteilt = $this->initiierunglib->isLvAufgeteilt($data['lvevaluierung_lehrveranstaltung_id']);
@@ -482,6 +500,8 @@ class Initiierung extends FHCAPI_Controller
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
 
+			$isRenderedBtnAuswertung = true;
+
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
 			if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) < count($studenten))
 			{
@@ -501,32 +521,31 @@ class Initiierung extends FHCAPI_Controller
 				$isDisabledEvaluierung = true;
 			}
 
-			// Case: LV aufgeteilt: nur Lektor darf bearbeiten
-			if ($item->lv_aufgeteilt)
-			{
-				if ($item->lv_aufgeteilt && !in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
-					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
-				}
+			// Case: Evaluierungscodes bereits versendet: Update nicht mehr möglich
+			if ($item->codes_gemailt && $item->codes_ausgegeben !== null && $item->codes_ausgegeben > 0) {
+
+				$isDisabledEvaluierung = true;
+				$isDisabledEvaluierungInfo = ['Evaluierungszeitfenster kann nicht mehr verändert werden, da Studierenden bereits eingeladen wurden.'];
+
 			}
 
-			// Case: Evaluierung bereits gestartet: Update nicht mehr möglich
-			if ($lvevaluierung_id && !empty($item->startzeit)) {
-				$today = new DateTime('today');
-				$startzeit = new DateTime(date('Y-m-d', strtotime($item->startzeit)));
-
-				if ($today > $startzeit) {
-					$isDisabledEvaluierung = true;
-					$isDisabledEvaluierungInfo = ['Evaluierungszeitfenster kann nicht mehr verändert werden, da Studierenden bereits eingeladen wurden.'];
-				}
-			}
-
-			// Case: Evaluierung was not started, but all students were mailed by other Evaluierung
-			//if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
+			// Case: Evaluierungscodes bereits durch diese oder andere Evaluierung versendet: Update nicht mehr möglich
 			if (count($sentByAnyEvaluierungOfLv) > $item->codes_ausgegeben)
 			{
 				$isDisabledEvaluierung = true;
 				$isDisabledEvaluierungInfo []= 'Students were mailed by other Evaluierung of this LV';
+			}
+
+			// Case: LV aufgeteilt: nur Lektor darf bearbeiten (alle vorherigen Meldungen überschreiben)
+			if ($item->lv_aufgeteilt)
+			{
+				if (!in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
+					$isDisabledEvaluierung = true;
+					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
+
+					// NOTE: verhindert dass LV-Leitung auf Auswertung einer Gruppe sehen kann, wenn nicht selbst Lektor
+					$isRenderedBtnAuswertung = false;
+				}
 			}
 
 
@@ -555,7 +574,8 @@ class Initiierung extends FHCAPI_Controller
 				'isDisabledEvaluierung' => $isDisabledEvaluierung,
 				'isDisabledEvaluierungInfo' => $isDisabledEvaluierungInfo,
 				'isDisabledSendMail' => $isDisabledSendMail,
-				'isDisabledSendMailInfo' => $isDisabledSendMailInfo
+				'isDisabledSendMailInfo' => $isDisabledSendMailInfo,
+				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung
 			];
 		}
 
@@ -589,8 +609,8 @@ class Initiierung extends FHCAPI_Controller
 
 		if (isEmptyString($startzeit)) return true; // 'required' rule handles missing field
 
-		$nowDate   = (new DateTime())->format('Y-m-d');
-		$startDate = (new DateTime($startzeit))->format('Y-m-d');
+		$nowDate   = new DateTime();
+		$startDate = new DateTime($startzeit);
 
 		return $nowDate <= $startDate;
 	}
@@ -601,15 +621,17 @@ class Initiierung extends FHCAPI_Controller
 	 * @return void
 	 * @throws DateMalformedStringException
 	 */
-	public function exitIfStartzeitPassed($lvevaluierung_id)
+	public function checkEndezeitNotPast($endezeit, $lvevaluierung_id)
 	{
-		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$nowDate   = (new DateTime())->format('Y-m-d');
-		$startDate = (new DateTime($lve->startzeit))->format('Y-m-d');
-		if ($nowDate > $startDate)
-		{
-			$this->terminateWithError('Cannot update after LV-Evaluierung has already startet.');
-		}
+		// Return if Evaluierung already exist
+		if (is_numeric($lvevaluierung_id)) return true;
+
+		if (isEmptyString($endezeit)) return true; // 'required' rule handles missing field
+
+		$nowDate   = new DateTime();
+		$endDate = new DateTime($endezeit);
+
+		return $nowDate <= $endDate;
 	}
 
 	/**
@@ -647,7 +669,7 @@ class Initiierung extends FHCAPI_Controller
 	{
 		if (!$lvevaluierung_id)
 		{
-			$this->terminateWithError('Evaluierung needs to be initialised by saving Start- end Endzeit.');
+			$this->terminateWithError('Missing Lvevaluierung ID');
 		}
 
 		$result = $this->LvevaluierungModel->load($lvevaluierung_id);
