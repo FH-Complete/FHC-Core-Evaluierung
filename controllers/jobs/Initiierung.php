@@ -343,7 +343,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
-	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
+	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one day after Evaluierung ends.
 	 *
 	 * @return void
 	 */
@@ -455,7 +455,7 @@ class Initiierung extends JOB_Controller
 							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
 							{
 								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
-								echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
+								//echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
 								$uid = $lvLeitung->mitarbeiter_uid;
 
 								$data = [
@@ -506,7 +506,7 @@ class Initiierung extends JOB_Controller
 							if (!in_array($lektor->uid, $gesamt_sent_users))
 							{
 								$gesamt_sent_users[] = $lektor->uid;
-								echo "\nGesamt Mail to ".$lektor->uid;
+								//echo "\nGesamt Mail to ".$lektor->uid;
 								$uid = $lektor->uid;
 
 								$data = [
