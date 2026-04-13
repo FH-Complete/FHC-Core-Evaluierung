@@ -19,12 +19,16 @@ export default {
 		lvevaluierung_lehrveranstaltung_id: {
 			type: [String, Number],
 			default: null
+		},
+		evaluationView: {
+			type: Object,
 		}
 	},
 	data() {
 		return {
 			auswertungData: [],
-			textantworten: []
+			textantworten: [],
+			auswertungHelpUrl: null
 		}
 	},
 	created() {
@@ -43,7 +47,11 @@ export default {
 					return this.$api.call(apiCallTextantworten)
 				})
 				.then(result => {
-					this.textantworten = result.data
+					this.textantworten = result.data;
+					return this.$api.call(ApiEvaluation.getAuswertungHelpUrl())
+				})
+				.then(result => {
+					this.auswertungHelpUrl = result.data;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
@@ -60,15 +68,36 @@ export default {
 		},
 		chartOptionsLvImZeitverlauf() {
 			return this.createTimelineChart(this.auswertungData);
-		}
+		},
 	},
 	methods: {
 		createEinzelfrageChart(fbFragen){
+			// Gesamtanzahl Bewertungen
+			const totalN = fbFragen.antworten.frequencies.reduce((a, b) => a + b, 0);
+
 			return {
 				chart: { type: 'column'},
-				title: { text: fbFragen.bezeichnung},
+				title: {
+					text: fbFragen.bezeichnung,
+					style: {
+						fontSize: "16px",
+					}},
+				tooltip: {
+					formatter: function () {
+						const labels = fbFragen.antworten.bezeichnungen;
+						const start = fbFragen.antworten.werte[0]; // z.B. 1
+
+						const index = this.x - start;
+						const text = labels[index] ?? "";
+
+						return `
+							<b>${this.x} ${text}</b><br>
+							Häufigkeit der Bewertungen: <b>${this.y}</b>
+						`;
+					}
+				},
 				series: [{
-					name: "Häufigkeit der Bewertungen",
+					name: `Häufigkeit der Bewertungen (N = ${totalN})`,
 					data: fbFragen.antworten.frequencies,
 					pointStart: fbFragen.antworten.werte[0],
 					color: "#6fcd98"
@@ -76,12 +105,12 @@ export default {
 					//Dummy-Series ONLY for vertical Hodges-Lehmann Estimator legend
 					{
 						name: fbFragen.antworten.hodgesLehmann.actYear !== null
-								? `Hodges-Lehmann Estimator (HLE): ${fbFragen.antworten.hodgesLehmann.actYear}`
+								? `Hodges-Lehmann Estimator (HLE: ${fbFragen.antworten.hodgesLehmann.actYear})`
 								: "Hodges-Lehmann Estimator (HLE)",
 						type: "line",
 						data: [],                 // no data -> dummy
-						color: "orange",
-						dashStyle: "Dot",
+						color: "grey",
+						dashStyle: "Dash",
 						lineWidth: 2,
 						marker: { enabled: false },
 						enableMouseTracking: false
@@ -106,7 +135,22 @@ export default {
 					},
 					plotLines: [
 						//{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
-						{ value: fbFragen.antworten.hodgesLehmann.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `HLE ${fbFragen.antworten.hodgesLehmann.actYear}` }}
+						{
+							value: fbFragen.antworten.hodgesLehmann.actYear,
+							color: "grey",
+							width: 2,
+							zIndex: 10,
+							dashStyle: "Dash",
+							label: {
+								text: `HLE: ${fbFragen.antworten.hodgesLehmann.actYear}`,
+								rotation: 360,
+								style: {
+									fontWeight: "bold",
+									fontSize: '13px',
+								},
+								y: 10 // Abstand nach unten
+							}
+						}
 					]
 				},
 				yAxis: {
@@ -125,7 +169,7 @@ export default {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
 				//subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
-				subtitle: { text: 'HLE - Hodges Lehmann Estimator der letzten 3 Jahre' },
+				subtitle: { text: 'Bewertungen der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
 					//data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
@@ -133,7 +177,7 @@ export default {
 					visible: i === 0 // only current year visible by default
 				})),
 				yAxis: {
-					title: { text: 'Bewertung' },
+					title: null, // set to null, otherwise it renders the word 'values'
 					min: 1,
 					max: 5,
 					tickInterval: 1,
@@ -211,7 +255,8 @@ export default {
 				legend: {
 					align: 'center',
 					verticalAlign: 'bottom',
-					layout: 'vertical'
+					layout: 'vertical',
+					useHtml: true,
 				},
 				credits: { enabled: false }
 			};
@@ -219,14 +264,23 @@ export default {
 	},
 	template: `
 	<div class="evaluation-evaluation-auswertung">
-		<h3 class="mb-4">Auswertung</h3>
+		<div class="d-flex flex-column flex-sm-row align-items-baseline gap-md-3">
+			<h3 class="mb-4">Ergebnisse LV-Evaluierung</h3>
+			<a  
+				v-if="auswertungHelpUrl"
+  				:href="auswertungHelpUrl"
+  			>
+				<i class="fa fa-external-link"></i>
+				Erläuterungen Ergebnisse
+			</a>
+		</div>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
-			<h4 class="mt-5 mb-3">Auswertung Einzelfragen</h4>
-			<div v-if="auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
+			<h4 class="mt-5 mb-4">1. Auswertung Einzelfragen</h4>
+			<div v-if="evaluationView.open && auswertungData.length > 0" v-for="(gruppe, index) in auswertungData" :key="gruppe.lvevaluierung_fragebogen_gruppe_id" 
 				:class="['row py-4 mb-3 gy-3', {'bg-light': index % 2 === 0 }]">
-				
-				<h5 class="mb-3">{{ gruppe.bezeichnung }}</h5>
- 
+				<h5 class="mb-3">{{ gruppe.bezeichnung }} 
+					<span v-if="gruppe.fbFragen.every(fbFrage => !fbFrage.verpflichtend)">(optional)</span>
+				</h5>
 				<div v-for="frage in gruppe.fbFragen" :key="frage.lvevaluierung_frage_id"
 					class="col-md-6 col-lg-4 col-xl-3">
 					<div class="card h-100">
@@ -236,11 +290,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
-			<h4 class="mt-5 mb-3">Textantworten</h4>
-			<div v-if="textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
+			<h4 class="mt-5 mb-4">2. Textantworten</h4>
+			<div v-if="evaluationView.open && textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
 				class="row-col mb-5">
 			
 				<h5 class="mb-3">{{ frage.bezeichnung }}</h5>
@@ -255,11 +309,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body">Keine Daten vorhanden oder Evaluierungszeitraum noch nicht abgeschlossen.</div></div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
-			<h4 class="mt-5 mb-3">Profillinien</h4>
-			<div class="row align-items-stretch g-3">
+			<h4 class="mt-5 mb-4">3. Profillinien</h4>
+			<div v-if="evaluationView.open && auswertungData.length > 0" class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">
 						<div class="card-body">
@@ -275,6 +329,7 @@ export default {
 					</div>
 				</div>
 			</div>
+			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
 	</div>	
 	`

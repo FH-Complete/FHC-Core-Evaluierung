@@ -25,6 +25,24 @@ ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
 
 DO $$
 BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
+    ADD CONSTRAINT fk_tbl_lvevaluierung_lehrveranstaltung_lehrveranstaltung_id FOREIGN KEY (lehrveranstaltung_id)
+        REFERENCES lehre.tbl_lehrveranstaltung (lehrveranstaltung_id)
+        ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung
+    ADD CONSTRAINT fk_tbl_lvevaluierung_lehrveranstaltung_studiensemester_kurzbz FOREIGN KEY (studiensemester_kurzbz)
+        REFERENCES public.tbl_studiensemester (studiensemester_kurzbz)
+        ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$
+BEGIN
 ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung ADD COLUMN IF NOT EXISTS reviewed_stg boolean;
 COMMENT ON COLUMN extension.tbl_lvevaluierung_lehrveranstaltung.reviewed_stg IS 'Review Spalte für Studiengänge Übersicht';
 ALTER TABLE extension.tbl_lvevaluierung_lehrveranstaltung

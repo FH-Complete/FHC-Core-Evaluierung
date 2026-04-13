@@ -58,8 +58,9 @@ ALTER TABLE extension.tbl_lvevaluierung_antwort
     ALTER COLUMN lvevaluierung_antwort_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_antwort_lvevaluierung_antwort_id');
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_antwort TO vilesci;
-GRANT SELECT ON TABLE extension.tbl_lvevaluierung_antwort TO web;
-GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_antwort_lvevaluierung_antwort_id TO vilesci;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_antwort TO web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_antwort_lvevaluierung_antwort_id TO vilesci;
+GRANT SELECT, INSERT, UPDATE, DELETE ON extension.seq_tbl_lvevaluierung_antwort_lvevaluierung_antwort_id TO web;
 
 DO $$
 BEGIN
