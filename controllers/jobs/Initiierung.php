@@ -15,6 +15,7 @@ class Initiierung extends JOB_Controller
 		parent::__construct();
 
 		$this->_ci =& get_instance();
+		$this->_ci->load->helper('hlp_sancho_helper');
 	}
 
 	/**
@@ -213,8 +214,6 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
-		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
-
 		// Get all Evaluierungen that start tomorrow
 		$result = $this->_ci->LvevaluierungModel->getLvesStartingIn('+1 day', false);
 
@@ -356,7 +355,6 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
-		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended yesterday
