@@ -269,6 +269,7 @@ export default {
 			<a  
 				v-if="auswertungHelpUrl"
   				:href="auswertungHelpUrl"
+  				target="_blank"
   			>
 				<i class="fa fa-external-link"></i>
 				Erläuterungen Ergebnisse
