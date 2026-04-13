@@ -557,6 +557,7 @@ class Initiierung extends JOB_Controller
 		$this->logInfo('Start Job sendReflexionStartReminder');
 
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
@@ -607,6 +608,17 @@ class Initiierung extends JOB_Controller
 						{
 							if (!in_array($lektor->mitarbeiter_uid, $gruppe_sent_users))
 							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lektor->mitarbeiter_uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
 								$gruppe_sent_users[] = $lektor->mitarbeiter_uid;
 								$uid = $lektor->mitarbeiter_uid;
 								//echo "\nGruppe Mail to ".$lektor->mitarbeiter_uid."\n";
@@ -658,6 +670,17 @@ class Initiierung extends JOB_Controller
 						{
 							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
 							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lvLeitung->mitarbeiter_uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
 								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
 								//echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
 								$uid = $lvLeitung->mitarbeiter_uid;
@@ -709,6 +732,17 @@ class Initiierung extends JOB_Controller
 						{
 							if (!in_array($lektor->uid, $gesamt_sent_users))
 							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lektor->uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
 								$gesamt_sent_users[] = $lektor->uid;
 								//echo "\nGesamt Mail to ".$lektor->uid;
 								$uid = $lektor->uid;
