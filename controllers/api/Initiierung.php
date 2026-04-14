@@ -387,6 +387,13 @@ class Initiierung extends FHCAPI_Controller
 			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
 
+		// If Lvevaluierung Endzeit is over -> do not allow sending email to student
+		$isEndezeitPast = $this->checkEndezeitNotPast($lve->endezeit, $lve->lvevaluierung_id);
+		if ($isEndezeitPast)
+		{
+			$this->terminateWithError('Kann nicht versendet werden: LV-Evaluierung Enddatum liegt in der Vergangenheit. Damit der Versand möglich ist, aktualisieren Sie bitte das Enddatum der Evaluierung.');
+		}
+
 		// Get Students of LV or LE, depending on Evaluation type
 		$studenten = $lveLv->lv_aufgeteilt
 			? $this->getStudentsForLeOrExit($lve)

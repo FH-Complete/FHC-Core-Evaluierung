@@ -55,6 +55,14 @@ export default {
 		onSendLinks(lveDetail) {
 			if (this.isSendingMail) { return };
 
+			// Return if Endezeit past
+			// NOTE: there is also a backend check, but this will run for each student.
+			// So, frontend check is to return early and give user one single message.
+			if (this.isEndezeitPast(lveDetail.endezeit)) {
+				this.$fhcAlert.alertWarning('Kann nicht versendet werden: Die Evaluierung ist bereits abgelaufen. Damit der Versand möglich ist, aktualisieren Sie bitte das Enddatum.');
+				return;
+			}
+
 			let completed = 0;
 			let isAllSent = null;
 
@@ -125,6 +133,15 @@ export default {
 					'?lvevaluierung_id=' + lvevaluierung_id;
 
 			window.open(url, '_blank');
+		},
+		isEndezeitPast(endezeit) {
+			if (!endezeit) return false;
+
+			// "YYYY-MM-DD HH:mm:ss" in ISO konvertieren
+			const ende = new Date(endezeit.replace(' ', 'T'));
+			const now = new Date();
+
+			return ende < now;
 		}
 	},
 	template: `
