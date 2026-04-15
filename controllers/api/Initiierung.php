@@ -642,7 +642,7 @@ class Initiierung extends FHCAPI_Controller
 			0
 		);
 
-		return $now > $start;
+		return $now < $start;
 	}
 
 	/**
