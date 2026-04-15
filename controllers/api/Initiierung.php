@@ -461,9 +461,8 @@ class Initiierung extends FHCAPI_Controller
 		$this->form_validation->set_rules(
 			'startzeit',
 			'Startzeit',
-			'required|callback_checkStartzeitNotPast[' . $data['lvevaluierung_id'] . ']'
+			'required'
 		);
-		$this->form_validation->set_message('checkStartzeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
 
 		$this->form_validation->set_rules(
 			'endezeit',
@@ -506,6 +505,9 @@ class Initiierung extends FHCAPI_Controller
 
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
+
+			// Status für Mailversand
+			$isDisabledSendMailInfo = [];
 
 			$isRenderedBtnAuswertung = true;
 
@@ -555,14 +557,6 @@ class Initiierung extends FHCAPI_Controller
 				}
 			}
 
-
-			// Status für Mailversand
-			$isDisabledSendMailInfo = [];
-			if ($lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
-			{
-				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
-			}
-
 //			if ($lvevaluierung_id && $item->codes_gemailt)
 //			{
 //				$isDisabledSendMailInfo[]= $item->codes_ausgegeben. ' Codes generated';
@@ -574,7 +568,14 @@ class Initiierung extends FHCAPI_Controller
 			}
 
 			// Button disable logic
-			$isDisabledSendMail = (!$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+
+			// If no issues collected to disable sending mails
+			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
+			{
+				// ...set positive msg: Versand ok
+				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
+			}
 
 			// Add infos
 			$item->editableCheck = [
