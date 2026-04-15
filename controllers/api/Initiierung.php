@@ -19,6 +19,7 @@ class Initiierung extends FHCAPI_Controller
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+		$this->load->config('extensions/FHC-Core-Evaluierung/initiierung');
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
@@ -28,10 +29,12 @@ class Initiierung extends FHCAPI_Controller
 
 		// Load language phrases
 		$this->loadPhrases([
-			'ui'
+			'ui',
+			'global'
 		]);
 
 		$this->_uid = getAuthUid();
+		$this->_minTimeBufferBeforeEndezeit = $this->config->item('minTimeBufferBeforeEndezeit');
 	}
 
 	/**
@@ -387,11 +390,18 @@ class Initiierung extends FHCAPI_Controller
 			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
 
-		// If Lvevaluierung Endzeit is over -> do not allow sending email to student
-		$isEndezeitPast = $this->checkEndezeitNotPast($lve->endezeit, $lve->lvevaluierung_id);
-		if ($isEndezeitPast)
+		// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
+		if ($this->_minTimeBufferBeforeEndezeit)
 		{
-			$this->terminateWithError('Kann nicht versendet werden: LV-Evaluierung Enddatum liegt in der Vergangenheit. Damit der Versand möglich ist, aktualisieren Sie bitte das Enddatum der Evaluierung.');
+			$isEndezeitValid = $this->checkEndezeitValid($lve->endezeit);
+			if ($isEndezeitValid === false)
+			{
+				$this->terminateWithError($this->p->t(
+					'global',
+					'endedatumMussInZukunftLiegen',
+					['minutes' => $this->_minTimeBufferBeforeEndezeit]
+				));
+			}
 		}
 
 		// Get Students of LV or LE, depending on Evaluation type
@@ -467,10 +477,14 @@ class Initiierung extends FHCAPI_Controller
 		$this->form_validation->set_rules(
 			'endezeit',
 			'Endezeit',
-			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitNotPast[' . $data['lvevaluierung_id'] . ']'
+			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitValid'
 		);
 		$this->form_validation->set_message('checkEndezeitAfterStartzeit', $this->p->t('ui', 'datumEndeVorDatumStart'));
-		$this->form_validation->set_message('checkEndezeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
+		$this->form_validation->set_message('checkEndezeitValid', $this->p->t(
+			'global',
+			'endedatumMussInZukunftLiegen',
+			['minutes' => $this->_minTimeBufferBeforeEndezeit]
+		));
 
 		// If Evaluierung is done by Lehreinheit
 		$lv_aufgeteilt = $this->initiierunglib->isLvAufgeteilt($data['lvevaluierung_lehrveranstaltung_id']);
@@ -529,6 +543,21 @@ class Initiierung extends FHCAPI_Controller
 				$isDisabledEvaluierungInfo = ['No students assigned to course'];
 				$isDisabledEvaluierung = true;
 			}
+
+			// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
+			if ($this->_minTimeBufferBeforeEndezeit)
+			{
+				$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
+				if ($isEndezeitValid === false)
+				{
+					$isDisabledSendMailInfo[]= $this->p->t(
+						'global',
+						'endedatumMussInZukunftLiegen',
+						['minutes' => $this->_minTimeBufferBeforeEndezeit]
+					);
+				}
+			}
+
 
 			// Case: Evaluierungscodes bereits versendet: Update nicht mehr möglich
 			if ($item->codes_gemailt && $item->codes_ausgegeben !== null && $item->codes_ausgegeben > 0) {
@@ -670,6 +699,29 @@ class Initiierung extends FHCAPI_Controller
 		);
 
 		return $now < $ende;
+	}
+
+	public function checkEndezeitValid($endezeit)
+	{
+		$bufferSeconds = (int)$this->_minTimeBufferBeforeEndezeit * 60;
+
+		$now  = new DateTime();
+		$ende = new DateTime($endezeit);
+
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
+
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
+
+		return ($ende->getTimestamp() - $now->getTimestamp()) >= $bufferSeconds;
 	}
 
 	/**
