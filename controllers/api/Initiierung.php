@@ -598,9 +598,23 @@ class Initiierung extends FHCAPI_Controller
 	 */
 	public function checkEndezeitAfterStartzeit($endezeit, $startzeit)
 	{
-		if (isEmptyString($endezeit) || isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+		$start = new DateTime($startzeit);
+		$ende   = new DateTime($endezeit);
 
-		return strtotime($endezeit) > strtotime($startzeit);
+		// Sekunden ignorieren
+		$start->setTime(
+			(int)$start->format('H'),
+			(int)$start->format('i'),
+			0
+		);
+
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
+
+		return $ende >= $start;
 	}
 
 	/**
@@ -609,17 +623,25 @@ class Initiierung extends FHCAPI_Controller
 	 * @param string $startzeit
 	 * @return bool
 	 */
-	public function checkStartzeitNotPast($startzeit, $lvevaluierung_id)
+	public function checkStartzeitNotPast($startzeit)
 	{
-		// Return if Evaluierung already exist
-		if (is_numeric($lvevaluierung_id)) return true;
+		$now   = new DateTime();
+		$start = new DateTime($startzeit);
 
-		if (isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
 
-		$nowDate   = new DateTime();
-		$startDate = new DateTime($startzeit);
+		$start->setTime(
+			(int)$start->format('H'),
+			(int)$start->format('i'),
+			0
+		);
 
-		return $nowDate <= $startDate;
+		return $now > $start;
 	}
 
 	/**
@@ -628,17 +650,25 @@ class Initiierung extends FHCAPI_Controller
 	 * @return void
 	 * @throws DateMalformedStringException
 	 */
-	public function checkEndezeitNotPast($endezeit, $lvevaluierung_id)
+	public function checkEndezeitNotPast($endezeit)
 	{
-		// Return if Evaluierung already exist
-		if (is_numeric($lvevaluierung_id)) return true;
+		$now   = new DateTime();
+		$ende = new DateTime($endezeit);
 
-		if (isEmptyString($endezeit)) return true; // 'required' rule handles missing field
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
 
-		$nowDate   = new DateTime();
-		$endDate = new DateTime($endezeit);
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
 
-		return $nowDate <= $endDate;
+		return $now < $ende;
 	}
 
 	/**
