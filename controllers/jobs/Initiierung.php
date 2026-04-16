@@ -16,6 +16,13 @@ class Initiierung extends JOB_Controller
 
 		$this->_ci =& get_instance();
 		$this->_ci->load->helper('hlp_sancho_helper');
+
+		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+		$this->_ci->load->config('extensions/FHC-Core-Evaluierung/initiierung');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 	}
 
 	/**
@@ -33,8 +40,6 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
-
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 
 		// Only for pilotphase
 		if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG') && CIS_EVALUIERUNG_ANZEIGEN_STG )
@@ -74,7 +79,6 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
 		
@@ -210,7 +214,6 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendEvaluierungStartReminder');
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
@@ -351,7 +354,6 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendReflexionStartInfo');
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
@@ -556,7 +558,6 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendReflexionStartReminder');
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
