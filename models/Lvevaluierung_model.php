@@ -82,6 +82,26 @@ class Lvevaluierung_model extends DB_Model
 	}
 
 	/**
+	 * Get Lvevaluilerungen by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getLvesByStSem($studiensemester_kurzbz)
+	{
+		$this->addSelect('lvevaluierung_id');
+		$this->addSelect('lvevaluierung_lehrveranstaltung_id');
+		$this->addSelect('lehreinheit_id');
+		$this->addSelect('fragebogen_id');
+
+		$this->addJoin('extension.tbl_lvevaluierung_lehrveranstaltung lvelv', 'lvevaluierung_lehrveranstaltung_id');
+
+		return $this->loadWhere([
+			'lvelv.studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+	}
+
+	/**
 	 * Get Evaluierungen, that were sent and whose start date matches the given day offset, related to the current date.
 	 *
 	 * @param int|string $offsetDays	e.g.: 0|0 day = today. -1|-1 day = yesterday, +14|+14 day = in two weeks
