@@ -10,6 +10,30 @@ class Lvevaluierung_model extends DB_Model
 	}
 
 	/**
+	 * Insert multiple Lvevaluierungen.
+	 *
+	 * @param $batch
+	 * @return mixed
+	 */
+	public function insertBatch($batch)
+	{
+		// Check class properties
+		if (is_null($this->dbTable)) return error('The given database table name is not valid', EXIT_MODEL);
+
+		// Insert data
+		$insert = $this->db->insert_batch($this->dbTable, $batch);
+
+		if ($insert)
+		{
+			return success();
+		}
+		else
+		{
+			return error($this->db->error(), EXIT_DATABASE);
+		}
+	}
+
+	/**
 	 * Insert new Lvevaluierung.
 	 *
 	 * @param $lvevaluierung
