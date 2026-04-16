@@ -322,13 +322,13 @@ export default {
 						</div>
 					</div>
 				</div>
-				<div class="col-lg-6">
+			<!--	<div class="col-lg-6">
 					<div class="card h-100">
 						<div class="card-body">
 							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
 						</div>
 					</div>
-				</div>
+				</div>-->
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
