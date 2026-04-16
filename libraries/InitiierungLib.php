@@ -137,6 +137,7 @@ class InitiierungLib
 				$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
 
 				// Add Studierende, that got mail by this or any other LE
+				$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
 				$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
 				$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
 				$grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehrveranstaltung_id) {
