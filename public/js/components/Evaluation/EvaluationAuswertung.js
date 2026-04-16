@@ -270,9 +270,10 @@ export default {
 				v-if="auswertungHelpUrl"
   				:href="auswertungHelpUrl"
   				target="_blank"
+  				class="btn btn-primary btn-sm"
   			>
 				<i class="fa fa-external-link"></i>
-				Erläuterungen Ergebnisse
+				Interpretationshilfe
 			</a>
 		</div>
 		<div class="evaluation-evaluation-auswertung-einzelfragen mb-3">
