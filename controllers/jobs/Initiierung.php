@@ -15,6 +15,7 @@ class Initiierung extends JOB_Controller
 		parent::__construct();
 
 		$this->_ci =& get_instance();
+		$this->_ci->load->helper('hlp_sancho_helper');
 	}
 
 	/**
@@ -213,8 +214,6 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
-		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
-
 		// Get all Evaluierungen that start tomorrow
 		$result = $this->_ci->LvevaluierungModel->getLvesStartingIn('+1 day', false);
 
@@ -344,7 +343,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
-	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
+	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one day after Evaluierung ends.
 	 *
 	 * @return void
 	 */
@@ -356,7 +355,6 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
-		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended yesterday
@@ -457,7 +455,7 @@ class Initiierung extends JOB_Controller
 							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
 							{
 								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
-								echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
+								//echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
 								$uid = $lvLeitung->mitarbeiter_uid;
 
 								$data = [
@@ -508,7 +506,7 @@ class Initiierung extends JOB_Controller
 							if (!in_array($lektor->uid, $gesamt_sent_users))
 							{
 								$gesamt_sent_users[] = $lektor->uid;
-								echo "\nGesamt Mail to ".$lektor->uid;
+								//echo "\nGesamt Mail to ".$lektor->uid;
 								$uid = $lektor->uid;
 
 								$data = [
@@ -547,5 +545,243 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('End Job sendReflexionStartInfo');
+	}
+
+	/**
+	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one week after first infomail was sent.
+	 *
+	 * @return void
+	 */
+	public function sendReflexionStartReminder(){
+
+		$this->logInfo('Start Job sendReflexionStartReminder');
+
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
+
+		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
+
+		// Get all Evaluierungen that ended one day before one week
+		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-8 day', true);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$gruppe_sent_users = array();
+			$gesamt_sent_users = array();
+
+			$data = hasData($result) ? getData($result) : [];
+
+			foreach($data as $row)
+			{
+				//var_dump($row); // check studiengangsbezeichnung
+//				var_dump($row->lvevaluierung_id);
+//				var_dump($row->lvevaluierung_lehrveranstaltung_id);
+//				var_dump($row->lv_bezeichnung);
+//				var_dump($row->startzeit);
+//				var_dump($row->endezeit);
+//				var_dump($row->lv_aufgeteilt ? 'Gruppe; Mail an Lektor' : 'Gesamt-LV; Mail an LVLeitungen');
+
+				// Get Start- and Endedatum of Reflexionszeitraum
+				$zeitfenster = $this->_ci->evaluationlib->calculateReflexionZeitfenster($row->endezeit);
+				$reflexionBis = $zeitfenster['bis']->format("d.m.Y");
+				// var_dump($zeitfenster['bis']->format("d.m.Y"));
+
+				// Link zu Ergebnissen der LV
+				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/?lvevaluierung_id='. $row->lvevaluierung_id;
+
+				// Gruppen Evaluierung
+				if($row->lv_aufgeteilt)
+				{
+					// Bei Gruppen Evaluierung ergeht Info an die jeweiligen LektorInnen
+					$result = $this->_ci->LehreinheitmitarbeiterModel->getLektorenByLe($row->lehreinheit_id);
+					if (hasData($result))
+					{
+						$lektoren = getData($result);
+
+						foreach($lektoren as $lektor)
+						{
+							if (!in_array($lektor->mitarbeiter_uid, $gruppe_sent_users))
+							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lektor->mitarbeiter_uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
+								$gruppe_sent_users[] = $lektor->mitarbeiter_uid;
+								$uid = $lektor->mitarbeiter_uid;
+								//echo "\nGruppe Mail to ".$lektor->mitarbeiter_uid."\n";
+
+								$data = [
+									'vorname' => $lektor->vorname,
+									'nachname' => $lektor->nachname,
+									'lv_bezeichnung' => $row->lv_bezeichnung,
+									'stg_bezeichnung' => $row->stg_bezeichnung,
+									'reflexion_bis' => $reflexionBis,
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LEHR_TEXT_4B_Pflicht',
+									$data,
+									$uid.'@'.DOMAIN,
+									'Reminder: LV-Evaluation auf Gruppen-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - LV-Reflexion bis '. $reflexionBis,
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LEHR_TEXT_4B_Pflicht to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LEHR_TEXT_4B_Pflicht to '. $uid);
+								}
+							}
+						}
+					}
+					else
+					{
+						$this->logError('Laden der Lektoren der Evaluierungs-Lehreinheit '. $row->lehreinheit_id. ' fehlgeschlagen');
+					}
+				}
+				// Gesamt-LV Evaluierung
+				else
+				{
+					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung für die verpflichtend durchzuführende LV-Reflexion
+					$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($row->lehrveranstaltung_id, $row->studiensemester_kurzbz);
+					if(hasData($result))
+					{
+						$lvLeitungen = getData($result);
+
+						foreach($lvLeitungen as $lvLeitung)
+						{
+							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
+							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lvLeitung->mitarbeiter_uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
+								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
+								//echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
+								$uid = $lvLeitung->mitarbeiter_uid;
+
+								$data = [
+									'vorname' => $lvLeitung->vorname,
+									'nachname' => $lvLeitung->nachname,
+									'lv_bezeichnung' => $row->lv_bezeichnung,
+									'stg_bezeichnung' => $row->stg_bezeichnung,
+									'reflexion_bis' => $reflexionBis,
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LVL_TEXT_6',
+									$data,
+									$uid.'@'.DOMAIN,
+									'Reminder: LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor – LV-Reflexion bis '. $reflexionBis,
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LVL_TEXT_6 to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LVL_TEXT_6 to '. $uid);
+								}
+
+							}
+						}
+					}
+
+					// Bei Gesamt Evaluierung ergeht Info an alle Lehrenden der LV für die optionale durchzuführende LV-Reflexion
+					$result = $this->_ci->LehrveranstaltungModel->getLecturersByLv(
+						$row->studiensemester_kurzbz,
+						$row->lehrveranstaltung_id
+					);
+
+					if(hasData($result))
+					{
+						$lektoren = getData($result);
+						//	var_dump('lektoren');
+						//	var_dump($lektoren);
+
+						foreach($lektoren as $lektor)
+						{
+							if (!in_array($lektor->uid, $gesamt_sent_users))
+							{
+								// Continue if LV-Reflexion already done
+								$result = $this->_ci->LvevaluierungReflexionModel->loadWhere([
+									'lvevaluierung_id' => $row->lvevaluierung_id,
+									'mitarbeiter_uid' => $lektor->uid
+								]);
+
+								if (hasData($result))
+								{
+									continue;
+								}
+
+								$gesamt_sent_users[] = $lektor->uid;
+								//echo "\nGesamt Mail to ".$lektor->uid;
+								$uid = $lektor->uid;
+
+								$data = [
+									'vorname' => $lektor->vorname,
+									'nachname' => $lektor->nachname,
+									'lv_bezeichnung' => $row->lv_bezeichnung,
+									'stg_bezeichnung' => $row->stg_bezeichnung,
+									'reflexion_bis' => $reflexionBis,
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LEHR_TEXT_4A_Optional',
+									$data,
+									$uid.'@'.DOMAIN,
+									'Reminder: LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - optionale LV-Reflexion bis '. $reflexionBis,
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LEHR_TEXT_4A_Optional to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LEHR_TEXT_4A_Optional to '. $uid);
+								}
+							}
+						}
+					}
+				}
+			}
+//			var_dump('gesamt sent users:');
+//			var_dump($gesamt_sent_users);
+		}
+
+		$this->logInfo('End Job sendReflexionStartReminder');
 	}
 }

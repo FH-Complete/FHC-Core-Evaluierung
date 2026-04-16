@@ -12,4 +12,8 @@ $config['filterLehreinheitenByUniqueLectorAndGruppen'] = true;
 // Define time window in which the lector is allowed to process the LV-Reflexion
 $config['reflexionZeitfensterDauer'] = '2 weeks';
 
+// Define minimum time buffer (in minutes) to set Evaluierung endezeit, calculating from now.
+// NOTE: Ensures students have time to complete the evaluation and links to evaluation remain valid.
+$config['minTimeBufferBeforeEndezeit'] = 15;	// in minutes
+
 $config['auswertungHelpUrl'] = APP_ROOT. 'cms/dms.php?id=389985';

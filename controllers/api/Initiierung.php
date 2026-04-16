@@ -19,6 +19,7 @@ class Initiierung extends FHCAPI_Controller
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+		$this->load->config('extensions/FHC-Core-Evaluierung/initiierung');
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
@@ -28,10 +29,12 @@ class Initiierung extends FHCAPI_Controller
 
 		// Load language phrases
 		$this->loadPhrases([
-			'ui'
+			'ui',
+			'global'
 		]);
 
 		$this->_uid = getAuthUid();
+		$this->_minTimeBufferBeforeEndezeit = $this->config->item('minTimeBufferBeforeEndezeit');
 	}
 
 	/**
@@ -387,6 +390,20 @@ class Initiierung extends FHCAPI_Controller
 			$this->checkLvLeitungAccessOrExit($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		}
 
+		// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
+		if ($this->_minTimeBufferBeforeEndezeit)
+		{
+			$isEndezeitValid = $this->checkEndezeitValid($lve->endezeit);
+			if ($isEndezeitValid === false)
+			{
+				$this->terminateWithError($this->p->t(
+					'global',
+					'endedatumMussInZukunftLiegen',
+					['minutes' => $this->_minTimeBufferBeforeEndezeit]
+				));
+			}
+		}
+
 		// Get Students of LV or LE, depending on Evaluation type
 		$studenten = $lveLv->lv_aufgeteilt
 			? $this->getStudentsForLeOrExit($lve)
@@ -454,17 +471,20 @@ class Initiierung extends FHCAPI_Controller
 		$this->form_validation->set_rules(
 			'startzeit',
 			'Startzeit',
-			'required|callback_checkStartzeitNotPast[' . $data['lvevaluierung_id'] . ']'
+			'required'
 		);
-		$this->form_validation->set_message('checkStartzeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
 
 		$this->form_validation->set_rules(
 			'endezeit',
 			'Endezeit',
-			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitNotPast[' . $data['lvevaluierung_id'] . ']'
+			'required|callback_checkEndezeitAfterStartzeit[' . $data['startzeit'] . ']|callback_checkEndezeitValid'
 		);
 		$this->form_validation->set_message('checkEndezeitAfterStartzeit', $this->p->t('ui', 'datumEndeVorDatumStart'));
-		$this->form_validation->set_message('checkEndezeitNotPast', $this->p->t('ui', 'datumInVergangenheit'));
+		$this->form_validation->set_message('checkEndezeitValid', $this->p->t(
+			'global',
+			'endedatumMussInZukunftLiegen',
+			['minutes' => $this->_minTimeBufferBeforeEndezeit]
+		));
 
 		// If Evaluierung is done by Lehreinheit
 		$lv_aufgeteilt = $this->initiierunglib->isLvAufgeteilt($data['lvevaluierung_lehrveranstaltung_id']);
@@ -500,6 +520,9 @@ class Initiierung extends FHCAPI_Controller
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
 
+			// Status für Mailversand
+			$isDisabledSendMailInfo = [];
+
 			$isRenderedBtnAuswertung = true;
 
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
@@ -520,6 +543,21 @@ class Initiierung extends FHCAPI_Controller
 				$isDisabledEvaluierungInfo = ['No students assigned to course'];
 				$isDisabledEvaluierung = true;
 			}
+
+			// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
+			if ($this->_minTimeBufferBeforeEndezeit)
+			{
+				$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
+				if ($isEndezeitValid === false)
+				{
+					$isDisabledSendMailInfo[]= $this->p->t(
+						'global',
+						'endedatumMussInZukunftLiegen',
+						['minutes' => $this->_minTimeBufferBeforeEndezeit]
+					);
+				}
+			}
+
 
 			// Case: Evaluierungscodes bereits versendet: Update nicht mehr möglich
 			if ($item->codes_gemailt && $item->codes_ausgegeben !== null && $item->codes_ausgegeben > 0) {
@@ -548,14 +586,6 @@ class Initiierung extends FHCAPI_Controller
 				}
 			}
 
-
-			// Status für Mailversand
-			$isDisabledSendMailInfo = [];
-			if ($lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
-			{
-				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
-			}
-
 //			if ($lvevaluierung_id && $item->codes_gemailt)
 //			{
 //				$isDisabledSendMailInfo[]= $item->codes_ausgegeben. ' Codes generated';
@@ -567,7 +597,14 @@ class Initiierung extends FHCAPI_Controller
 			}
 
 			// Button disable logic
-			$isDisabledSendMail = (!$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+
+			// If no issues collected to disable sending mails
+			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
+			{
+				// ...set positive msg: Versand ok
+				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
+			}
 
 			// Add infos
 			$item->editableCheck = [
@@ -591,9 +628,23 @@ class Initiierung extends FHCAPI_Controller
 	 */
 	public function checkEndezeitAfterStartzeit($endezeit, $startzeit)
 	{
-		if (isEmptyString($endezeit) || isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+		$start = new DateTime($startzeit);
+		$ende   = new DateTime($endezeit);
 
-		return strtotime($endezeit) > strtotime($startzeit);
+		// Sekunden ignorieren
+		$start->setTime(
+			(int)$start->format('H'),
+			(int)$start->format('i'),
+			0
+		);
+
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
+
+		return $ende >= $start;
 	}
 
 	/**
@@ -602,17 +653,25 @@ class Initiierung extends FHCAPI_Controller
 	 * @param string $startzeit
 	 * @return bool
 	 */
-	public function checkStartzeitNotPast($startzeit, $lvevaluierung_id)
+	public function checkStartzeitNotPast($startzeit)
 	{
-		// Return if Evaluierung already exist
-		if (is_numeric($lvevaluierung_id)) return true;
+		$now   = new DateTime();
+		$start = new DateTime($startzeit);
 
-		if (isEmptyString($startzeit)) return true; // 'required' rule handles missing field
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
 
-		$nowDate   = new DateTime();
-		$startDate = new DateTime($startzeit);
+		$start->setTime(
+			(int)$start->format('H'),
+			(int)$start->format('i'),
+			0
+		);
 
-		return $nowDate <= $startDate;
+		return $now < $start;
 	}
 
 	/**
@@ -621,17 +680,48 @@ class Initiierung extends FHCAPI_Controller
 	 * @return void
 	 * @throws DateMalformedStringException
 	 */
-	public function checkEndezeitNotPast($endezeit, $lvevaluierung_id)
+	public function checkEndezeitNotPast($endezeit)
 	{
-		// Return if Evaluierung already exist
-		if (is_numeric($lvevaluierung_id)) return true;
+		$now   = new DateTime();
+		$ende = new DateTime($endezeit);
 
-		if (isEmptyString($endezeit)) return true; // 'required' rule handles missing field
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
 
-		$nowDate   = new DateTime();
-		$endDate = new DateTime($endezeit);
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
 
-		return $nowDate <= $endDate;
+		return $now < $ende;
+	}
+
+	public function checkEndezeitValid($endezeit)
+	{
+		$bufferSeconds = (int)$this->_minTimeBufferBeforeEndezeit * 60;
+
+		$now  = new DateTime();
+		$ende = new DateTime($endezeit);
+
+		// Sekunden ignorieren
+		$now->setTime(
+			(int)$now->format('H'),
+			(int)$now->format('i'),
+			0
+		);
+
+		$ende->setTime(
+			(int)$ende->format('H'),
+			(int)$ende->format('i'),
+			0
+		);
+
+		return ($ende->getTimestamp() - $now->getTimestamp()) >= $bufferSeconds;
 	}
 
 	/**
