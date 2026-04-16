@@ -65,6 +65,178 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
+	 *
+	 * Job will not run before Zeitfenster for switching Evaluierungsebene is closed.
+	 * Job checks, if Evaluierungen already exist to prevent double entries.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function createEvaluierungen($studiensemester_kurzbz)
+	{
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+			return;
+		}
+
+		// Get Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster for '. $studiensemester_kurzbz);
+			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+			return;
+		}
+
+		$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
+		$now   = new DateTime();
+
+		// Go on only if Zeitfenster is closed
+		if ($now > $zeitfensterEnde)
+		{
+			// Get LveLvs by Studiensemester
+			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+			if (isError($result))
+			{
+				$this->logError(getError($result));
+			}
+
+			$lveLvs = getData($result);
+			$insertBatch = [];
+
+			foreach ($lveLvs as $lveLv)
+			{
+				// Get valid Fragebogen
+				$result = $this->_ci->LvevaluierungFragebogenModel->getActiveFragebogen(
+					$lveLv->lehrveranstaltung_id,
+					$lveLv->studiensemester_kurzbz
+				);
+
+				if (!hasData($result))
+				{
+					$this->logError('job createEvaluierungen: No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
+				}
+
+				$fragebogenId = getData($result)[0]->fragebogen_id;
+
+				// Get Lehreinheiten and Gruppen for LveLv
+				$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById($lveLv->lvevaluierung_lehrveranstaltung_id);
+				$data = hasData($result) ? getData($result) : [];
+
+				// If Evaluierungsebene = Gruppe
+				if ($lveLv->lv_aufgeteilt)
+				{
+					// Group data by LE
+					$groupedByLe = $this->_ci->initiierunglib->groupByLeAndAddData($data, $lveLv->lvevaluierung_lehrveranstaltung_id);
+
+					if ($this->_ci->config->item('filterLehreinheitenByUniqueLectorAndGruppen'))
+					{
+						// Keep grouped Lehreinheiten only if LEs have unique Lector and unique Gruppen combinations
+						if (!$this->_ci->initiierunglib->hasUniqueLectorPerLehreinheit($data) ||
+							$this->_ci->initiierunglib->hasHierarchicalDuplicateGruppen($data))
+						{
+							$groupedByLe = [];
+						}
+					}
+
+					foreach ($groupedByLe as $item) {
+						$insertBatch[] = [
+							'lehreinheit_id' => $item->lehreinheit_id,
+							'lvevaluierung_lehrveranstaltung_id' => $lveLv->lvevaluierung_lehrveranstaltung_id,
+							'fragebogen_id' => $fragebogenId
+						];
+					}
+				}
+				// If Evaluierungsebene = Gesamt-LV
+				else
+				{
+					// Group data by LV
+					$groupedByLv = $this->_ci->initiierunglib->groupByLvAndAddData(
+						$data,
+						$lveLv->lvevaluierung_lehrveranstaltung_id,
+						$lveLv->lehrveranstaltung_id,
+						$lveLv->studiensemester_kurzbz
+					);
+
+					foreach ($groupedByLv as $item) {
+						$insertBatch[] = [
+							'lehreinheit_id' => NULL,
+							'lvevaluierung_lehrveranstaltung_id' => $lveLv->lvevaluierung_lehrveranstaltung_id,
+							'fragebogen_id' => $fragebogenId
+						];
+					}
+				}
+			}
+
+			// Get existing LV Evaluierungen by Studiensemester
+			$result =  $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
+
+			// If Evaluierungen exist
+			if (hasData($result))
+			{
+				$lves = getData($result);
+
+				// Remove insert entries that already exist in Evaluierungen
+				$filteredBatch = [];
+
+				foreach ($insertBatch as $insert)
+				{
+					$found = false;
+
+					foreach ($lves as $lve)
+					{
+						if (
+							$insert['lehreinheit_id'] === $lve->lehreinheit_id &&
+							$insert['lvevaluierung_lehrveranstaltung_id'] === $lve->lvevaluierung_lehrveranstaltung_id
+						){
+							$found = true;
+							break;
+						}
+					}
+
+					if (!$found)
+					{
+						$filteredBatch[] = $insert;
+					}
+				}
+
+				$insertBatch = $filteredBatch;
+			}
+
+
+			// Insert LV Evaluierungen
+			if (!empty($insertBatch))
+			{
+				$result = $this->_ci->LvevaluierungModel->insertBatch($insertBatch);
+
+				if (isError($result))
+				{
+					$this->logError(getError($result));
+					$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+				}
+				else
+				{
+					$this->logInfo('Created ' . count($insertBatch) . ' new Evaluierungen');
+				}
+			}
+			else
+			{
+				$this->logInfo('No new Evaluierungen needed - all already present.');
+			}
+
+			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+		}
+	}
+
+	/**
 	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
 	 *
 	 * @return void
