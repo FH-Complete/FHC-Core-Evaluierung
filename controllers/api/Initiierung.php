@@ -516,6 +516,7 @@ class Initiierung extends FHCAPI_Controller
 			$lvevaluierung_id = isset($item->lvevaluierung_id) ? $item->lvevaluierung_id : null;
 			$studenten = isset($item->studenten) ? $item->studenten : [];
 			$sentByAnyEvaluierungOfLv = isset($item->sentByAnyEvaluierungOfLv) ? $item->sentByAnyEvaluierungOfLv : [];
+			$isSentToAllStudents = count($sentByAnyEvaluierungOfLv) >= count($studenten);
 
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
@@ -526,13 +527,13 @@ class Initiierung extends FHCAPI_Controller
 			$isRenderedBtnAuswertung = true;
 
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
-			if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) < count($studenten))
+			if (!$lvevaluierung_id && !$isSentToAllStudents)
 			{
 				$isDisabledSendMailInfo[]= 'Cannot send. Save dates first';	// todo besser zu isDisabledEvaluierungInfo?
 			}
 
 			// Case: All students were already mailed
-			if (count($sentByAnyEvaluierungOfLv) >= count($studenten))
+			if ($isSentToAllStudents)
 			{
 				$isDisabledEvaluierung = true;
 			}
@@ -547,14 +548,17 @@ class Initiierung extends FHCAPI_Controller
 			// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
 			if ($this->_minTimeBufferBeforeEndezeit)
 			{
-				$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
-				if ($isEndezeitValid === false)
+				if (!$isSentToAllStudents)
 				{
-					$isDisabledSendMailInfo[]= $this->p->t(
-						'global',
-						'endedatumMussInZukunftLiegen',
-						['minutes' => $this->_minTimeBufferBeforeEndezeit]
-					);
+					$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
+					if ($isEndezeitValid === false)
+					{
+						$isDisabledSendMailInfo[]= $this->p->t(
+							'global',
+							'endedatumMussInZukunftLiegen',
+							['minutes' => $this->_minTimeBufferBeforeEndezeit]
+						);
+					}
 				}
 			}
 
@@ -597,7 +601,7 @@ class Initiierung extends FHCAPI_Controller
 			}
 
 			// Button disable logic
-			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) || $isSentToAllStudents;
 
 			// If no issues collected to disable sending mails
 			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
