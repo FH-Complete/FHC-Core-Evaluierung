@@ -4,6 +4,7 @@ import ApiFhc from "../../api/fhc.js";
 import ApiInitiierung from "../../api/initiierung.js";
 import Switcher from "./Switcher.js";
 import LveItem from "./LveItem.js";
+import DateHelper from "../../helpers/DateHelper";
 
 export default {
 	name: "LveStarten",
@@ -110,6 +111,21 @@ export default {
 					this.selLveLvDetails = lv_aufgeteilt
 							? data.groupedByLe
 							: data.groupedByLv;
+
+					// If start- and endezeit is null, set default values
+					this.selLveLvDetails.forEach(item => {
+						// default startzeit: now
+						if (!item.startzeit) {
+							item.startzeit = DateHelper.formatToSqlTimestamp(new Date());
+						}
+						// default endezeit: now + 3 days
+						if (!item.endezeit) {
+							item.endezeit = DateHelper.formatToSqlTimestamp(
+								DateHelper.addDays(new Date(), 3)
+							);
+						}
+					});
+
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
