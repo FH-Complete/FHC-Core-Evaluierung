@@ -214,11 +214,14 @@ class InitiierungLib
 				if ($evalMatch->insertvon || $evalMatch->updatevon)
 				{
 					$this->_ci->load->model('person/Person_model', 'PersonModel');
-					if ($evalMatch->insertvon)
+					if ($evalMatch->insertvon !== 'system')
 					{
-
 						$result = $this->_ci->PersonModel->getFullName($evalMatch->insertvon);
 						$item->insertvonFullName = hasData($result) ? getData($result) : '';
+					}
+					else
+					{
+						$item->insertvonFullName = $evalMatch->insertvon;
 					}
 
 					if ($evalMatch->updatevon)

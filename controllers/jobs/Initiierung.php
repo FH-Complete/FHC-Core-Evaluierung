@@ -151,7 +151,8 @@ class Initiierung extends JOB_Controller
 						$insertBatch[] = [
 							'lehreinheit_id' => $item->lehreinheit_id,
 							'lvevaluierung_lehrveranstaltung_id' => $lveLv->lvevaluierung_lehrveranstaltung_id,
-							'fragebogen_id' => $fragebogenId
+							'fragebogen_id' => $fragebogenId,
+							'insertvon' => 'system'
 						];
 					}
 				}
@@ -170,7 +171,8 @@ class Initiierung extends JOB_Controller
 						$insertBatch[] = [
 							'lehreinheit_id' => NULL,
 							'lvevaluierung_lehrveranstaltung_id' => $lveLv->lvevaluierung_lehrveranstaltung_id,
-							'fragebogen_id' => $fragebogenId
+							'fragebogen_id' => $fragebogenId,
+							'insertvon' => 'system'
 						];
 					}
 				}

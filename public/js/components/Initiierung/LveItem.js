@@ -109,15 +109,14 @@ export default {
 		getSavedEvaluierungInfoString(lveLvDetail) {
 			const isUpdate = lveLvDetail.updateamum != null;
 
-			const lektor = isUpdate
-					? lveLvDetail.updatevonFullName
-					: lveLvDetail.insertvonFullName;
+			if (isUpdate) {
+				const lektor = lveLvDetail.updatevonFullName;
+				const date = lveLvDetail.updateamum;
 
-			const date = isUpdate
-					? lveLvDetail.updateamum
-					: lveLvDetail.insertamum;
+				return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
+			}
 
-			return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
+			return '';
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +
