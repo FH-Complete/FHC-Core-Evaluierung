@@ -259,9 +259,7 @@ export default {
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->
 			<!-- Codes versenden -->
-			<div class="card-body mb-3" 
-				v-if="lveLvDetail.lvevaluierung_id || lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-			>
+			<div class="card-body mb-3" v-if="lveLvDetail.editableCheck.isRenderedSendMail">
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
 					<div class="col-6 col-md-5">

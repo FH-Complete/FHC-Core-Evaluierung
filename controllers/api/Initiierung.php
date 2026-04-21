@@ -516,22 +516,24 @@ class Initiierung extends FHCAPI_Controller
 			$lvevaluierung_id = isset($item->lvevaluierung_id) ? $item->lvevaluierung_id : null;
 			$studenten = isset($item->studenten) ? $item->studenten : [];
 			$sentByAnyEvaluierungOfLv = isset($item->sentByAnyEvaluierungOfLv) ? $item->sentByAnyEvaluierungOfLv : [];
+			$hasStartAndEndezeit= $item->startzeit && $item->endezeit;
 			$isSentToAllStudents = count($sentByAnyEvaluierungOfLv) >= count($studenten);
 
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
 
 			// Status für Mailversand
+			$isRenderedSendMail = true;
 			$isDisabledSendMailInfo = [];
 
 			$isRenderedBtnAuswertung = true;
 
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
-			if (!$lvevaluierung_id && !$isSentToAllStudents)
+			if ((!$lvevaluierung_id || !$hasStartAndEndezeit) && !$isSentToAllStudents)
 			{
-				$isDisabledSendMailInfo[]= 'Cannot send. Save dates first';	// todo besser zu isDisabledEvaluierungInfo?
+				$isRenderedSendMail = false;
+				$isDisabledSendMailInfo[]= 'Vor Versand: Start- und/oder Endedatum speichern';	// todo besser zu isDisabledEvaluierungInfo?
 			}
-
 			// Case: All students were already mailed
 			if ($isSentToAllStudents)
 			{
@@ -548,7 +550,7 @@ class Initiierung extends FHCAPI_Controller
 			// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
 			if ($this->_minTimeBufferBeforeEndezeit)
 			{
-				if (!$isSentToAllStudents)
+				if ($hasStartAndEndezeit && !$isSentToAllStudents)
 				{
 					$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
 					if ($isEndezeitValid === false)
@@ -614,6 +616,7 @@ class Initiierung extends FHCAPI_Controller
 			$item->editableCheck = [
 				'isDisabledEvaluierung' => $isDisabledEvaluierung,
 				'isDisabledEvaluierungInfo' => $isDisabledEvaluierungInfo,
+				'isRenderedSendMail' => $isRenderedSendMail,
 				'isDisabledSendMail' => $isDisabledSendMail,
 				'isDisabledSendMailInfo' => $isDisabledSendMailInfo,
 				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung
