@@ -11,14 +11,14 @@ class Evaluation extends FHCAPI_Controller
 
 		parent::__construct(array(
 				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r'),
 				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r'),
 				'getAuswertungHelpUrl' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
 				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r'),
 				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
+				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r'),
 				'saveOrUpdateReflexion' => 'extension/lvevaluierung_init:r',
 				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
 				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
@@ -183,13 +183,8 @@ class Evaluation extends FHCAPI_Controller
 //		$this->addMeta('$isKfl', $isKfl);
 //		$this->addMeta('$isStgl', $isStgl);
 
-		if (
-			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
-			$isKfl ||
-			$isStgl
-		) {
-
+		if ($isKfl || $isStgl)
+		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
 			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
 			$countSubmitted = count($submittedLveCodes);
@@ -493,6 +488,11 @@ class Evaluation extends FHCAPI_Controller
 			$lveLv->studiensemester_kurzbz
 		);
 		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+
+		if (!$isKfl && !$isStgl)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		$reflexionenByLveLv = [];
 		foreach ($lves as $lve)
