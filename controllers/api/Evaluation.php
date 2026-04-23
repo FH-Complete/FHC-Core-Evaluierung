@@ -798,19 +798,19 @@ class Evaluation extends FHCAPI_Controller
 				'showEinmeldungButton' => true,
 			];
 
-			// KFL / STGL, aber nur wenn nicht selbst Bearbeiter der Reflexion ist
-			if (($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid)
-			{
-				$reflexion['isBearbeitungOffen'] = false;
-				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
-			}
+			$isReadOnly =
+				($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid
 
-			// Gesamt LV + fremde LV Leitung Reflexion
-			if (
-				!$lveLv->lv_aufgeteilt
-				&& $this->_uid !== $lvLeitungUid
-				&& $reflexion['mitarbeiter_uid'] === $lvLeitungUid
-			) {
+				|| (
+					!$lveLv->lv_aufgeteilt
+					&& !$isKfl
+					&& !$isStgl
+					&& $reflexion['mitarbeiter_uid'] === $lvLeitungUid
+					&& $this->_uid !== $lvLeitungUid
+				);
+
+			if ($isReadOnly)
+			{
 				$reflexion['isBearbeitungOffen'] = false;
 				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
 			}
