@@ -459,7 +459,7 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Build Reflexionen by Lehrende
-		$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
+		$reflexionen = $this->buildReflexionenByLve($lve, $lveLv, $lvLeitung);
 
 		// Filter Reflexionen (nicht alle dürfen alle Reflexionen sehen)
 		$filteredReflexionen = $this->filterReflexionenByPermission(
@@ -504,7 +504,7 @@ class Evaluation extends FHCAPI_Controller
 			}
 
 			// Build Reflexionen
-			$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
+			$reflexionen = $this->buildReflexionenByLve($lve, $lveLv, $lvLeitung);
 
 			$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
 				$reflexionen,
@@ -658,33 +658,74 @@ class Evaluation extends FHCAPI_Controller
 
 		return $verpflichtend;
 	}
-	private function buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung){
 
-		// Get Lehrende
+	/**
+	 * Builds reflexion dataset for a given LVE evaluation.
+	 *
+	 * Combines existing Reflexionen with expected lecturers derived from the Evaluierungsebene (Gruppe or Gesamt-LV)
+	 * Ensures that every expected lecturer has a reflexion entry, even if none exists yet (null reflexion fallback).
+	 *
+	 * @param $lve
+	 * @param $lveLv
+	 * @param $lvLeitung
+	 * @return array
+	 */
+	private function buildReflexionenByLve($lve, $lveLv, $lvLeitung)
+	{
+		$data = [];
+
+		// Get Reflexionen
+		$result = $this->LvevaluierungReflexionModel->loadWhere([
+			'lvevaluierung_id' => $lve->lvevaluierung_id,
+		]);
+
+		$reflexionen = hasData($result) ? getData($result) : [];
+
+		// Get all Lehrende of Lve that have to do Reflexion
 		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, $lvLeitung, true);
 
-		// ReflexionData
-		$data = [];
+		$lektorenByUid = [];
 		foreach ($lektoren as $lektor) {
-			$isVerpflichtend = $this->isReflexionVerpflichtendForUid($lveLv, $lektor->uid);
+			$lektorenByUid[$lektor->uid] = $lektor;
+		}
 
-			// Get Reflexion
-			$result = $this->LvevaluierungReflexionModel->loadWhere([
-				'lvevaluierung_id' => $lve->lvevaluierung_id,
-				'mitarbeiter_uid' => $lektor->uid,
-			]);
-			$reflexion = hasData($result) ? getData($result)[0] : null;
+		// Store lektoren with reflexionen done
+		$reflexionenUids = [];
 
-			// ReflexionData immer zurückgeben mit Lektoren Info.
-			// Eigentliche LV-Reflexion kann null sein -> frontend bildet dann leeres Formular zum Bearbeiten
+		foreach ($reflexionen as $reflexion)
+		{
+			$reflexionenUids[] = $reflexion->mitarbeiter_uid;
+
+			// Lektor holen (einfach gehalten → über LV)
+			$lektor = isset($lektorenByUid[$reflexion->mitarbeiter_uid])
+				? $lektorenByUid[$reflexion->mitarbeiter_uid]
+				: null;
+
 			$data[] = [
-				'lvevaluierung_reflexion_id' => !is_null($reflexion) ? $reflexion->lvevaluierung_reflexion_id : null,
+				'lvevaluierung_reflexion_id' => $reflexion->lvevaluierung_reflexion_id,
 				'lvevaluierung_id' => $lve->lvevaluierung_id,
-				'mitarbeiter_uid' => $lektor->uid,
-				'lveReflexion' => $reflexion, // kann null sein
+				'mitarbeiter_uid' => $reflexion->mitarbeiter_uid,
+				'lveReflexion' => $reflexion,
 				'vorname' => $lektor->vorname,
 				'nachname' => $lektor->nachname,
-				'isVerpflichtend' => $isVerpflichtend,
+				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
+				'isLvLeitung' => $lektor->isLvLeitung
+			];
+		}
+
+		// Add wrapper for missing Reflexionen
+		foreach ($lektoren as $lektor)
+		{
+			if (in_array($lektor->uid, $reflexionenUids)) continue;
+
+			$data[] = [
+				'lvevaluierung_reflexion_id' => null,
+				'lvevaluierung_id' => $lve->lvevaluierung_id,
+				'mitarbeiter_uid' => $lektor->uid,
+				'lveReflexion' => null,
+				'vorname' => $lektor->vorname,
+				'nachname' => $lektor->nachname,
+				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
 				'isLvLeitung' => $lektor->isLvLeitung
 			];
 		}
@@ -696,7 +737,6 @@ class Evaluation extends FHCAPI_Controller
 		});
 
 		return $data;
-
 	}
 
 	private function filterReflexionenByPermission(
