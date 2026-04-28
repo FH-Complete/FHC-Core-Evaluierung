@@ -306,6 +306,31 @@ class InitiierungLib
 	}
 
 	/**
+	 * Filters students to return only those who have not yet received evaluation mail.
+	 *
+	 * @param $lvaluierung_lehrveranstaltung_id
+	 * @param $studenten
+	 * @return array
+	 */
+	public function filterUnmailedStudentMailReceivers($lvaluierung_lehrveranstaltung_id, $studenten)
+	{
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
+		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvaluierung_lehrveranstaltung_id);
+
+		if (isError($result)) return $result;	// return the error object
+
+		$lveLvPrestudenten = hasData($result) ? getData($result) : [];
+
+		$mailedPrestudentIds = array_column($lveLvPrestudenten, 'prestudent_id');
+
+		$unmailedStudenten = array_values(array_filter($studenten, function ($s) use ($mailedPrestudentIds) {
+			return !in_array($s->prestudent_id, $mailedPrestudentIds, true);
+		}));
+
+		return success($unmailedStudenten);
+	}
+
+	/**
 	 * Generates code and sends mail to single student: transaction safe
 	 */
 	public function generateAndSendCodeForStudent($lve, $student, $lehrveranstaltung_id, $insertvon)

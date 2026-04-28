@@ -414,13 +414,13 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError('Cannot send. No Students assigned to this course');
 		}
 
-		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
-		$mailedPrestudentIds =array_column($lveLvPrestudenten, 'prestudent_id');
+		$result = $this->initiierunglib->filterUnmailedStudentMailReceivers(
+			$lveLv->lvevaluierung_lehrveranstaltung_id,
+			$studenten
+		);
 
-		// Filter studenten to keep only unmailed
-		$unmailedStudenten = array_values(array_filter($studenten, function ($s) use ($mailedPrestudentIds) {
-			return !in_array($s->prestudent_id, $mailedPrestudentIds, true);
-		}));
+		if (isError($result)) return $this->terminateWithError(getError($result));
+		$unmailedStudenten = hasData($result) ? getData($result) : [];
 
 		// Return if all Students of LV or LE already got mail
 		if (count($unmailedStudenten) === 0)
