@@ -239,6 +239,183 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Sends evaluation codes for finished Lehrveranstaltungen of given Studiensemester if not already mailed.
+	 *
+	 * Job runs after last Unterrichtseinheit has passed and only processes evaluations without sent codes and if
+	 * times are not set or endezeit has passed.
+	 *
+	 * Automatically sets start- and endzeit and sends mails to all unmailed students.
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function sendUnsentEvaluierungen($studiensemester_kurzbz)
+	{
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			return;
+		}
+
+		// Get Evaluierungen by Studiensemester
+		$result =  $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
+
+		// If Evaluierungen exist
+		if (hasData($result))
+		{
+			$data = getData($result);
+			$now = new DateTime();
+			$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+
+			// Foreach Evaluierung
+			foreach ($data as $item)
+			{
+				// Get Stundenplantermine
+				if ($item->lv_aufgeteilt)	// Gruppe
+				{
+					$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
+				}
+				else	// Gesamt-LV
+				{
+					$result = $this->_ci->StundenplanModel->getTermineByLv(
+						$item->lehrveranstaltung_id,
+						$item->studiensemester_kurzbz
+					);
+				}
+
+				if (isError($result))
+				{
+					$this->logError(getError($result));
+					$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
+					return;
+				}
+
+				// Stundenplantermine
+				$termine = hasData($result) ? getData($result) : [];
+
+				// Wenn keine Studenplantermine vorhanden --> ignorieren
+				if (empty($termine)) continue;
+
+				// Letzte Unterrichtseinheit
+				$lastTermin = end($termine);
+				$lastTerminDate = new DateTime($lastTermin->datum);
+				$lastTerminDate->setTime(23, 59, 59); // Tagesende setzen, damit Folgecheck nicht zu früh greift
+
+				// Test values
+//				var_dump('LVE ID: '. $item->lvevaluierung_id);
+//				var_dump($item->lv_aufgeteilt ? 'Gruppe' : 'Gesamt');
+//				var_dump('Letzte Einheit: '. $lastTerminDate->format("Y-m-d"));
+//				var_dump('-------------------------');
+
+				// Wenn letzte Unterrichtseinheit vorbei ist und keine codes versendet worden sind
+				if ($now > $lastTerminDate && $item->codes_gemailt === false)
+				{
+					// Wenn Endezeit existiert
+					if ($item->endezeit !== null)
+					{
+						$endezeit = new DateTime($item->endezeit);
+
+						// Wenn Endezeit heute oder in der Zukunft --> ignorieren
+						// (Lektor kann noch ändern bzw. selbst Mailversand auslösen)
+						if ($endezeit >= $now) continue;
+					}
+
+					// Wenn Endezeit abgelaufen ist oder gar keine Zeiten gesetzt sind:
+					// Codes generieren & Mail versenden
+					//--------------------------------------------------------------------------------------------------
+					// Get Students
+					if ($item->lv_aufgeteilt)	// Gruppe
+					{
+						$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
+						$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
+					}
+					else	// Gesamt-LV
+					{
+						$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+						$result = $this->_ci->LehrveranstaltungModel->getStudentsByLv(
+							$item->studiensemester_kurzbz,
+							$item->lehrveranstaltung_id,
+							true	// true = only active students
+						);
+					}
+
+					if (isError($result))
+					{
+						$this->logError(getError($result));
+						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
+						return;
+					}
+
+					// Studenten
+					$studenten = hasData($result) ? getData($result) : [];
+
+					// Get unmailed studenten
+					$result = $this->_ci->initiierunglib->filterUnmailedStudentMailReceivers(
+						$item->lvevaluierung_lehrveranstaltung_id,
+						$studenten
+					);
+
+					if (isError($result))
+					{
+						$this->logError(getError($result));
+						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
+						return;
+					}
+
+					$unmailedStudenten = hasData($result) ? getData($result) : [];
+					if (empty($unmailedStudenten)) continue;
+
+					// Set new Start- and Endezeit
+					$newStartzeit = clone $now;	// Startdatum heute, Zeit jetzt (da mails auch gleich gesendet werden)
+					$newEndezeit  =(clone $now)
+						->modify('+3 days')
+						->setTime(23, 59, 59);	// Endedatum in 3 Tagen, 23:59:59
+
+					$item->startzeit = $newStartzeit->format('Y-m-d H:i:s');
+					$item->endezeit  = $newEndezeit->format('Y-m-d H:i:s');
+
+					// Sent mail counter
+					$mailCounter = 0;
+
+					// Loop unmailed Studenten
+					foreach ($unmailedStudenten as $student)
+					{
+						// Generate Code and send Mail
+						if ($this->initiierunglib->generateAndSendCodeForStudent($item, $student, $item->lehrveranstaltung_id, 'system'))
+						{
+							// Count up
+							$mailCounter++;
+						}
+						else
+						{
+							$this->logInfo('Failed sending mail for LVE-ID '. $item->lvevaluierung_id. ' / student'. $student->uid);
+						}
+					}
+
+					if ($mailCounter > 0)
+					{
+						$codesAusgegeben = $item->codes_ausgegeben !== null ? $item->codes_ausgegeben : 0;
+
+						// Update Evaluierung
+						$this->_ci->LvevaluierungModel->update(
+							$item->lvevaluierung_id,
+							[
+								'startzeit' => $newStartzeit->format('Y-m-d H:i:s'),
+								'endezeit'  => $newEndezeit->format('Y-m-d H:i:s'),
+								'codes_gemailt' => true,
+								'codes_ausgegeben' => $codesAusgegeben + $mailCounter
+							]
+						);
+
+						$this->logInfo($mailCounter. ' mails sent for LVE-ID '. $item->lvevaluierung_id);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendUnsentEvaluierung for '. $studiensemester_kurzbz);
+	}
+
+	/**
 	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
 	 *
 	 * @return void
