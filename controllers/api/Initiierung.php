@@ -428,7 +428,7 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithSuccess();
 		}
 
-		if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $unmailedStudenten[0], $lveLv->lehrveranstaltung_id))
+		if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $unmailedStudenten[0], $lveLv->lehrveranstaltung_id, $this->_uid))
 		{
 			$this->LvevaluierungModel->update(
 				$lvevaluierung_id,

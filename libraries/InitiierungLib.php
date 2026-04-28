@@ -308,13 +308,14 @@ class InitiierungLib
 	/**
 	 * Generates code and sends mail to single student: transaction safe
 	 */
-	public function generateAndSendCodeForStudent($lve, $student, $lehrveranstaltung_id)
+	public function generateAndSendCodeForStudent($lve, $student, $lehrveranstaltung_id, $insertvon)
 	{
 		$lvevaluierung_id = $lve->lvevaluierung_id;
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$this->_ci->load->model('organisation/Studiengangstyp_model', 'StudiengangstypModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 
 		$this->_ci->LehrveranstaltungModel->addSelect('bezeichnung, bezeichnung_english, studiengang_kz');
 		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
@@ -340,7 +341,7 @@ class InitiierungLib
 		$this->_ci->db->trans_begin();
 
 		$code = $this->_ci->LvevaluierungCodeModel->getUniqueCode();
-		$url  = APP_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Evaluierung?code=' . urlencode($code);
+		$url  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Evaluierung?code=' . urlencode($code);
 
 		$mailData = [
 			'vorname'         => $student->vorname,
@@ -359,7 +360,9 @@ class InitiierungLib
 			'Lvevaluierung_Mail_Codeversand',
 			$mailData,
 			$student->uid . '@' . DOMAIN,
-			$lvBezeichnung.': Ihr Feedback gewünscht | Your feedback is requested'
+			$lvBezeichnung.': Ihr Feedback gewünscht | Your feedback is requested',
+			'sancho_header_lvevaluierung.jpg',
+			'sancho_footer_lvevaluierung.jpg'
 		);
 
 		if ($mailSent)
@@ -374,7 +377,7 @@ class InitiierungLib
 			$this->_ci->LvevaluierungPrestudentModel->insert([
 				'prestudent_id'     => $student->prestudent_id,
 				'lvevaluierung_id'  => $lvevaluierung_id,
-				'insertvon'         => getAuthUid(),
+				'insertvon'         => $insertvon,
 			]);
 
 			$this->_ci->db->trans_commit();
