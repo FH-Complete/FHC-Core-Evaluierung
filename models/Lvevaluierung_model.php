@@ -89,11 +89,6 @@ class Lvevaluierung_model extends DB_Model
 	 */
 	public function getLvesByStSem($studiensemester_kurzbz)
 	{
-		$this->addSelect('lvevaluierung_id');
-		$this->addSelect('lvevaluierung_lehrveranstaltung_id');
-		$this->addSelect('lehreinheit_id');
-		$this->addSelect('fragebogen_id');
-
 		$this->addJoin('extension.tbl_lvevaluierung_lehrveranstaltung lvelv', 'lvevaluierung_lehrveranstaltung_id');
 
 		return $this->loadWhere([
