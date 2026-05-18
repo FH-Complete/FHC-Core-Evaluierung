@@ -77,7 +77,7 @@ export default {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
 		site_url_opStgKvp(){
-			return null;	// todo define url
+			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selStgKz;
 		},
 		isDisabledSubmitMalveBtn(){
 			return true;	// todo adapt conditionally
