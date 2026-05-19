@@ -19,7 +19,7 @@ export default {
 			type: Object,
 		}
 	},
-	emits: ['openEinmeldung'],
+	emits: ['changeView'],
 	data() {
 		return {
 			reflexionen: []
@@ -41,8 +41,8 @@ export default {
 
 	},
 	methods: {
-		openEinmeldung() {
-			this.$emit('openEinmeldung');
+		changeView(view) {
+			this.$emit('changeView', view);
 		},
 	},
 	template: `
@@ -59,7 +59,7 @@ export default {
 				>
 					<evaluation-reflexion-form 
 						:reflexion="reflexion"
-						@open-einmeldung="openEinmeldung"
+						@change-view="changeView"
 					>
 					</evaluation-reflexion-form>
 				</div>

@@ -275,7 +275,7 @@ export default {
 						:lvevaluierung_id="lvevaluierung_id"
 						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
 						:lvevaluierung_template_id="lvTemplateId"
-						@open-einmeldung="changeView('einmeldung')"
+						@change-view="changeView"
 						class="d-block mt-5"
 					></component>
 				</keep-alive>

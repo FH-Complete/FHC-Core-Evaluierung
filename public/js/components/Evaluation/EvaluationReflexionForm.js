@@ -16,7 +16,7 @@ export default {
 			required: true
 		}
 	},
-	emits: ['openEinmeldung'],
+	emits: ['changeView'],
 	data() {
 		return {
 		}
@@ -105,8 +105,8 @@ export default {
 	 				.catch(this.$fhcAlert.handleSystemError);
 			}
 		},
-		openEinmeldung(){
-			this.$emit('openEinmeldung');
+		changeView(){
+			this.$emit('changeView', 'einmeldung');
 		}
 	},
 	template: `
@@ -276,6 +276,8 @@ export default {
 		</fieldset>
 	</fhc-form>
 	<!-- Wenn aufgrund fehlender Berechtigung keine Reflexion zurückgeliefert wurde-->
+						@click.prevent="changeView()"
+						@click.prevent="changeView()"
 	<div v-else class="card">
 		<div class="card-body mt-3 mb-5 text-center">
 			<span class="text-muted">Nicht zur Anzeige dieser LV-Reflexion berechtigt</span>
