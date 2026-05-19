@@ -146,7 +146,11 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	{
 		$excludedLehrformen = $this->config->item('excludedLehrformen');
 
-		//$uid = getAuthUid();
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
+		$result = $this->LvevaluierungZeitfensterModel->getZeitfenster('typswitch', $lvevaluierung_lehrveranstaltung_id);
+		$zeitfensterEndedatum = hasData($result) ? getData($result)[0]->endedatum : null;
+
+			//$uid = getAuthUid();
 		//$params = [$lvevaluierung_lehrveranstaltung_id, $uid];
 		$params = [$lvevaluierung_lehrveranstaltung_id];
 
@@ -209,6 +213,14 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 						ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
 						AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
 				WHERE 1=1';
+
+			// Lehreinheiten, die nach dem Switch-Zeitfenster angelegt werden, werden von der Evaluierung ausgeschlossen,
+			// um die Konsistenz der Unterscheidung zwischen Gruppen- und Gesamt-LV sicherzustellen.
+			if (!is_null($zeitfensterEndedatum))
+			{
+				$qry .= ' AND le.insertamum <= ?::timestamp';
+				$params[] = $zeitfensterEndedatum;
+			}
 
 			if(!is_null($uid))
 			{
