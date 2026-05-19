@@ -110,174 +110,176 @@ export default {
 		}
 	},
 	template: `
-	<fhc-form v-if="reflexion" ref="reflexionForm" @submit.prevent="saveReflexion()">
-		<form-validation></form-validation>
-		<fieldset :disabled="!reflexion.isBearbeitungOffen">
-			<div class="card">
-				<!-- Daten für Lehrende -->
-				<div class="card-body d-flex flex-column gap-3">
-					<!-- Badge Reflexion verpflichtend/optional -->
-					<div class="d-flex justify-content-end">
-<!--						<span class="badge" :class="reflexion.isVerpflichtend ? 'bg-primary' : 'border border-1 border-secondary-subtle text-secondary'">-->
-						<span class="badge border border-1 border-secondary-subtle text-secondary">
-							{{ reflexion.isVerpflichtend ? 'Reflexion verpflichtend' : 'Reflexion optional' }}
-						</span>
-					</div>
-					<!-- Tabelle Infos -->
-					<table class="table table-sm mb-4">
-						<tbody>
-							<!-- Zeile Lehrender -->
-							<tr>
-								<th>{{ rollenbezeichnung }}</th>
-								<td class="fw-bold">{{ reflexion.vorname + ' ' + reflexion.nachname }}</td>
-							</tr>
-							<!-- Zeile Bearbeitung Zeitfenster -->
-							<tr>
-								<th>Bearbeitung Zeitfenster</th>
-								<td>
-									{{ reflexion.zeitfensterVon }} - {{ reflexion.zeitfensterBis }}
-								</td>
-							</tr>
-							<!-- Zeile Bearbeitung möglich -->
-							<tr>
-								<th>Bearbeitung möglich</th>
-								<td>{{ reflexion.isBearbeitungOffen ? 'Ja' : 'Nein' }}</td>
-							</tr>
-							<!-- Zeile Sperre Grund -->
-							<tr>
-								<th>Sperre Grund</th>
-								<td>
-									<div v-if="reflexion.sperreGrund?.length === 0">-</div>
-									<div
-										v-for="(grund, index) in reflexion.sperreGrund"
-										:key="'grund-'+index"
-									>
-										{{ grund }}
-									</div>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div><!--.end card-body-->
-				<!-- Formular -->
-				<div class="card-body d-flex flex-column gap-4">
-					<div>
-						<div class="fw-bold mb-2">{{label.praesenz.question}} *</div>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.praesenz_kurzbz"
-							name="praesenz_kurzbz"
-							:label="label.praesenz.ja"
-							value="ja"
+	<div v-if="reflexion">
+		<fhc-form ref="reflexionForm" @submit.prevent="saveReflexion()">
+			<form-validation></form-validation>
+			<fieldset :disabled="!reflexion.isBearbeitungOffen">
+				<div class="card">
+					<!-- Daten Lehrende -->
+					<div class="card-body d-flex flex-column gap-3">
+						<!-- Badge Reflexion verpflichtend/optional -->
+						<div class="d-flex justify-content-end">
+							<span class="badge border border-1 border-secondary-subtle text-secondary">
+								{{ reflexion.isVerpflichtend ? 'Reflexion verpflichtend' : 'Reflexion optional' }}
+							</span>
+						</div>
+						<!-- Tabelle Infos -->
+						<table class="table mb-4">
+							<tbody>
+								<!-- Zeile Lehrender -->
+								<tr>
+									<th>{{ rollenbezeichnung }}</th>
+									<td class="fw-bold">{{ reflexion.vorname + ' ' + reflexion.nachname }}</td>
+								</tr>
+								<!-- Zeile Gruppe -->
+								<tr>
+									<th>Gruppen</th>
+									<td>{{ reflexion.gruppeBezeichnung }}</td>
+								</tr>
+								<!-- Zeile Bearbeitung Zeitfenster -->
+								<tr>
+									<th>Reflexion Zeitfenster</th>
+									<td>{{ reflexion.zeitfensterVon }} - {{ reflexion.zeitfensterBis }}</td>
+								</tr>
+								<!-- Zeile Bearbeitung möglich -->
+								<tr>
+									<th>Reflexion möglich</th>
+									<td>{{ reflexion.isBearbeitungOffen ? 'Ja' : 'Nein' }}</td>
+								</tr>
+								<!-- Zeile Sperre Grund -->
+								<tr>
+									<th>Sperre Grund</th>
+									<td>
+										<div v-if="reflexion.sperreGrund?.length === 0">-</div>
+										<div
+											v-for="(grund, index) in reflexion.sperreGrund"
+											:key="'grund-'+index"
+										>
+											{{ grund }}
+										</div>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div><!--.end card-body-->
+					<!-- Formular -->
+					<div class="card-body d-flex flex-column gap-4">
+						<div>
+							<div class="fw-bold mb-2">{{label.praesenz.question}} *</div>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.praesenz_kurzbz"
+								name="praesenz_kurzbz"
+								:label="label.praesenz.ja"
+								value="ja"
+								>
+							</form-input>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.praesenz_kurzbz"
+								name="praesenz_kurzbz"
+								:label="label.praesenz.nein"
+								value="nein"
+								>
+							</form-input>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.praesenz_kurzbz"
+								name="praesenz_kurzbz"
+								:label="label.praesenz.unknown"
+								value="unknown"
+								>
+							</form-input>
+						</div>
+						<div>
+							<div class="fw-bold mb-2">{{label.nachvollziehbar.question}} *</div>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
+								name="nachvollziehbar_kurzbz"
+								:label="label.nachvollziehbar.ja"
+								value="ja"
+								>
+							</form-input>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
+								name="nachvollziehbar_kurzbz"
+								:label="label.nachvollziehbar.nein"
+								value="nein"
+								>
+							</form-input>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
+								name="nachvollziehbar_kurzbz"
+								:label="label.nachvollziehbar.unknown"
+								value="unknown"
+								>
+							</form-input>
+						</div>
+						<div>
+							<form-input
+								type="textarea"
+								v-model="reflexion.lveReflexion.anmerkung_nachvollziehbarkeit"
+								name="anmerkung_nachvollziehbarkeit"
+								:label="label.anmerkung.question"
+								rows="4"
+								>
+							</form-input>
+						</div>
+						<div>
+							<div class="fw-bold mb-2">{{label.massnahmen.question}}</div>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.massnahmennoetig"
+								name="massnahmennoetig"
+								:label="label.massnahmen.ja"
+								value="true"
+								>
+							</form-input>
+							<form-input
+								type="radio"
+								v-model="reflexion.lveReflexion.massnahmennoetig"
+								name="massnahmennoetig"
+								:label="label.massnahmen.nein"
+								value="false"
+								>
+							</form-input>
+						</div>
+						<div class="col d-flex justify-content-end">
+							<button 
+								type="submit" 
+								class="btn btn-primary me-2" 
+								:disabled="isDisabledSubmitBtn"
+								v-if="reflexion.display.showSaveButton"
 							>
-						</form-input>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.praesenz_kurzbz"
-							name="praesenz_kurzbz"
-							:label="label.praesenz.nein"
-							value="nein"
-							>
-						</form-input>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.praesenz_kurzbz"
-							name="praesenz_kurzbz"
-							:label="label.praesenz.unknown"
-							value="unknown"
-							>
-						</form-input>
-					</div>
-					<div>
-						<div class="fw-bold mb-2">{{label.nachvollziehbar.question}} *</div>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
-							name="nachvollziehbar_kurzbz"
-							:label="label.nachvollziehbar.ja"
-							value="ja"
-							>
-						</form-input>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
-							name="nachvollziehbar_kurzbz"
-							:label="label.nachvollziehbar.nein"
-							value="nein"
-							>
-						</form-input>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.nachvollziehbar_kurzbz"
-							name="nachvollziehbar_kurzbz"
-							:label="label.nachvollziehbar.unknown"
-							value="unknown"
-							>
-						</form-input>
-					</div>
-					<div>
-						<form-input
-							type="textarea"
-							v-model="reflexion.lveReflexion.anmerkung_nachvollziehbarkeit"
-							name="anmerkung_nachvollziehbarkeit"
-							:label="label.anmerkung.question"
-							rows="4"
-							>
-						</form-input>
-					</div>
-					<div>
-						<div class="fw-bold mb-2">{{label.massnahmen.question}}</div>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.massnahmennoetig"
-							name="massnahmennoetig"
-							:label="label.massnahmen.ja"
-							value="true"
-							>
-						</form-input>
-						<form-input
-							type="radio"
-							v-model="reflexion.lveReflexion.massnahmennoetig"
-							name="massnahmennoetig"
-							:label="label.massnahmen.nein"
-							value="false"
-							>
-						</form-input>
-					</div>
-					<div class="col d-flex justify-content-end">
-						<button 
-							type="submit" 
-							class="btn btn-primary me-2" 
-							:disabled="isDisabledSubmitBtn"
-							v-if="reflexion.display.showSaveButton"
-						>
-							Speichern
-						</button>
-					</div>
-				</div><!--.end card-body-->
-				<!-- Einmeldung -->
-				<div 
-				v-if="reflexion.display.showEinmeldungButton" 
-				class="card-body border-top py-4 d-flex flex-column gap-3">
-				<div class="fw-bold">Einmeldung LV-Weiterentwicklung</div>
-				<button 
-					type="submit" 
-					class="btn btn-primary me-2 w-100" 
-					:disabled="isDisabledSubmitBtn"
-					@click.prevent="openEinmeldung()"
-				>
-					Neue Einmeldung
-				</button>
-				<div class="form-text">
-					<i class="fa fa-info-circle text-primary me-2"></i>Maßnahmenableitungen aus der LV-Evaluierung direkt hier eintragen!
-				</div>
-			</div><!--.end card-body-->
-			</div><!--.end card-->
-		</fieldset>
-	</fhc-form>
-	<!-- Wenn aufgrund fehlender Berechtigung keine Reflexion zurückgeliefert wurde-->
+								Speichern
+							</button>
+						</div>
+					</div><!--.end card-body-->
+					<!-- Einmeldung -->
+					<div 
+					v-if="reflexion.display.showEinmeldungButton" 
+					class="card-body border-top py-4 d-flex flex-column gap-3">
+					<div class="fw-bold">Einmeldung LV-Weiterentwicklung</div>
+					<button 
+						type="submit" 
+						class="btn btn-primary me-2 w-100" 
+						:disabled="isDisabledSubmitBtn"
 						@click.prevent="changeView()"
-						@click.prevent="changeView()"
+					>
+						Neue Einmeldung
+					</button>
+					<div class="form-text">
+						<i class="fa fa-info-circle text-primary me-2"></i>Maßnahmenableitungen aus der LV-Evaluierung direkt hier eintragen!
+					</div>
+				</div><!--.end card-body-->
+				</div><!--.end card-->
+			</fieldset>
+		</fhc-form>
+	</div>
+	<!-- Keine Reflexion wegen fehlender Berechtigung -->
 	<div v-else class="card">
 		<div class="card-body mt-3 mb-5 text-center">
 			<span class="text-muted">Nicht zur Anzeige dieser LV-Reflexion berechtigt</span>

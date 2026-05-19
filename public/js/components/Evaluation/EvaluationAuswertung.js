@@ -24,6 +24,7 @@ export default {
 			type: Object,
 		}
 	},
+	emits: ['changeView'],
 	data() {
 		return {
 			auswertungData: [],
@@ -260,7 +261,11 @@ export default {
 				},
 				credits: { enabled: false }
 			};
-		}
+		},
+		changeView() {
+			this.$emit('changeView', 'reflexion');
+		},
+
 	},
 	template: `
 	<div class="evaluation-evaluation-auswertung">
@@ -313,6 +318,11 @@ export default {
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
+		<div class="bg-primary-subtle py-5 text-center">
+			<button class="btn btn-primary" @click="changeView()">
+				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
+			</button>
+		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
 			<div v-if="evaluationView.open && auswertungData.length > 0" class="row align-items-stretch g-3">
@@ -332,6 +342,11 @@ export default {
 				</div>-->
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+		</div>
+		<div class="bg-primary-subtle mt-5 py-5 text-center">
+			<button class="btn btn-primary" @click="changeView()">
+				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
+			</button>
 		</div>
 	</div>	
 	`
