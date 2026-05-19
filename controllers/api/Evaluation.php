@@ -25,6 +25,8 @@ class Evaluation extends FHCAPI_Controller
 				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
 				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
 				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
+				'getMalveByStg' => 'extension/lvevaluierung_stg:rw',
+				'saveMalveByStg' => 'extension/lvevaluierung_stg:rw',
 			)
 		);
 
@@ -940,6 +942,104 @@ class Evaluation extends FHCAPI_Controller
 
 		$this->terminateWithSuccess($data);
 	}
+
+	/**
+	 * Get MALVE by Studiengang and Studiensemester.
+	 *
+	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
+	 * @return void
+	 */
+	public function getMalveByStg()
+	{
+		$studiengang_kz = $this->input->get('studiengang_kz');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
+
+		if (hasData($result))
+		{
+			$studiengang = getData($result)[0];
+
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			$data = $this->getDataOrTerminateWithError($result);
+
+			$this->terminateWithSuccess($data);
+		}
+		else
+		{
+			$this->terminateWithError('No Studiengang found to get MALVE data');
+		}
+	}
+
+	/**
+	 * Save MALVE by Studiengang and Studiensemester.
+	 *
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this STG.
+	 *
+	 * @return void
+	 */
+	public function saveMalveByStg()
+	{
+		$studiengang_kz = $this->input->post('studiengang_kz');
+		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
+
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
+
+		if (hasData($result))
+		{
+			$studiengang = getData($result)[0];
+
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+
+			// Check if already exist
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			// If not exist
+			if (!hasData($result))
+			{
+				// Insert
+				$result = $this->LvevaluierungMalveModel->insert([
+					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'insertvon' => $this->_uid
+				]);
+
+				if (isError($result))
+				{
+					$this->terminateWithError(getError($result));
+				}
+				else
+				{
+					$insertId = getData($result);
+
+					// Get new record
+					$record = $this->LvevaluierungMalveModel->load($insertId);
+
+					if (!hasData($record))
+					{
+						$this->terminateWithError('Inserted record not found');
+					}
+
+					$this->terminateWithSuccess(getData($record));
+				}
+			}
+		}
+		else
+		{
+			$this->terminateWithError('No Studiengang found to get MALVE data');
+		}
+	}
+
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Helper methods

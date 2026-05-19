@@ -19,6 +19,7 @@ export default {
 			selStgKz: null,
 			selOrgform: null,
 			table: null,
+			malve: null
 		}
 	},
 	created() {
@@ -33,6 +34,10 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
+				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester))
+			})
+			.then(result => {
+				this.malve = result.data
 				return this.$api.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
 			})
 			.then(result => {
@@ -57,7 +62,10 @@ export default {
 						this.lists.orgforms = result.data
 						this.selOrgform = result.data[0].orgform_kurzbz;
 						this.table.replaceData();
+						return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester))
 					})
+					.then(result => this.malve = result.data)
+					.catch(error => this.$fhcAlert.handleSystemError(error));
 			}
 		},
 		selOrgform(newVal){
@@ -80,7 +88,10 @@ export default {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selStgKz;
 		},
 		isDisabledSubmitMalveBtn(){
-			return true;	// todo adapt conditionally
+			return this.malve?.length > 0;
+		},
+		malveAbgeschlossenTxt(){
+			if (this.malve !== null) return 'MALVE-STGL abgeschlossen am ' + this.DateHelper.formatDate(this.malve[0].insertamum)
 		},
 		tabulatorOptions() {
 			const self = this;
@@ -322,13 +333,26 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		submitMalve(){
-			this.$fhcAlert
-				.confirm({
+		async submitMalve(){
+			if (await this.$fhcAlert.confirm({
 					header: 'Bitte bestätigen Sie:',
 					message:`Ich habe alle LV-Evaluierungen des Studiengangs - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet.`
+				}) === false
+			){
+				return;
+			}
+
+			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selStudiensemester))
+				.then(result => {
+					if (result.data) {
+						this.malve = result.data;
+						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+					}
 				})
-				.then()
+				.catch(error => {
+						cell.restoreOldValue();
+						this.$fhcAlert.handleSystemError(error);
+					});
 		},
 		onTableBuilt() {
 			this.table = this.$refs.stgTable.tabulator;
@@ -406,14 +430,6 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button 
-						class="btn btn-primary" 
-						@click="submitMalve" 
-						:disabled="isDisabledSubmitMalveBtn"
-						>
-						<i class="fa fa-envelope me-2"></i>
-						MALVE-STGL abschließen
-					</button>
 					<!-- workaround: wrap a tag with span to show tooltip also on disabled button-->
 					<span
 					  v-tooltip
@@ -423,14 +439,23 @@ export default {
 						<a 
 							type="button" 
 							class="btn btn-outline-secondary" 
-							:class="{ disabled: isDisabledSubmitMalveBtn }"
 							:href="site_url_opStgKvp" 
 							target="_blank"
-							:aria-disabled="isDisabledSubmitMalveBtn"
 						>
 							<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
 						</a>
 					</span>
+					<button 
+						v-if="malve !== null"
+						class="btn"
+						:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
+						@click="submitMalve" 
+						:disabled="isDisabledSubmitMalveBtn"
+						>
+						<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+						{{ malve.length > 0 ? 'MALVE-STGL abgeschlossen' : 'MALVE-STGL abschließen' }}
+					</button>
+					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
 				</template>
 			</core-filter-cmpt>
 		</div>

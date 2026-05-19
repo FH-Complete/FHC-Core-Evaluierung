@@ -138,5 +138,25 @@ export default {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungHelpUrl',
 		}
+	},
+	getMalveByStg(studiengang_kz, studiensemester_kurzbz){
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByStg',
+			params: {
+				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	saveMalveByStg(studiengang_kz, studiensemester_kurzbz){
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByStg',
+			params: {
+				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
 	}
 }
