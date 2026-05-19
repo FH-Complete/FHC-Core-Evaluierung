@@ -150,8 +150,6 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 		$result = $this->LvevaluierungZeitfensterModel->getZeitfenster('typswitch', $lvevaluierung_lehrveranstaltung_id);
 		$zeitfensterEndedatum = hasData($result) ? getData($result)[0]->endedatum : null;
 
-			//$uid = getAuthUid();
-		//$params = [$lvevaluierung_lehrveranstaltung_id, $uid];
 		$params = [$lvevaluierung_lehrveranstaltung_id];
 
 		$qry = '
