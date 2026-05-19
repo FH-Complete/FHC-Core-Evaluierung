@@ -270,7 +270,7 @@ export default {
 				v-if="auswertungHelpUrl"
   				:href="auswertungHelpUrl"
   				target="_blank"
-  				class="btn btn-primary btn-sm"
+  				class="btn btn-primary"
   			>
 				<i class="fa fa-external-link"></i>
 				Interpretationshilfe
