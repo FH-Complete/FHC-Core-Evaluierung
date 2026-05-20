@@ -104,7 +104,7 @@ export default {
 			return this.evalData?.lvLeitungen?.map(l => `${l.vorname} ${l.nachname}`).join(', ');
 		},
 		formattedEvalPeriod() {
-			if (!this.evalData.startzeit || !this.evalData.endezeit) return;
+			if (!this.evalData.startzeit || !this.evalData.endezeit) return '-';
 
 			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
 		},
