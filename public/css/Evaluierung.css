@@ -89,3 +89,13 @@
 .columns-md-2 > .card {
     break-inside: avoid;
 }
+
+.evaluation-card-flex {
+    flex: 1 1 300px; /* wächst, bricht bei ~300px */
+    max-width: 420px; /* verhindert zu breite Cards */
+}
+
+.evaluation-data-table-flex {
+    flex: 2 1 500px;
+    max-width: 1300px;
+}
