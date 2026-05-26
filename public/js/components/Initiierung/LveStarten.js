@@ -194,13 +194,6 @@ export default {
 					lv.kurzbzlang.toLowerCase().includes(query) ||
 					lv.lehrveranstaltung_id.toString().includes(query)
 			);
-		},
-		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
-			const url = this.$api.getUri() +
-				'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
-				'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
-
-			window.open(url, '_blank');
 		}
 	},
 	template: `
@@ -314,12 +307,6 @@ export default {
 								</span>
 							</div>
 						</button>
-<!--						<button -->
-<!--							class="btn btn-outline-secondary btn-sm position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"-->
-<!--							@click="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"-->
-<!--						>-->
-<!--							<i class="fa fa-square-poll-horizontal"></i>-->
-<!--						</button>-->
 					</h2>
 					<div 
 						:ref="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 
