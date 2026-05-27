@@ -38,9 +38,6 @@ export default {
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
-	computed: {
-
-	},
 	methods: {
 		changeView(view) {
 			this.$emit('changeView', view);
