@@ -985,7 +985,7 @@ class Initiierung extends JOB_Controller
 								];
 
 								$mailSent = sendSanchoMail(
-									'LVE_LEHR_TEXT_4B_Pflicht',
+									'LVE_LEHR_TEXT_4B_PFLICHT',
 									$data,
 									$uid.'@'.DOMAIN,
 									'Reminder: LV-Evaluation auf Gruppen-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - LV-Reflexion bis '. $reflexionBis,
@@ -1109,7 +1109,7 @@ class Initiierung extends JOB_Controller
 								];
 
 								$mailSent = sendSanchoMail(
-									'LVE_LEHR_TEXT_4A_Optional',
+									'LVE_LEHR_TEXT_4A_OPTIONAL',
 									$data,
 									$uid.'@'.DOMAIN,
 									'Reminder: LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - optionale LV-Reflexion bis '. $reflexionBis,
