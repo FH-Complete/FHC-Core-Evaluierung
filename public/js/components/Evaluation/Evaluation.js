@@ -269,7 +269,7 @@ export default {
 								<!-- Body -->
 								<div class="card-body d-flex flex-column justify-content-center align-items-center">
 									<!-- Display RL-Quote -->
-									<div class="fw-bold display-4 mb-3">
+									<div class="fw-bold display-5 mb-3">
 										{{ evalData.ruecklaufquote !== null ? evalData.ruecklaufquote + ' %' : '-' }}
 									</div>
 									<!-- abgeschlossen / versandt -->
