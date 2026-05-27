@@ -30,6 +30,7 @@ export default {
 				ruecklaufquote: null,
 				startzeit: null,
 				endezeit: null,
+				showAggregation: false,
 			},
 			selectedView: this.selected_view || 'auswertung',
 			scrollPositions: {
@@ -38,9 +39,14 @@ export default {
 				einmeldung: 0
 			},
 			evaluationView: {
-				open: null,
-				msg: ''
-			}
+				open: false,
+				msg: [],
+				canAggregate: false
+			},
+			// Used to build Dropdown to switch Ansicht LV- or Gruppenebene.
+			// Built only if canAggregate is true.
+			aggregationOptions: [],
+			selAggregationValue: null
 		}
 	},
 	provide() {
@@ -57,13 +63,38 @@ export default {
 			this.$api
 				.call(apiCall)
 				.then(result => {
-					if (result.data?.data !== null)
-					{
-						this.evalData = result.data.data;
-					}
+					if (result.data) {
+						const data = result.data;
 
-					this.evaluationView.open = result.data.evaluationView.open;
-					this.evaluationView.msg  = result.data.evaluationView.msg;
+						// Basic data
+						if (data.data !== null) {
+							this.evalData = data.data;
+						}
+
+						// Permissions on view / GUI
+						this.evaluationView.open = data.evaluationView.open;
+						this.evaluationView.msg  = data.evaluationView.msg;
+						this.evaluationView.canAggregate = data.evaluationView.canAggregate;
+
+						if (this.evaluationView.canAggregate === true && this.evaluationView.aggregationOptions !== null) {
+
+							// Dropdown values
+							this.aggregationOptions = data.evaluationView.aggregationOptions;
+
+							// Dropdown starting value
+							this.selAggregationValue = this.lvevaluierung_id
+								? this.lvevaluierung_id
+								: this.lvevaluierung_lehrveranstaltung_id;
+
+							// Case: STGL oder KFL steigt als Lehrender ein und Evaluierungsebene ist Gesamt-LV.
+							// Dropdown default value muss dann von lvevaluierung_id auf lvevaluierung_lehrveranstaltung_id gesetzt werden
+							const exists = data.evaluationView.aggregationOptions.some(opt => opt.value === this.selAggregationValue);
+
+							if (!exists && data.evaluationView.aggregationOptions.length > 0) {
+								this.selAggregationValue = data.evaluationView.aggregationOptions[0].value;
+							}
+						}
+					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
@@ -174,6 +205,16 @@ export default {
 			const el = this.$refs.scrollArea;
 			if (el) el.scrollTop = this.scrollPositions[this.selectedView] || 0
 		},
+		onAggregationChange() {
+			const value = this.selAggregationValue;
+			const selectedOption = this.aggregationOptions.find(o => o.value == value)
+
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+					`${this.role}?${selectedOption.param}=${selectedOption.value}&selected_view=${this.selectedView}`;
+
+			window.open(url, '_self');
+		}
 	},
 	template: `
 	<div class="evaluation-evaluation container-fluid d-flex flex-column vh-100 p-0">
@@ -212,6 +253,25 @@ export default {
 						title="Einmeldungen">
 							<i class="fa fa-square-poll-horizontal"></i>
 					</label>
+				</div>
+			</div>
+			
+			<!-- Aggregation Dropdown -->
+			<div v-if="evaluationView.canAggregate && aggregationOptions && selAggregationValue" class="row mt-3 pt-2 align-items-center">
+				<div class="col-12 col-md-auto">
+					<select
+						v-model="selAggregationValue" 
+						@change="onAggregationChange"
+						class="form-select border-5 border-secondary">
+						  	<option
+								v-for="option in aggregationOptions"
+								:key="option.param + '-' + option.value"
+								:value="option.value"
+							 	:data-param="option.param"
+						  	>
+								{{ option.text }}
+						  	</option>
+					</select>
 				</div>
 			</div>
 		</div>
