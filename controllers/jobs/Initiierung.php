@@ -741,7 +741,7 @@ class Initiierung extends JOB_Controller
 				// var_dump($zeitfenster['bis']->format("d.m.Y"));
 
 				// Link zu Ergebnissen der LV
-				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/?lvevaluierung_id='. $row->lvevaluierung_id;
+				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/lehre/?lvevaluierung_id='. $row->lvevaluierung_id;
 
 				// Gruppen Evaluierung
 				if($row->lv_aufgeteilt)
@@ -945,7 +945,7 @@ class Initiierung extends JOB_Controller
 				// var_dump($zeitfenster['bis']->format("d.m.Y"));
 
 				// Link zu Ergebnissen der LV
-				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/?lvevaluierung_id='. $row->lvevaluierung_id;
+				$link  = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Evaluation/lehre/?lvevaluierung_id='. $row->lvevaluierung_id;
 
 				// Gruppen Evaluierung
 				if($row->lv_aufgeteilt)
