@@ -236,8 +236,20 @@ export default {
 					},
 					{
 						title:'LV-Evaluation',
-						formatter:() => '<button class="btn btn-outline-secondary"><i class="fa-solid fa-square-poll-horizontal me-2"></i>LV-Evaluation</button>',
-						cellClick: (e, cell) => self.openEvaluationByLveLv(cell.getData().lvevaluierung_lehrveranstaltung_id),
+						formatter: (cell) => {
+							// disable button if not for evaluation ausgewählt
+							const enabled = cell.getData().verpflichtend;
+
+							return `<button class="btn btn-outline-secondary"
+									  ${!enabled ? 'disabled' : ''}>
+									  <i class="fa-solid fa-square-poll-horizontal me-2"></i>
+									  LV-Evaluation
+									</button>`;
+						},
+						cellClick: (e, cell) => {
+							if (!cell.getData().verpflichtend) return;
+							self.openEvaluationByLveLv(cell.getData().lvevaluierung_lehrveranstaltung_id)
+						},
 						hozAlign:"center",
 						headerSort:false,
 						width: 140
