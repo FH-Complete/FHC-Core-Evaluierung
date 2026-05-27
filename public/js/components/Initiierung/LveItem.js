@@ -120,7 +120,7 @@ export default {
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +
-					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/lehre/' +
 					'?lvevaluierung_id=' + lvevaluierung_id;
 
 			window.open(url, '_blank');

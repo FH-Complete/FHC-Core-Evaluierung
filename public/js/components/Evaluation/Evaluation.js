@@ -10,7 +10,13 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id', 'lehrveranstaltung_template_id', 'selected_view'],
+	props: [
+		'role',
+		'lvevaluierung_id',
+		'lvevaluierung_lehrveranstaltung_id',
+		'lehrveranstaltung_template_id',
+		'selected_view'
+	],
 	data() {
 		return {
 			evalData: {
@@ -45,7 +51,7 @@ export default {
 	created() {
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id)
+				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role)
 				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 			this.$api
@@ -63,10 +69,7 @@ export default {
 		}
 		else {
 			// If no Lve ID or LveLv ID
-			this.evaluationView = {
-				open: false,
-				msg: 'Keine Daten vorhanden'
-			}
+			this.evaluationView.msg = ['Keine Daten vorhanden'];
 		}
 	},
 	computed: {
@@ -307,7 +310,8 @@ export default {
 			<div v-if="evaluationView.open === true">
 				<keep-alive>
 					<component
-						:evaluationView="evaluationView" 
+						:evaluationView="evaluationView"
+						:role="role" 
 						:is="selectedComponent" 
 						:lvevaluierung_id="lvevaluierung_id"
 						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
@@ -315,13 +319,18 @@ export default {
 						@change-view="changeView"
 						class="d-block mt-5"
 					></component>
-				</keep-alive>
-				
+				</keep-alive>				
 			</div>
 		  	<!-- Alert if no existing data or evaluation period still running -->
 		  	<div v-else class="card card-body py-5 d-flex mt-3" role="alert">
-				<div class="fw-bold">
-					<i class="fa fa-triangle-exclamation me-2 fa-lg text-warning"></i>{{ evaluationView.msg }}
+		  		<div class="d-flex align-items-start">
+					<i class="fa fa-triangle-exclamation fa-2x text-warning me-3"></i>
+					<div>
+						<div class="fw-bold">Ansicht nicht verfügbar</div>
+						<div class="mt-3" v-for="(msg, index) in evaluationView.msg" :key="index">
+							{{ msg }}
+						</div>
+					</div>
 				</div>
 			</div><!--.end v-else-->
 		</main>

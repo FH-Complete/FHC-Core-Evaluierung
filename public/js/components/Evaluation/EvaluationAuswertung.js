@@ -22,7 +22,8 @@ export default {
 		},
 		evaluationView: {
 			type: Object,
-		}
+		},
+		role: null,
 	},
 	emits: ['changeView'],
 	data() {
@@ -35,10 +36,10 @@ export default {
 	created() {
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			const apiCallAuswertungData = this.lvevaluierung_id
-					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id)
+					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 			const apiCallTextantworten = this.lvevaluierung_id
-					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id)
+					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 			this.$api

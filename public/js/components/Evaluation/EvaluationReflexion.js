@@ -17,7 +17,8 @@ export default {
 		},
 		evaluationView: {
 			type: Object,
-		}
+		},
+		role: null
 	},
 	emits: ['changeView'],
 	data() {
@@ -27,7 +28,7 @@ export default {
 	},
 	created() {
 		const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id)
+				? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id, this.role)
 				: ApiEvaluation.getReflexionDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 		this.$api

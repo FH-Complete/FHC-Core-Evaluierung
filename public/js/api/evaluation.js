@@ -1,10 +1,11 @@
 export default {
-	getEvaluationDataByLve(lvevaluierung_id) {
+	getEvaluationDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role,
 			}
 		}
 	},
@@ -17,12 +18,13 @@ export default {
 			}
 		}
 	},
-	getAuswertungDataByLve(lvevaluierung_id) {
+	getAuswertungDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},
@@ -35,12 +37,13 @@ export default {
 			}
 		}
 	},
-	getTextantwortenByLve(lvevaluierung_id) {
+	getTextantwortenByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getTextantwortenByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},
@@ -53,12 +56,13 @@ export default {
 			}
 		}
 	},
-	getReflexionDataByLve(lvevaluierung_id) {
+	getReflexionDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},

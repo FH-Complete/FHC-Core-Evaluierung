@@ -54,6 +54,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getEvaluationDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
@@ -93,20 +94,40 @@ class Evaluation extends FHCAPI_Controller
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
 
-			// Evaluation open check
-			$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
-			$isEvaluationViewOpenMsg = null;
+			// Check if Evaluation view is open
+			// ---------------------------------------------------------------------------------------------------------
+			$isEvaluationViewOpen = true;
+			$isEvaluationViewOpenMsg = [];
 
-			if (!$isEvaluationViewOpen) {
-				$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv);
-				$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
+			$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
 
-				$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
-					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+			if (!$this->hasSetEvaluierungszeitraum($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[] = 'Evaluierung noch nicht gestartet'. $context;
+			}
+			elseif (!$this->hasSentEvaluierungscodes($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungscodes noch nicht versendet'. $context;
+			}
+			elseif (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+			}
+			elseif ($role === 'stg' || $role === 'kf')
+			{
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context;
+				}
 			}
 
-			$canAggregate = $isKfl || $isStgl;
+			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
+			// ---------------------------------------------------------------------------------------------------------
+			$canAggregate = $role === 'stg' || $role === 'kf';
 			$aggregationOptions = null;
 
 			if ($canAggregate)
@@ -146,7 +167,7 @@ class Evaluation extends FHCAPI_Controller
 				'data' => null,
 				'evaluationView' => [
 					'open' => false,
-					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation',
+					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -185,6 +206,7 @@ class Evaluation extends FHCAPI_Controller
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
+		// Permission Check
 		if ($isKfl || $isStgl)
 		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
@@ -202,43 +224,53 @@ class Evaluation extends FHCAPI_Controller
 			// Min startzeit / max endezeit overall Evaluierungen
 			$periodTimes = $this->getPeriodTimes($lves);
 
-			// Evaluation open check
+			// Check if Evaluation view is open
+			// ---------------------------------------------------------------------------------------------------------
 			$isEvaluationViewOpen = true;
-			$now = new DateTime();
+			$isEvaluationViewOpenMsg = [];
 
-			if (empty($lves)) {
-				$isEvaluationViewOpen = false;
-			}
-
-			// Prüfe: irgendeine LVE hat keine Codes oder kein Endezeit
-			foreach ($lves as $lve) {
-				if ($lve->codes_ausgegeben === null || $lve->codes_ausgegeben === 0 || $lve->endezeit === null) {
-					$isEvaluationViewOpen = false;
-					break;
-				}
-			}
-
-			// Prüfe: irgendeine Evaluierungsperiode ist noch nicht abgeschlossen
-			$maxEndezeit = new DateTime($periodTimes['maxEndezeit']);
-			if ($isEvaluationViewOpen && $now < $maxEndezeit) {
-				$isEvaluationViewOpen = false;
-			}
-
-			if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'uid')))
+			// No Evaluierung at all
+			if (empty($lves))
 			{
-				$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForAllLvesInLveLv($lvevaluierung_lehrveranstaltung_id);
-				if (!$isReflexionszeitRaumAbgeschlossen) {
-					$isEvaluationViewOpen = false;
-				}
-			}
-			// Evaluation Open Message
-			$isEvaluationViewOpenMsg = null;
-			if (!$isEvaluationViewOpen) {
-				$isEvaluationViewOpenMsg = ($isKfl || $isStgl)
-					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet';
 			}
 
+			// Check each Evaluierung
+			foreach ($lves as $lve)
+			{
+				$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
+
+				if (!$this->hasSetEvaluierungszeitraum($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet'. $context;
+					continue;
+				}
+
+				if (!$this->hasSentEvaluierungscodes($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungcodes noch nicht versendet'. $context;
+					continue;
+				}
+
+				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+					continue;
+				}
+
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context;
+				}
+			}
+
+			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
+			// ---------------------------------------------------------------------------------------------------------
 			$canAggregate = $isKfl || $isStgl;
 			$aggregationOptions = null;
 
@@ -279,7 +311,7 @@ class Evaluation extends FHCAPI_Controller
 				'data' => null,
 				'evaluationView' => [
 					'open' => false,
-					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation',
+					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -298,15 +330,20 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 
-		// Return if Evaluation not accessible
-		if (!$this->isEvaluationViewOpen($lve))
+		// Exit Auswertung view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
 		{
-			$this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
+		// Get Auswertungen
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -336,24 +373,18 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
-
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		// Return if Evaluation period is still running
-		$periodTimes = $this->getPeriodTimes($lves);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
-		if ($now < $periodTimes['maxEndezeit'])
+		// Exit Auswertung view
+		foreach ($lves as $lve)
 		{
-			$this->terminateWithSuccess([]);
+			if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+			if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
-		// Return if students did not get codes yet
-		$codes = array_column($lves, 'codes_ausgegeben');
-		if (in_array(null, $codes, true)) {
-			$this->terminateWithSuccess([]);
-		}
-
-		// Get Auswertungdata
+		// Get Auswertungen
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -399,15 +430,20 @@ class Evaluation extends FHCAPI_Controller
 	public function getTextantwortenByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
-		// Return if Evaluation period is still running
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
 
-		if ($now < $lve->endezeit) {
-			$this->terminateWithSuccess([]);
+		// Exit Auswertung view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
+		{
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
+		// Get Textantworten
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -426,15 +462,18 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
-		// Return if Evaluation period is still running
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$periodTimes = $this->getPeriodTimes($lves);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
 
-		if ($now < $periodTimes['maxEndezeit']) {
-			$this->terminateWithSuccess([]);
+		// Exit Textantworten view
+		foreach ($lves as $lve)
+		{
+			if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+			if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
+		// Get Textantworten
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -546,6 +585,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getReflexionDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
@@ -559,36 +599,40 @@ class Evaluation extends FHCAPI_Controller
 		$lvLeitung = hasData($result) ? getData($result)[0] : null;
 		$isLvLeitung = $this->_uid === $lvLeitung->mitarbeiter_uid;
 
-		// Skip if Evaluation period is still running or students did not get codes yet
-		if (!$this->isEvaluationViewOpen($lve))
+		// Exit Reflexionen view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
 		{
-			$this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
+		// Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
 		// Build Reflexionen by Lehrende
 		$reflexionen = $this->buildReflexionenByLve($lve, $lveLv, $lvLeitung);
 
-		$showReflexionenUebersicht = $isKfl || $isStgl || $isLvLeitung;
+		// Übersicht Reflexionen (before possible filtering in next step)
+		// -------------------------------------------------------------------------------------------------------------
 		$reflexionenUebersichtData = [];
+		$isReflexionszeitRaumAbgeschlossen = $this->isReflexionszeitraumAbgeschlossen($lve);
+		$showReflexionenUebersicht =
+			$role === 'stg' ||
+			$role === 'kf' ||
+			($isLvLeitung && !$lveLv->lv_aufgeteilt);    // LV-Leitung darf Übersicht nur sehen, wenn Gesamt-LV
 
-		$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
-
-		if (
-			$showReflexionenUebersicht &&
-			$isReflexionszeitRaumAbgeschlossen &&
-			!($isLvLeitung && $lveLv->lv_aufgeteilt)	// LV-Leitung darf Übersicht nur sehen, wenn Gesamt-LV
-		)
+		if ($showReflexionenUebersicht && $isReflexionszeitRaumAbgeschlossen)
 		{
 			$reflexionenUebersichtData = $this->buildReflexionenUebersichtData($reflexionen); // note: use the unfiltered reflexionen
 		}
 
-		// Do not filter if is KFL or STG
-		if (
-			!$isKfl && !$isStgl ||	// Lektoren
-			($isKfl || $isStgl) && !$isReflexionszeitRaumAbgeschlossen	// STGL und KFL, wenn noch innerhalb Reflexionszeit
-		)
+		// Filter Reflexionen and add checks
+		// -------------------------------------------------------------------------------------------------------------
+		// Filter Reflexionen if necessary (nicht alle dürfen alle Reflexionen sehen)
+		// Ausnahme: STGL und KFL, wenn Reflexionszeit abgeschlossen ist (dürfen immer alles sehen)
+		if (!(($role === 'stg' || $role === 'kf') && $isReflexionszeitRaumAbgeschlossen))
 		{
-			// Filter Reflexionen (nicht alle dürfen alle Reflexionen sehen)
 			$reflexionen = $this->filterVisibleReflexionenForLehrende(
 				$reflexionen,
 				$lveLv,
@@ -635,12 +679,19 @@ class Evaluation extends FHCAPI_Controller
 			$this->terminateWithError('Permission denied');
 		}
 
+		// Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
 		$reflexionenByLveLv = [];
+		$allReflexionszeitraumAbgeschlossen = true;
 		foreach ($lves as $lve)
 		{
 			// Skip if Evaluation period is still running or students did not get codes yet
-			if (!$this->isEvaluationViewOpen($lve))
+			if (!$this->hasSetEvaluierungszeitraum($lve)) continue;
+			if (!$this->hasSentEvaluierungscodes($lve)) continue;
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) continue;
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 			{
+				$allReflexionszeitraumAbgeschlossen = false;
 				continue;
 			}
 
@@ -662,10 +713,13 @@ class Evaluation extends FHCAPI_Controller
 			);
 		}
 
+		// Übersicht Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
 		$showReflexionenUebersicht = $isKfl || $isStgl;
 		$reflexionenUebersichtData = [];
 
-		if ($showReflexionenUebersicht) {
+		if ($showReflexionenUebersicht && $allReflexionszeitraumAbgeschlossen)
+		{
 			$reflexionenUebersichtData = $this->buildReflexionenUebersichtData($reflexionenByLveLv);
 		}
 
@@ -1394,35 +1448,18 @@ class Evaluation extends FHCAPI_Controller
 		}
 	}
 
-
-	// -----------------------------------------------------------------------------------------------------------------
-	// Helper methods
-	// -----------------------------------------------------------------------------------------------------------------
-	/**
-	 * Return if Evaluation has not been ended yet, Evaluation period is still running or codes were not even sent.
-	 *
-	 * @param $lve
-	 * @return bool
-	 */
-	private function isEvaluationViewOpen($lve)
+	private function hasSetEvaluierungszeitraum($lve)
 	{
-		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		return $lve->startzeit !== null && $lve->endezeit !== null;
+	}
 
-		// Lehrende
-		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+	private function hasSentEvaluierungscodes($lve)
+	{
+		return $lve->codes_gemailt === true && $lve->codes_ausgegeben !== null;
+	}
 
-		// Für KFL und STGL Evaluierungsansicht öffnen, wenn LV-Reflexionszeitraum abgeschlossen
-		if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'uid')))
-		{
-			$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
-			if (!$isReflexionszeitRaumAbgeschlossen)
-			{
-				return false;
-			}
-		}
-
+	private function isEvaluierungszeitraumAbgeschlossen($lve)
+	{
 		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitfenster abgeschlossen
 		$now = (new DateTime())->format('Y-m-d H:i:s');
 		return !(
@@ -1430,6 +1467,24 @@ class Evaluation extends FHCAPI_Controller
 			$lve->endezeit === null ||
 			$now < $lve->endezeit
 		);
+	}
+
+	private function isReflexionszeitraumAbgeschlossen($lve)
+	{
+		return $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
+	}
+
+	private function getEvaluationViewOpenMsgContextText($lve, $isLvAufgeteilt)
+	{
+		if ($isLvAufgeteilt)
+		{
+			$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+			$gruppe = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+
+			return ' für Gruppe ' . $gruppe;
+		}
+
+		return ' für Gesamt-LV';
 	}
 	/**
 	 * Calculate all durations in minutes.
