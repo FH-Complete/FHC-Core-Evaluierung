@@ -60,11 +60,11 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// Permission check
+		// STGL, KFL
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 
-		// LV-Leitungen, if required
+		// LV-Leitungen
 		$lvLeitungen = [];
 		if ($this->_lvLeitungRequired)
 		{
@@ -75,6 +75,7 @@ class Evaluation extends FHCAPI_Controller
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
 
+		// Permission Check
 		if (
 			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
 			in_array($this->_uid, array_column($lehrende, 'uid')) ||
