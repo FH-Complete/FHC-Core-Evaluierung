@@ -858,6 +858,20 @@ class Evaluation extends FHCAPI_Controller
 				? $lektorenByUid[$reflexion->mitarbeiter_uid]
 				: null;
 
+			$leGruppeBezeichnung = '';
+			if ($lveLv->lv_aufgeteilt)
+			{
+				$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+				$leGruppeBezeichnung = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+			}
+			else
+			{
+
+				$result = $this->evaluationlib->getLehreinheitgruppenByLv($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz, $reflexion->mitarbeiter_uid);
+				$leGruppen = hasData($result) ? getData($result) : [];
+				$leGruppeBezeichnung = implode(', ', array_column($leGruppen, 'gruppe_bezeichnung'));
+			}
+
 			$data[] = [
 				'lvevaluierung_reflexion_id' => $reflexion->lvevaluierung_reflexion_id,
 				'lvevaluierung_id' => $lve->lvevaluierung_id,
@@ -866,7 +880,8 @@ class Evaluation extends FHCAPI_Controller
 				'vorname' => $lektor->vorname,
 				'nachname' => $lektor->nachname,
 				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
-				'isLvLeitung' => $lektor->isLvLeitung
+				'isLvLeitung' => $lektor->isLvLeitung,
+				'gruppeBezeichnung'	=> $leGruppeBezeichnung
 			];
 		}
 
@@ -874,6 +889,20 @@ class Evaluation extends FHCAPI_Controller
 		foreach ($lektoren as $lektor)
 		{
 			if (in_array($lektor->uid, $reflexionenUids)) continue;
+
+			$leGruppeBezeichnung = '';
+			if ($lveLv->lv_aufgeteilt)
+			{
+				$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+				$leGruppeBezeichnung = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+			}
+			else
+			{
+
+				$result = $this->evaluationlib->getLehreinheitgruppenByLv($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz, $lektor->uid);
+				$leGruppen = hasData($result) ? getData($result) : [];
+				$leGruppeBezeichnung = implode(', ', array_column($leGruppen, 'gruppe_bezeichnung'));
+			}
 
 			$data[] = [
 				'lvevaluierung_reflexion_id' => null,
@@ -883,7 +912,8 @@ class Evaluation extends FHCAPI_Controller
 				'vorname' => $lektor->vorname,
 				'nachname' => $lektor->nachname,
 				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
-				'isLvLeitung' => $lektor->isLvLeitung
+				'isLvLeitung' => $lektor->isLvLeitung,
+				'gruppeBezeichnung' => $leGruppeBezeichnung
 			];
 		}
 
