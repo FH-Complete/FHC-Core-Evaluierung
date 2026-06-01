@@ -60,11 +60,12 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// KFL, STGL, Last inserted LV-Leitung
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -75,7 +76,8 @@ class Evaluation extends FHCAPI_Controller
 			$isLektorOfLv ||
 			$isLvLeitung ||
 			$isKfl ||
-			$isStgl
+			$isStgl ||
+			$isAdmin
 		) {
 
 			// Abgeschickte Frageboegen, Ruecklaufquote
@@ -186,17 +188,18 @@ class Evaluation extends FHCAPI_Controller
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// KFL, STGL, LV-Leitung (last insertet LvLeitung)
+		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
 		// Permission Check
-		if ($isKfl || $isStgl)
+		if ($isKfl || $isStgl || $isAdmin)
 		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
 			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
@@ -324,10 +327,11 @@ class Evaluation extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		// KFL, STGL, Last inserted LV-Leitung
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -338,7 +342,9 @@ class Evaluation extends FHCAPI_Controller
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
 			!$isKfl &&
-			!$isStgl)
+			!$isStgl &&
+			$isAdmin
+		)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -389,9 +395,10 @@ class Evaluation extends FHCAPI_Controller
 		// KFL, STGL
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Permission check
-		if (!$isKfl && !$isStgl)
+		if (!$isKfl && !$isStgl && !$isAdmin)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -456,10 +463,11 @@ class Evaluation extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		// KFL, STGL, Last inserted LV-Leitung
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -470,7 +478,9 @@ class Evaluation extends FHCAPI_Controller
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
 			!$isKfl &&
-			!$isStgl)
+			!$isStgl &&
+			!$isAdmin
+		)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -508,9 +518,10 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Permission check
-		if (!$isKfl && !$isStgl)
+		if (!$isKfl && !$isStgl && !$isAdmin)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -641,10 +652,11 @@ class Evaluation extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		// KFL, STGL, Last inserted LV-Leitung
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -655,7 +667,9 @@ class Evaluation extends FHCAPI_Controller
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
 			!$isKfl &&
-			!$isStgl)
+			!$isStgl &&
+			!$isAdmin
+		)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -727,8 +741,9 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt('admin');
 
-		if (!$isKfl && !$isStgl)
+		if (!$isKfl && !$isStgl && !$isAdmin)
 		{
 			$this->terminateWithError('Permission denied');
 		}
