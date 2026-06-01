@@ -8,13 +8,12 @@ class Studienbereich extends Auth_Controller
 	 */
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-			'index'=> 'extension/lvevaluierung_init:rw'	// TODO!
-			)
-		);
-
-		$this->load->library('PermissionLib');
+			'index' => [
+				'extension/lvevaluierung_kf:rw',
+				'extension/lvevaluierung_admin:rw',
+			]
+		));
 	}
 
 	/**
@@ -23,9 +22,6 @@ class Studienbereich extends Auth_Controller
 	 */
 	public function index()
 	{
-		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_init:rw'))	// TODO!
-		{
-			$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Studienbereich');
-		}
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Studienbereich');
 	}
 }
