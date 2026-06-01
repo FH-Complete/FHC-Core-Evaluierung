@@ -73,6 +73,15 @@ class EvaluationLib
 		return false;
 	}
 
+	public function getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		// Check for LV-Leitung
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz);
+
+		return hasData($result) ? getData($result) : [];
+	}
+
 	/**
 	 * Get Lehrende depending on Gesamt or GruppenEvaluierung.
 	 * Add optionale Lehrende for reflexion.
@@ -83,18 +92,17 @@ class EvaluationLib
 	 * @param $addOptionale
 	 * @return array
 	 */
-	public function getLehrendeByLve($lve, $lveLv, $lvLeitung = null, $addOptionale = false)
+	public function getLehrendeByLve($lve, $lveLv, $addOptionale = false)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-		if (is_null($lvLeitung))
-		{
-			$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
-				$lveLv->lehrveranstaltung_id,
-				$lveLv->studiensemester_kurzbz
-			);
-			$lvLeitung = hasData($result) ? getData($result)[0] : null;
-		}
+
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
+		);
+		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+
 
 		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
 		{
