@@ -5,29 +5,82 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 class Evaluation extends FHCAPI_Controller
 {
 	const BERECHTIGUNG_STG = 'extension/lvevaluierung_stg';
+	const BERECHTIGUNG_INIT = 'extension/lvevaluierung_init';
+	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
+
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
-
-		parent::__construct(array(
-				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getAuswertungHelpUrl' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'saveOrUpdateReflexion' => 'extension/lvevaluierung_init:r',
-				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
-				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
-				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
-				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
-				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
-				'getMalveByStg' => 'extension/lvevaluierung_stg:rw',
-				'saveMalveByStg' => 'extension/lvevaluierung_stg:rw',
-			)
+		parent::__construct([
+				'getEvaluationDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEvaluationDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungHelpUrl' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEntitledStgs' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getOrgformsByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvListByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'updateVerpflichtend' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'updateReviewedLvInStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'saveOrUpdateReflexion' => [
+					self::BERECHTIGUNG_INIT . ':rw',
+				],
+				'saveMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+			]
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
@@ -65,7 +118,7 @@ class Evaluation extends FHCAPI_Controller
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -192,7 +245,7 @@ class Evaluation extends FHCAPI_Controller
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
@@ -331,7 +384,7 @@ class Evaluation extends FHCAPI_Controller
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -395,7 +448,7 @@ class Evaluation extends FHCAPI_Controller
 		// KFL, STGL
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Permission check
 		if (!$isKfl && !$isStgl && !$isAdmin)
@@ -467,7 +520,7 @@ class Evaluation extends FHCAPI_Controller
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -518,7 +571,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Permission check
 		if (!$isKfl && !$isStgl && !$isAdmin)
@@ -656,7 +709,7 @@ class Evaluation extends FHCAPI_Controller
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -741,7 +794,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt('admin');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		if (!$isKfl && !$isStgl && !$isAdmin)
 		{

@@ -8,13 +8,12 @@ class Studiengaenge extends Auth_Controller
 	 */
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
 		parent::__construct(array(
-			'index'=> 'extension/lvevaluierung_stg:rw'
-			)
-		);
-
-		$this->load->library('PermissionLib');
+			'index' => [
+				'extension/lvevaluierung_stg:rw',
+				'extension/lvevaluierung_admin:rw',
+			]
+		));
 	}
 
 	/**
@@ -23,9 +22,6 @@ class Studiengaenge extends Auth_Controller
 	 */
 	public function index()
 	{
-		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_stg:rw'))
-		{
-			$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge');
-		}
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge');
 	}
 }
