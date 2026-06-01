@@ -8,24 +8,30 @@ class Evaluation extends Auth_Controller
 	 */
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
-		parent::__construct(array(
-			'index'=> 'extension/lvevaluierung_init:rw'	// TODO!
-			)
+		parent::__construct(
+			[
+				'lehre'=> [
+					'extension/lvevaluierung_init:rw',
+					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:rw',
+				],
+				'stg'=> 'extension/lvevaluierung_stg:rw',
+				'kf'=> 'extension/lvevaluierung_kf:rw',
+			]
 		);
-
-		$this->load->library('PermissionLib');
+	}
+	public function lehre()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
 	}
 
-	/**
-	 * Index Controller
-	 * @return void
-	 */
-	public function index()
+	public function stg()
 	{
-		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_init:rw'))	// TODO!
-		{
-			$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation.php');
-		}
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
+	}
+
+	public function kf()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
 	}
 }

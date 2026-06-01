@@ -5,14 +5,43 @@ import tooltip from "../../../../../js/directives/tooltip.js";
 import DateHelper from "../../helpers/DateHelper";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
+
 const router = VueRouter.createRouter({
-	history: VueRouter.createWebHistory(),
+	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Evaluierung/evaluation/Evaluation`),
 	routes: [
 		{
-			path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluation/Evaluation`,
-			name: 'Evaluation',
+			name: 'lehre',
+			path: '/lehre',
 			component: Evaluation,
 			props: route => ({
+				role: 'lehre',
+				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
+						? Number(route.query.lvevaluierung_id)
+						: null,
+				selected_view: route.query.selected_view || null
+			})
+		},
+		{
+			name: 'stg',
+			path: '/stg',
+			component: Evaluation,
+			props: route => ({
+				role: 'stg',
+				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
+						? Number(route.query.lvevaluierung_id)
+						: null,
+				lvevaluierung_lehrveranstaltung_id: route.query.lvevaluierung_lehrveranstaltung_id && route.query.lvevaluierung_lehrveranstaltung_id !== 'null'
+						? Number(route.query.lvevaluierung_lehrveranstaltung_id)
+						: null,
+				selected_view: route.query.selected_view || null
+			})
+		},
+		{
+			name: 'kf',
+			path: '/kf',
+			component: Evaluation,
+			props: route => ({
+				role: 'kf',
 				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
 						? Number(route.query.lvevaluierung_id)
 						: null,

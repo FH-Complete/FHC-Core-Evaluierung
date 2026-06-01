@@ -1,15 +1,13 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
-import EinmeldungCreate from '../../../../FHC-Core-LVKVP/js/components/einmeldung/create.js';
-import EinmeldungList from '../../../../FHC-Core-LVKVP/js/components/einmeldung/list.js';
+import MdlSrcCourseWrapper from '../../../../FHC-Core-LVKVP/js/components/einmeldung/mdlSrcCourseWrapper.js';
 
 export default {
 	name: "EvaluationEinmeldung",
 	components: {
 		FormForm,
 		FormInput,
-		create:EinmeldungCreate,
-		list:EinmeldungList
+		einmeldung: MdlSrcCourseWrapper
 	},
 	inject: [
 		'evalData'
@@ -33,27 +31,13 @@ export default {
 		<h3 class="mb-4">Einmeldung LV Weiterentwicklung</h3>
 		<div v-if="evaluationView.open" class="row mb-3">
 			<div class="col-12 mb-3">
-				<div class="card">
-						<div class="card-body d-flex">
-							<div class="col-8">
-								<create
-									:templateid="evalData.lehrveranstaltung_template_id"
-									:sprache="evalData.sprache"
-									source="lvevaluierung"
-									:lvevalsem="evalData.studiensemester_kurzbz"
-									@op_workpackage_created="$refs.opwplist.fetchWorkpackages()"
-								>
-								</create>
-							</div>
-							<div class="col-4">
-								<list 
-									ref="opwplist"
-									:templateid="evalData.lehrveranstaltung_template_id"
-									:sprache="evalData.sprache"
-								></list>
-							</div>
-						</div>
-				</div>
+				<einmeldung
+					:templateid="evalData.lehrveranstaltung_template_id"
+					:sprache="evalData.sprache"
+					source="lvevaluierung"
+					:lvevalsem="evalData.studiensemester_kurzbz"
+				>
+				</einmeldung>			
 			</div>
 		</div>
 		<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>

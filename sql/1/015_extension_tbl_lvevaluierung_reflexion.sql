@@ -32,6 +32,7 @@ CREATE SEQUENCE IF NOT EXISTS extension.seq_tbl_lvevaluierung_reflexion_lvevalui
 ALTER TABLE extension.tbl_lvevaluierung_reflexion
     ALTER COLUMN lvevaluierung_reflexion_id SET DEFAULT nextval('extension.seq_tbl_lvevaluierung_reflexion_lvevaluierung_reflexion_id');
 GRANT SELECT, INSERT, UPDATE ON extension.seq_tbl_lvevaluierung_reflexion_lvevaluierung_reflexion_id TO vilesci;
+GRANT SELECT, INSERT, UPDATE ON extension.seq_tbl_lvevaluierung_reflexion_lvevaluierung_reflexion_id TO web;
 
 DO $$
 BEGIN

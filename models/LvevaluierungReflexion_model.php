@@ -28,7 +28,10 @@ class LvevaluierungReflexion_model extends DB_Model
 			    lve.lvevaluierung_id = ?
 				AND lve.codes_gemailt
 			    AND lve.endezeit IS NOT NULL
-				AND DATE(lve.endezeit) + COALESCE(CAST(? AS INTERVAL), INTERVAL '0 day') < CURRENT_DATE
+				AND DATE(lve.endezeit) 
+					+ INTERVAL '1 day'
+					+ COALESCE(CAST(? AS INTERVAL), INTERVAL '0 day') 
+					< CURRENT_DATE
 		";
 
 		$result = $this->execQuery(

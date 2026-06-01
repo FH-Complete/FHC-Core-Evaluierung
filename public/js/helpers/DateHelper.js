@@ -61,7 +61,23 @@ export default {
 
 		return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())} ` +
 				`${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}:${pad(dateObj.getSeconds())}`;
-	}
+	},
+
+	/**
+	 * Adds a number of days to a given date.
+	 * Returns a new Date object (does not mutate the original date).
+	 *
+	 * @param {Date | String} dateValue
+	 * @param {Number} days
+	 * @return {Date|null}
+	 */
+	addDays(dateValue, days) {
+		const dateObj = _toValidDate(dateValue);
+
+		if (!dateObj || typeof days !== 'number') return null;
+
+		return new Date(dateObj.getTime() + days * 24 * 60 * 60 * 1000);
+	},
 }
 
 // Private functions
