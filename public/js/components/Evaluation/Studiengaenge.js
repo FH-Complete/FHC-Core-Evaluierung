@@ -46,35 +46,6 @@ export default {
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
-	watch: {
-		selStudiensemester(newVal){
-			if (newVal && this.selStgKz && this.table)
-			{
-				this.table.replaceData();
-			}
-		},
-		selStgKz(newVal){
-			if (newVal && this.selStudiensemester && this.table)
-			{
-				this.$api
-					.call(ApiEvaluation.getOrgformsByStg(newVal, this.selStudiensemester))
-					.then(result => {
-						this.lists.orgforms = result.data
-						this.selOrgform = result.data[0].orgform_kurzbz;
-						this.table.replaceData();
-						return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester))
-					})
-					.then(result => this.malve = result.data)
-					.catch(error => this.$fhcAlert.handleSystemError(error));
-			}
-		},
-		selOrgform(newVal){
-			if (newVal && this.selOrgform && this.table)
-			{
-				this.table.replaceData();
-			}
-		},
-	},
 	computed: {
 		selStgFullName() {
 			const stg = this.lists.stgs.find(s => s.studiengang_kz == this.selStgKz);
@@ -312,6 +283,34 @@ export default {
 		},
 	},
 	methods: {
+		onStudiensemesterChange() {
+			if (!this.selStudiensemester || !this.table) return;
+
+			this.table.replaceData();
+		},
+		onStgChange() {
+			if (!this.selStgKz || !this.selStudiensemester || !this.table) return;
+
+			this.$api
+				.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
+				.then(result => {
+					this.lists.orgforms = result.data;
+					if (!this.lists.orgforms.some(o => o.orgform_kurzbz === this.selOrgform)) {
+						this.selOrgform = this.lists.orgforms[0]?.orgform_kurzbz ?? null;
+					}
+
+					this.table.replaceData();
+
+					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester));
+				})
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		onOrgformChange() {
+			if (!this.selOrgform || !this.table) return;
+
+			this.table.replaceData();
+		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
 			const url = this.$api.getUri() +
 					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/stg/' +
@@ -394,7 +393,9 @@ export default {
 							type="select"
 							v-model="selStudiensemester"
 							name="studiensemester_kurzbz"
-							:label="$p.t('lehre/studiensemester')">
+							:label="$p.t('lehre/studiensemester')"
+							 @change="onStudiensemesterChange"
+						 >
 							<option 
 								v-for="studSem in lists.studiensemester"
 								:key="studSem.studiensemester_kurzbz" 
@@ -409,7 +410,8 @@ export default {
 							v-model="selStgKz"
 							name="studiengang_kz"
 							:label="$p.t('lehre/studiengang')"
-							>
+							@change="onStgChange"
+						>
 							<option v-for="stg in lists.stgs" :key="stg.studiengang_kz" :value="stg.studiengang_kz">
 								{{ stg.kuerzel }} {{ stg.bezeichnung }}
 							</option>
@@ -421,7 +423,8 @@ export default {
 							v-model="selOrgform"
 							name="orgform_kurzbz"
 							:label="$p.t('lehre/organisationsform')"
-							>
+							@change="onOrgformChange"
+						>
 							<option v-for="orgform in lists.orgforms" :key="orgform.orgform_kurzbz" :value="orgform.orgform_kurzbz">
 								{{ orgform.orgform_kurzbz }}
 							</option>
