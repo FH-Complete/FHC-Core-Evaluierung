@@ -87,6 +87,12 @@ export default {
 			}
 		}
 	},
+	getEntitledKfs() {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEntitledKfs',
+		}
+	},
 	getEntitledStgs(studiensemester_kurzbz){
 		return {
 			method: 'get',
@@ -117,6 +123,16 @@ export default {
 			}
 		}
 	},
+	getLvListByKf(studiensemester_kurzbz, oe_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvListByKf',
+			params: {
+				studiensemester_kurzbz: studiensemester_kurzbz,
+				oe_kurzbz: oe_kurzbz,
+			}
+		}
+	},
 	updateVerpflichtend(lvevaluierung_lehrveranstaltung_id, isVerpflichtend) {
 		return {
 			method: 'post',
@@ -124,6 +140,16 @@ export default {
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
 				isVerpflichtend: isVerpflichtend
+			}
+		}
+	},
+	updateReviewedLvInKf(lvevaluierung_lehrveranstaltung_id, isReviewed) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/updateReviewedLvInKf',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				isReviewed: isReviewed
 			}
 		}
 	},
@@ -143,12 +169,32 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungHelpUrl',
 		}
 	},
+	getMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByKf',
+			params: {
+				oe_kurzbz: oe_kurzbz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
 	getMalveByStg(studiengang_kz, studiensemester_kurzbz){
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByStg',
 			params: {
 				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	saveMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByKf',
+			params: {
+				oe_kurzbz: oe_kurzbz,
 				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}

@@ -35,20 +35,36 @@ class EvaluationLib
 			return false;
 	}
 
-	public function isKFL($uid, $lehrveranstaltung_id)
+	public function isKFL($uid, $lehrveranstaltung_id = null, $oe_kurzbz = null)
 	{
-		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
-		$lv = hasData($result) ? getData($result)[0] : null;
-
-		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
-		$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
-
-		if (hasData($result))
+		if (!is_null($lehrveranstaltung_id))
 		{
-			$leitungen = getData($result);
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+			$lv = hasData($result) ? getData($result)[0] : null;
 
-			return in_array($lv->oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+			$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
+
+			if (hasData($result))
+			{
+				$leitungen = getData($result);
+
+				return in_array($lv->oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			}
+		}
+
+		if (!is_null($oe_kurzbz))
+		{
+			$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+			$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
+
+			if (hasData($result))
+			{
+				$leitungen = getData($result);
+
+				return in_array($oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			}
 		}
 
 		return false;

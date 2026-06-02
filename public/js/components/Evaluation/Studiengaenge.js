@@ -385,7 +385,7 @@ export default {
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
 		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
 	 	<div class="row align-items-center mb-3">
-	 		<h4>{{selStudiensemester}} - {{ selStgFullName }}</h4>
+	 		<h2>{{selStudiensemester}} - {{ selStgFullName }}</h2>
 			<div class="col-md-12">
 				<div class="d-flex justify-content-end align-items-center">
 					<div class="me-2">
