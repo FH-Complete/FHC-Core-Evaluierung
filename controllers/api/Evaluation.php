@@ -396,7 +396,7 @@ class Evaluation extends FHCAPI_Controller
 			!$isLvLeitung &&
 			!$isKfl &&
 			!$isStgl &&
-			$isAdmin
+			!$isAdmin
 		)
 		{
 			$this->terminateWithError('Permission denied');
