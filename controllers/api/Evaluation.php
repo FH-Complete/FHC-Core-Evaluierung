@@ -5,29 +5,82 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 class Evaluation extends FHCAPI_Controller
 {
 	const BERECHTIGUNG_STG = 'extension/lvevaluierung_stg';
+	const BERECHTIGUNG_INIT = 'extension/lvevaluierung_init';
+	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
+
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
-
-		parent::__construct(array(
-				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getAuswertungHelpUrl' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r'),
-				'saveOrUpdateReflexion' => 'extension/lvevaluierung_init:r',
-				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
-				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
-				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
-				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
-				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
-				'getMalveByStg' => 'extension/lvevaluierung_stg:rw',
-				'saveMalveByStg' => 'extension/lvevaluierung_stg:rw',
-			)
+		parent::__construct([
+				'getEvaluationDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEvaluationDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungHelpUrl' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLve' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLveLv' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEntitledStgs' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getOrgformsByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvListByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'updateVerpflichtend' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'updateReviewedLvInStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'saveOrUpdateReflexion' => [
+					self::BERECHTIGUNG_INIT . ':rw',
+				],
+				'saveMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+			]
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
@@ -60,27 +113,24 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// STGL, KFL
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-
-		// LV-Leitungen
-		$lvLeitungen = [];
-		if ($this->_lvLeitungRequired)
-		{
-			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-			$lvLeitungen = hasData($result) ? getData($result) : [];
-		}
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
-		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
 
 		// Permission Check
 		if (
-			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			$isLektorOfLv ||
+			$isLvLeitung ||
 			$isKfl ||
-			$isStgl
+			$isStgl ||
+			$isAdmin
 		) {
 
 			// Abgeschickte Frageboegen, Ruecklaufquote
@@ -191,24 +241,18 @@ class Evaluation extends FHCAPI_Controller
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// Permission check
+		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-
-		// LV-Leitungen, if required
-		$lvLeitungen = [];
-		if ($this->_lvLeitungRequired)
-		{
-			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-			$lvLeitungen = hasData($result) ? getData($result) : [];
-		}
+		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
 		// Permission Check
-		if ($isKfl || $isStgl)
+		if ($isKfl || $isStgl || $isAdmin)
 		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
 			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
@@ -272,7 +316,7 @@ class Evaluation extends FHCAPI_Controller
 
 			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
 			// ---------------------------------------------------------------------------------------------------------
-			$canAggregate = $isKfl || $isStgl;
+			$canAggregate = $isKfl || $isStgl || $isAdmin;
 			$aggregationOptions = null;
 
 			if ($canAggregate)
@@ -334,6 +378,29 @@ class Evaluation extends FHCAPI_Controller
 		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Last inserted LV-Leitung, Admin
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		// Exit Auswertung view
 		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
@@ -374,7 +441,20 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKfl && !$isStgl && !$isAdmin)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		// Exit Auswertung view
 		foreach ($lves as $lve)
@@ -434,6 +514,29 @@ class Evaluation extends FHCAPI_Controller
 		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Last inserted LV-Leitung, Admin
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		// Exit Auswertung view
 		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
@@ -464,6 +567,17 @@ class Evaluation extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKfl && !$isStgl && !$isAdmin)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		// Exit Textantworten view
 		foreach ($lves as $lve)
@@ -591,14 +705,27 @@ class Evaluation extends FHCAPI_Controller
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$result = $this->LehrveranstaltungModel->getLvLeitung(
-			$lveLv->lehrveranstaltung_id,
-			$lveLv->studiensemester_kurzbz
-		);
-		$lvLeitung = hasData($result) ? getData($result)[0] : null;
-		$isLvLeitung = $this->_uid === $lvLeitung->mitarbeiter_uid;
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
 
 		// Exit Reflexionen view
 		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
@@ -612,7 +739,7 @@ class Evaluation extends FHCAPI_Controller
 		// Reflexionen
 		// -------------------------------------------------------------------------------------------------------------
 		// Build Reflexionen by Lehrende
-		$reflexionen = $this->buildReflexionenByLve($lve, $lveLv, $lvLeitung);
+		$reflexionen = $this->buildReflexionenByLve($lve, $lveLv);
 
 		// Übersicht Reflexionen (before possible filtering in next step)
 		// -------------------------------------------------------------------------------------------------------------
@@ -630,14 +757,13 @@ class Evaluation extends FHCAPI_Controller
 
 		// Filter Reflexionen and add checks
 		// -------------------------------------------------------------------------------------------------------------
-		// Filter Reflexionen if necessary (nicht alle dürfen alle Reflexionen sehen)
-		// Ausnahme: STGL und KFL, wenn Reflexionszeit abgeschlossen ist (dürfen immer alles sehen)
+		/* Filter Reflexionen if necessary (nicht alle dürfen alle Reflexionen sehen)
+			Ausnahme: STGL und KFL, wenn Reflexionszeit abgeschlossen ist (dürfen immer alles sehen) */
 		if (!(($role === 'stg' || $role === 'kf') && $isReflexionszeitRaumAbgeschlossen))
 		{
 			$reflexionen = $this->filterVisibleReflexionenForLehrende(
 				$reflexionen,
-				$lveLv,
-				$lvLeitung->mitarbeiter_uid
+				$lveLv
 			);
 		}
 
@@ -646,8 +772,7 @@ class Evaluation extends FHCAPI_Controller
 			$lve,
 			$lveLv,
 			$isKfl,
-			$isStgl,
-			$lvLeitung->mitarbeiter_uid
+			$isStgl
 		);
 
 		$resultData = [
@@ -669,13 +794,9 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$result = $this->LehrveranstaltungModel->getLvLeitung(
-			$lveLv->lehrveranstaltung_id,
-			$lveLv->studiensemester_kurzbz
-		);
-		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
-		if (!$isKfl && !$isStgl)
+		if (!$isKfl && !$isStgl && !$isAdmin)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -697,15 +818,14 @@ class Evaluation extends FHCAPI_Controller
 			}
 
 			// Build Reflexionen
-			$reflexionen = $this->buildReflexionenByLve($lve, $lveLv, $lvLeitung);
+			$reflexionen = $this->buildReflexionenByLve($lve, $lveLv);
 
 			$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
 				$reflexionen,
 				$lve,
 				$lveLv,
 				$isKfl,
-				$isStgl,
-				$lvLeitung->mitarbeiter_uid
+				$isStgl
 			);
 
 			$reflexionenByLveLv = array_merge(
@@ -755,7 +875,7 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 
-		$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+		$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
 		if (!in_array($this->_uid, array_column($lektorOfLve, 'uid')) ||
 			$mitarbeiterUid != $this->_uid)
 		{
@@ -882,7 +1002,7 @@ class Evaluation extends FHCAPI_Controller
 	 * @param $lvLeitung
 	 * @return array
 	 */
-	private function buildReflexionenByLve($lve, $lveLv, $lvLeitung)
+	private function buildReflexionenByLve($lve, $lveLv)
 	{
 		$data = [];
 
@@ -894,7 +1014,7 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionen = hasData($result) ? getData($result) : [];
 
 		// Get all Lehrende of Lve that have to do Reflexion
-		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, $lvLeitung, true);
+		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
 
 		$lektorenByUid = [];
 		foreach ($lektoren as $lektor) {
@@ -1140,11 +1260,12 @@ class Evaluation extends FHCAPI_Controller
 
 	private function filterVisibleReflexionenForLehrende(
 		$reflexionen,
-		$lveLv,
-		$lvLeitungUid
+		$lveLv
 	)
 	{
 		$data = [];
+
+		$lvLeitung = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
 		foreach ($reflexionen as $reflexion) {
 			// Gruppen-Evaluierung: nur eigene Reflexion sichtbar
@@ -1162,11 +1283,12 @@ class Evaluation extends FHCAPI_Controller
 				}
 
 				// Wenn nicht LV-Leitung: auch Reflexion von LV-Leitung sichtbar
-				if ($this->_uid !== $lvLeitungUid &&
-					$reflexion['mitarbeiter_uid'] === $lvLeitungUid)
+				if (
+					$this->_uid !== $lvLeitung[0]->mitarbeiter_uid &&
+					$reflexion['mitarbeiter_uid'] === $lvLeitung[0]->mitarbeiter_uid
+				)
 				{
 					$data[] = $reflexion;
-
 				}
 			}
 		}
@@ -1177,13 +1299,14 @@ class Evaluation extends FHCAPI_Controller
 		$lve,
 		$lveLv,
 		$isKfl,
-		$isStgl,
-		$lvLeitungUid
+		$isStgl
 	)
 	{
 		$data = [];
 
 		$check = $this->checkBearbeitungOffenForReflexion($lve);
+
+		$lvLeitung = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
 		foreach ($reflexionen as $reflexion)
 		{
@@ -1204,8 +1327,8 @@ class Evaluation extends FHCAPI_Controller
 					!$lveLv->lv_aufgeteilt
 					&& !$isKfl
 					&& !$isStgl
-					&& $reflexion['mitarbeiter_uid'] === $lvLeitungUid
-					&& $this->_uid !== $lvLeitungUid
+					&& $reflexion['mitarbeiter_uid'] === $lvLeitung[0]->mitarbeiter_uid
+					&& $this->_uid !== $lvLeitung[0]->mitarbeiter_uid
 				);
 
 			if ($isReadOnly)
