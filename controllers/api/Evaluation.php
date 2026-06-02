@@ -316,7 +316,7 @@ class Evaluation extends FHCAPI_Controller
 
 			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
 			// ---------------------------------------------------------------------------------------------------------
-			$canAggregate = $isKfl || $isStgl;
+			$canAggregate = $isKfl || $isStgl || $isAdmin;
 			$aggregationOptions = null;
 
 			if ($canAggregate)
