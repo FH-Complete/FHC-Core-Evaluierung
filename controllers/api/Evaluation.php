@@ -4,6 +4,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class Evaluation extends FHCAPI_Controller
 {
+	const BERECHTIGUNG_KF = 'extension/lvevaluierung_kf';
 	const BERECHTIGUNG_STG = 'extension/lvevaluierung_stg';
 	const BERECHTIGUNG_INIT = 'extension/lvevaluierung_init';
 	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
@@ -12,44 +13,57 @@ class Evaluation extends FHCAPI_Controller
 	{
 		parent::__construct([
 				'getEvaluationDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getEvaluationDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getAuswertungDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getAuswertungDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getAuswertungHelpUrl' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getTextantwortenByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getTextantwortenByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getReflexionDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getReflexionDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEntitledKfs' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getEntitledStgs' => [
@@ -60,6 +74,10 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getLvListByKf' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'getLvListByStg' => [
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
@@ -68,14 +86,24 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getMalveByKf' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'updateVerpflichtend' => [
 					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'updateReviewedLvInKf' => [
+					self::BERECHTIGUNG_KF . ':rw',
 				],
 				'updateReviewedLvInStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
 				],
 				'saveOrUpdateReflexion' => [
 					self::BERECHTIGUNG_INIT . ':rw',
+				],
+				'saveMalveByKf' => [
+					self::BERECHTIGUNG_KF . ':rw',
 				],
 				'saveMalveByStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
@@ -1571,6 +1599,194 @@ class Evaluation extends FHCAPI_Controller
 			$this->terminateWithError('No Studiengang found to get MALVE data');
 		}
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Evaluation Kompetenzfeld
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Get Kompetenzfelder for which the user is entitled.
+	 *
+	 * @return void
+	 */
+	public function getEntitledKfs()
+	{
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+
+		$condition = '
+                oe_kurzbz IN (\'' . implode('\',\'', $entitledOes) . '\') AND
+                aktiv = TRUE AND
+                organisationseinheittyp_kurzbz = \'Kompetenzfeld\'
+            ';
+
+		$result = $this->OrganisationseinheitModel->loadWhere($condition);
+
+		$oes = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($oes);
+	}
+
+	/**
+	 * Get Lv-List Data of all Lvs that shall be evaluated in given Studiensemester and Kompetenzfeld.
+	 * (from Lvevaluierung-Lehrveranstaltung table)
+	 *
+	 * @return void
+	 */
+	public function getLvListByKf()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+
+		// Permission check
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+	$this->addMeta('uid', $this->_uid);
+	$this->addMeta('$isAdmin', $isAdmin);
+		if (!in_array($oe_kurzbz, $entitledOes) && !$isAdmin) $this->terminateWithError('Permission denied');
+	$this->addMeta('$entitledOes', $entitledOes);
+	$this->addMeta('$oe_kurzbz', $oe_kurzbz);
+
+		// Get LV List
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByKf(
+			$studiensemester_kurzbz,
+			$oe_kurzbz
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Get Ruecklauf data
+		$lveLvIds = array_column($data, 'lvevaluierung_lehrveranstaltung_id');
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLveLv($lveLvIds);
+		$rlData = hasData($result) ? getData($result) : [];
+
+		// Add Ruecklauf values to data
+		foreach ($data as $item)
+		{
+			$lveLvId = $item->lvevaluierung_lehrveranstaltung_id;
+			$agg = current(array_filter($rlData, function ($r) use ($lveLvId)
+			{
+				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
+			}));
+			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float)$agg->ruecklaufquote
+				: null;
+		}
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Get MALVE by Kompetenzfeld and Studiensemester.
+	 *
+	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
+	 * @return void
+	 */
+	public function getMalveByKf()
+	{
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+		$result = $this->LvevaluierungMalveModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Save MALVE by Kompetenzfeld and Studiensemester.
+	 *
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this Kompetenzfeld.
+	 *
+	 * @return void
+	 */
+	public function saveMalveByKF()
+	{
+		$oe_kurzbz = $this->input->post('oe_kurzbz');
+		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
+
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
+		if (!$isKfl) $this->terminateWithError('Permission denied. Only KFL can save.');
+
+		// Check if OE is Kompetenzfeld
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->OrganisationseinheitModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			'organisationseinheittyp_kurzbz' => 'Kompetenzfeld',
+			'aktiv' => TRUE
+		]);
+
+		if (hasData($result))
+		{
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+
+			// Check if MALVE already exist
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			// If not exist
+			if (!hasData($result))
+			{
+				// Insert
+				$result = $this->LvevaluierungMalveModel->insert([
+					'oe_kurzbz' => $oe_kurzbz,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'insertvon' => $this->_uid
+				]);
+
+				if (isError($result))
+				{
+					$this->terminateWithError(getError($result));
+				}
+				else
+				{
+					$insertId = getData($result);
+
+					// Get new record
+					$record = $this->LvevaluierungMalveModel->load($insertId);
+
+					if (!hasData($record))
+					{
+						$this->terminateWithError('Inserted record not found');
+					}
+
+					$this->terminateWithSuccess(getData($record));
+				}
+			}
+		}
+		else
+		{
+			$this->terminateWithError('No Kompetenzfeld found to get MALVE data');
+		}
+	}
+
+	/**
+	 * Update reviewed Evaluierungen for given Lehrveranstaltung, reviewed by Kompetenzfeldleitung.
+	 *
+	 * @return void
+	 */
+	public function updateReviewedLvInKf()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$isReviewed = $this->input->post('isReviewed');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			['reviewed_kf' => $isReviewed]
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
 
 	private function hasSetEvaluierungszeitraum($lve)
 	{

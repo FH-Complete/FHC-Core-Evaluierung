@@ -18,6 +18,7 @@ class Evaluation extends Auth_Controller
 				],
 				'stg'=> [
 					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:r',
 					'extension/lvevaluierung_admin:rw',
 				],
 				'kf'=> [

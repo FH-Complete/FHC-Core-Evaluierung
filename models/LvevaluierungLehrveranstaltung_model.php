@@ -79,6 +79,62 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	}
 
 	/**
+	 * Get Lvs that are scheduled for evaluation in the given Studiensemester and Kompetenzfeld.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $oe_kurzbz
+	 * @return mixed
+	 */
+	public function getLveLvsByKf($studiensemester_kurzbz, $oe_kurzbz)
+	{
+		if (is_string($oe_kurzbz) && !is_array($oe_kurzbz))
+		{
+			$oe_kurzbz = [$oe_kurzbz];
+		}
+		$params = [$studiensemester_kurzbz, $oe_kurzbz];
+
+		$qry = '
+			-- Alle LVs eines bestimmten Studiensemesters, wo eingeloggter user Kompetenzfeldleiter ist
+			WITH lvs AS (
+				SELECT
+					DISTINCT ON (lv.lehrveranstaltung_id) 
+					lv.lehrveranstaltung_id,
+					lv.bezeichnung AS "lv_bezeichnung",
+					lv.orgform_kurzbz,
+					lv.semester,
+					lv.studiengang_kz,
+					lv.lehrveranstaltung_template_id,
+					stg.kurzbzlang,
+					stg.bezeichnung AS "stg_bezeichnung",
+					le.studiensemester_kurzbz
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN lehre.tbl_lehreinheit le USING (lehrveranstaltung_id)
+					JOIN public.tbl_studiengang stg USING (studiengang_kz)
+				WHERE
+					le.studiensemester_kurzbz = ?
+					AND lv.oe_kurzbz IN ?
+				ORDER BY
+					lv.lehrveranstaltung_id
+			)
+	
+			-- Final join
+			SELECT
+				*
+			FROM		  	
+				lvs	
+			JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv 
+				ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
+				AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
+			ORDER BY
+			  	kurzbzlang,
+			  	lv_bezeichnung
+		';
+
+		return $this->execQuery($qry, $params);
+	}
+
+	/**
 	 * Get Lvs that are scheduled for evaluation in the given Studiensemester and Studiengang (can be number or array).
 	 *
 	 * @param $studiensemester_kurzbz
