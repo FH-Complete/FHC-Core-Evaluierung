@@ -10,6 +10,18 @@ const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Evaluierung/evaluation/Evaluation`),
 	routes: [
 		{
+			name: 'index',
+			path: '/',
+			component: Evaluation,
+			props: route => ({
+				role: 'lehre',
+				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
+						? Number(route.query.lvevaluierung_id)
+						: null,
+				selected_view: route.query.selected_view || null
+			})
+		},
+		{
 			name: 'lehre',
 			path: '/lehre',
 			component: Evaluation,
