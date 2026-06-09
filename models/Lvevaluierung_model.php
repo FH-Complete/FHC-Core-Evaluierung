@@ -10,6 +10,30 @@ class Lvevaluierung_model extends DB_Model
 	}
 
 	/**
+	 * Insert multiple Lvevaluierungen.
+	 *
+	 * @param $batch
+	 * @return mixed
+	 */
+	public function insertBatch($batch)
+	{
+		// Check class properties
+		if (is_null($this->dbTable)) return error('The given database table name is not valid', EXIT_MODEL);
+
+		// Insert data
+		$insert = $this->db->insert_batch($this->dbTable, $batch);
+
+		if ($insert)
+		{
+			return success();
+		}
+		else
+		{
+			return error($this->db->error(), EXIT_DATABASE);
+		}
+	}
+
+	/**
 	 * Insert new Lvevaluierung.
 	 *
 	 * @param $lvevaluierung
@@ -55,6 +79,21 @@ class Lvevaluierung_model extends DB_Model
 		}
 
 		return $this->load($lvevaluierung['lvevaluierung_id']);
+	}
+
+	/**
+	 * Get Lvevaluilerungen by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getLvesByStSem($studiensemester_kurzbz)
+	{
+		$this->addJoin('extension.tbl_lvevaluierung_lehrveranstaltung lvelv', 'lvevaluierung_lehrveranstaltung_id');
+
+		return $this->loadWhere([
+			'lvelv.studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
 	}
 
 	/**

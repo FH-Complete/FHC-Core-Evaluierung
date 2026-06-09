@@ -1,10 +1,11 @@
 export default {
-	getEvaluationDataByLve(lvevaluierung_id) {
+	getEvaluationDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role,
 			}
 		}
 	},
@@ -17,12 +18,13 @@ export default {
 			}
 		}
 	},
-	getAuswertungDataByLve(lvevaluierung_id) {
+	getAuswertungDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},
@@ -35,12 +37,13 @@ export default {
 			}
 		}
 	},
-	getTextantwortenByLve(lvevaluierung_id) {
+	getTextantwortenByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getTextantwortenByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},
@@ -53,12 +56,13 @@ export default {
 			}
 		}
 	},
-	getReflexionDataByLve(lvevaluierung_id) {
+	getReflexionDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLve',
 			params: {
-				lvevaluierung_id: lvevaluierung_id
+				lvevaluierung_id: lvevaluierung_id,
+				role: role
 			}
 		}
 	},
@@ -81,6 +85,12 @@ export default {
 				mitarbeiter_uid: mitarbeiter_uid,
 				data: data
 			}
+		}
+	},
+	getEntitledKfs() {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEntitledKfs',
 		}
 	},
 	getEntitledStgs(studiensemester_kurzbz){
@@ -113,6 +123,16 @@ export default {
 			}
 		}
 	},
+	getLvListByKf(studiensemester_kurzbz, oe_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvListByKf',
+			params: {
+				studiensemester_kurzbz: studiensemester_kurzbz,
+				oe_kurzbz: oe_kurzbz,
+			}
+		}
+	},
 	updateVerpflichtend(lvevaluierung_lehrveranstaltung_id, isVerpflichtend) {
 		return {
 			method: 'post',
@@ -120,6 +140,16 @@ export default {
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
 				isVerpflichtend: isVerpflichtend
+			}
+		}
+	},
+	updateReviewedLvInKf(lvevaluierung_lehrveranstaltung_id, isReviewed) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/updateReviewedLvInKf',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				isReviewed: isReviewed
 			}
 		}
 	},
@@ -137,6 +167,46 @@ export default {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungHelpUrl',
+		}
+	},
+	getMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByKf',
+			params: {
+				oe_kurzbz: oe_kurzbz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	getMalveByStg(studiengang_kz, studiensemester_kurzbz){
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByStg',
+			params: {
+				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	saveMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByKf',
+			params: {
+				oe_kurzbz: oe_kurzbz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	saveMalveByStg(studiengang_kz, studiensemester_kurzbz){
+		return {
+			method: 'post',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByStg',
+			params: {
+				studiengang_kz: studiengang_kz,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
 		}
 	}
 }

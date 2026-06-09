@@ -35,20 +35,36 @@ class EvaluationLib
 			return false;
 	}
 
-	public function isKFL($uid, $lehrveranstaltung_id)
+	public function isKFL($uid, $lehrveranstaltung_id = null, $oe_kurzbz = null)
 	{
-		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
-		$lv = hasData($result) ? getData($result)[0] : null;
-
-		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
-		$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
-
-		if (hasData($result))
+		if (!is_null($lehrveranstaltung_id))
 		{
-			$leitungen = getData($result);
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+			$lv = hasData($result) ? getData($result)[0] : null;
 
-			return in_array($lv->oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+			$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
+
+			if (hasData($result))
+			{
+				$leitungen = getData($result);
+
+				return in_array($lv->oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			}
+		}
+
+		if (!is_null($oe_kurzbz))
+		{
+			$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+			$result = $this->_ci->BenutzerfunktionModel->getKFLByUID($uid);
+
+			if (hasData($result))
+			{
+				$leitungen = getData($result);
+
+				return in_array($oe_kurzbz, array_column($leitungen, 'oe_kurzbz'));
+			}
 		}
 
 		return false;
@@ -73,6 +89,15 @@ class EvaluationLib
 		return false;
 	}
 
+	public function getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz)
+	{
+		// Check for LV-Leitung
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz);
+
+		return hasData($result) ? getData($result) : [];
+	}
+
 	/**
 	 * Get Lehrende depending on Gesamt or GruppenEvaluierung.
 	 * Add optionale Lehrende for reflexion.
@@ -83,18 +108,17 @@ class EvaluationLib
 	 * @param $addOptionale
 	 * @return array
 	 */
-	public function getLehrendeByLve($lve, $lveLv, $lvLeitung = null, $addOptionale = false)
+	public function getLehrendeByLve($lve, $lveLv, $addOptionale = false)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-		if (is_null($lvLeitung))
-		{
-			$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
-				$lveLv->lehrveranstaltung_id,
-				$lveLv->studiensemester_kurzbz
-			);
-			$lvLeitung = hasData($result) ? getData($result)[0] : null;
-		}
+
+		$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+			$lveLv->lehrveranstaltung_id,
+			$lveLv->studiensemester_kurzbz
+		);
+		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+
 
 		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
 		{
@@ -149,6 +173,54 @@ class EvaluationLib
 		}
 
 		return $result;
+	}
+
+	public function getLehreinheitgruppenByLe($lehreinheit_id)
+	{
+		$this->_ci->load->config('extensions/FHC-Core-Evaluierung/initiierung');
+		$excludedLehrformen = $this->_ci->config->item('excludedLehrformen');
+		$excludedLehrformenString = implode("', '", $excludedLehrformen);
+
+		$this->prepareLehreinheitgruppenSelect();
+
+		return $this->_ci->LehreinheitModel->loadWhere(
+			[
+				'lehreinheit_id' => $lehreinheit_id,
+				"lehrform_kurzbz NOT IN ('{$excludedLehrformenString}')" => null
+			]
+		);
+	}
+
+	public function getLehreinheitgruppenByLv($lehrveranstaltung_id, $studiensemester_kurzbz, $mitarbeiter_uid = null)
+	{
+		$this->_ci->load->config('extensions/FHC-Core-Evaluierung/initiierung');
+		$excludedLehrformen = $this->_ci->config->item('excludedLehrformen');
+		$excludedLehrformenString = implode("', '", $excludedLehrformen);
+
+		$this->prepareLehreinheitgruppenSelect();
+
+		if ($mitarbeiter_uid !== null)
+		{
+			return $this->_ci->LehreinheitModel->loadWhere(
+				[
+					'lehrveranstaltung_id' => $lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'mitarbeiter_uid' => $mitarbeiter_uid,
+					"lehrform_kurzbz NOT IN ('{$excludedLehrformenString}')" => null
+				]
+			);
+		}
+		else
+		{
+			return $this->_ci->LehreinheitModel->loadWhere(
+				[
+					'lehrveranstaltung_id' => $lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					"lehrform_kurzbz NOT IN ('{$excludedLehrformenString}')" => null
+				]
+			);
+		}
+
 	}
 
 	public function isZeitfensterOffen($startDate, $endDate)
@@ -320,5 +392,39 @@ class EvaluationLib
 		$result = $this->_ci->SpracheModel->loadWhere(array('sprache' => $userLang));
 
 		return hasData($result) ? getData($result)[0]->index : $defaultIdx;
+	}
+	private function prepareLehreinheitgruppenSelect()
+	{
+		$this->_ci->load->model('education/Lehreinheitgruppe_model', 'LehreinheitModel');
+
+		$this->_ci->LehreinheitModel->addSelect('legr.*');
+		$this->_ci->LehreinheitModel->addSelect('gr.direktinskription');
+		$this->_ci->LehreinheitModel->addSelect('lema.mitarbeiter_uid');
+		$this->_ci->LehreinheitModel->addSelect('lema.lehrfunktion_kurzbz');
+		$this->_ci->LehreinheitModel->addSelect('
+			CASE
+			  	-- Normale Gruppe
+				WHEN legr.gruppe_kurzbz IS NULL THEN 
+					COALESCE(
+						CONCAT(
+							UPPER(CONCAT(stg.typ, stg.kurzbz, \'-\')),
+								COALESCE(legr.semester :: varchar, \'\'),
+								COALESCE(legr.verband :: varchar, \'\'),
+								COALESCE(legr.gruppe, \'\')
+							), 
+						\'\'
+					) 
+				-- Spezialgruppe
+				ELSE 
+					legr.gruppe_kurzbz
+	  		END AS gruppe_bezeichnung
+		');
+
+		$this->_ci->LehreinheitModel->addJoin('lehre.tbl_lehreinheitmitarbeiter lema', 'lehreinheit_id');
+		$this->_ci->LehreinheitModel->addJoin('lehre.tbl_lehreinheitgruppe legr', 'lehreinheit_id', 'LEFT');
+		$this->_ci->LehreinheitModel->addJoin('public.tbl_gruppe gr', 'gruppe_kurzbz', 'LEFT');
+		$this->_ci->LehreinheitModel->addJoin('public.tbl_studiengang stg', 'stg.studiengang_kz = legr.studiengang_kz', 'LEFT');
+
+		$this->_ci->LehreinheitModel->addOrder('gruppe_bezeichnung');
 	}
 }

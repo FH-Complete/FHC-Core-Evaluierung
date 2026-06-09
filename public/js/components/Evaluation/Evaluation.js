@@ -10,7 +10,13 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: ['lvevaluierung_id', 'lvevaluierung_lehrveranstaltung_id', 'lehrveranstaltung_template_id', 'selected_view'],
+	props: [
+		'role',
+		'lvevaluierung_id',
+		'lvevaluierung_lehrveranstaltung_id',
+		'lehrveranstaltung_template_id',
+		'selected_view'
+	],
 	data() {
 		return {
 			evalData: {
@@ -24,6 +30,7 @@ export default {
 				ruecklaufquote: null,
 				startzeit: null,
 				endezeit: null,
+				showAggregation: false,
 			},
 			selectedView: this.selected_view || 'auswertung',
 			scrollPositions: {
@@ -32,9 +39,14 @@ export default {
 				einmeldung: 0
 			},
 			evaluationView: {
-				open: null,
-				msg: ''
-			}
+				open: false,
+				msg: [],
+				canAggregate: false
+			},
+			// Used to build Dropdown to switch Ansicht LV- or Gruppenebene.
+			// Built only if canAggregate is true.
+			aggregationOptions: [],
+			selAggregationValue: null
 		}
 	},
 	provide() {
@@ -45,28 +57,50 @@ export default {
 	created() {
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id)
+				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role)
 				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 			this.$api
 				.call(apiCall)
 				.then(result => {
-					if (result.data?.data !== null)
-					{
-						this.evalData = result.data.data;
-					}
+					if (result.data) {
+						const data = result.data;
 
-					this.evaluationView.open = result.data.evaluationView.open;
-					this.evaluationView.msg  = result.data.evaluationView.msg;
+						// Basic data
+						if (data.data !== null) {
+							this.evalData = data.data;
+						}
+
+						// Permissions on view / GUI
+						this.evaluationView.open = data.evaluationView.open;
+						this.evaluationView.msg  = data.evaluationView.msg;
+						this.evaluationView.canAggregate = data.evaluationView.canAggregate;
+
+						if (this.evaluationView.canAggregate === true && this.evaluationView.aggregationOptions !== null) {
+
+							// Dropdown values
+							this.aggregationOptions = data.evaluationView.aggregationOptions;
+
+							// Dropdown starting value
+							this.selAggregationValue = this.lvevaluierung_id
+								? this.lvevaluierung_id
+								: this.lvevaluierung_lehrveranstaltung_id;
+
+							// Case: STGL oder KFL steigt als Lehrender ein und Evaluierungsebene ist Gesamt-LV.
+							// Dropdown default value muss dann von lvevaluierung_id auf lvevaluierung_lehrveranstaltung_id gesetzt werden
+							const exists = data.evaluationView.aggregationOptions.some(opt => opt.value === this.selAggregationValue);
+
+							if (!exists && data.evaluationView.aggregationOptions.length > 0) {
+								this.selAggregationValue = data.evaluationView.aggregationOptions[0].value;
+							}
+						}
+					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 		else {
 			// If no Lve ID or LveLv ID
-			this.evaluationView = {
-				open: false,
-				msg: 'Keine Daten vorhanden'
-			}
+			this.evaluationView.msg = ['Keine Daten vorhanden'];
 		}
 	},
 	computed: {
@@ -104,12 +138,57 @@ export default {
 			return this.evalData?.lvLeitungen?.map(l => `${l.vorname} ${l.nachname}`).join(', ');
 		},
 		formattedEvalPeriod() {
-			if (!this.evalData.startzeit || !this.evalData.endezeit) return;
+			if (!this.evalData.startzeit || !this.evalData.endezeit) return '-';
 
 			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
+		},
+		ruecklaufWarning() {
+			let msgCollector = [];
+
+			if (this.evalData.ruecklaufquote !== null && this.evalData.ruecklaufquote < 30) {
+				msgCollector.push({
+					text: 'RL-Quote < 30%',
+					type: 'text-danger',
+					title: 'Repräsentativität könnte durch geringe Rücklaufquote eingeschränkt sein'
+				})
+			}
+
+			if (this.evalData.codes_ausgegeben > 0)
+			{
+				if (this.evalData.countSubmitted <= 5) {
+					msgCollector.push({
+						text: 'abgeschlossen <= 5',
+						type: 'text-danger',
+						title: 'Vorsicht bei Interpretation: Anzahl der Evaluierungen ist sehr gering, Anonymität könnte beeinträchtigt sein.'
+					})
+				}
+
+				if (this.evalData.countSubmitted > 5 && this.evalData.countSubmitted <= 10) {
+					msgCollector.push({
+						text: 'abgeschlossen <= 10',
+						type: 'text-warning',
+						title: 'Berücksichtigen bei Interpretation: Anzahl der Evaluierungen ist gering'
+					})
+				}
+			}
+
+			return msgCollector;
+		},
+		ruecklaufClass() {
+			if (this.evalData?.ruecklaufquote === null) {
+				return 'bg-white'
+			}
+
+			if (this.evalData.ruecklaufquote < 30) {
+				return 'bg-danger-subtle'
+			}
+
+			if (this.evalData.ruecklaufquote >= 30) {
+				return 'bg-success-subtle'
+			}
 		}
 	},
 	methods: {
@@ -126,6 +205,16 @@ export default {
 			const el = this.$refs.scrollArea;
 			if (el) el.scrollTop = this.scrollPositions[this.selectedView] || 0
 		},
+		onAggregationChange() {
+			const value = this.selAggregationValue;
+			const selectedOption = this.aggregationOptions.find(o => o.value == value)
+
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+					`${this.role}?${selectedOption.param}=${selectedOption.value}&selected_view=${this.selectedView}`;
+
+			window.open(url, '_self');
+		}
 	},
 	template: `
 	<div class="evaluation-evaluation container-fluid d-flex flex-column vh-100 p-0">
@@ -166,119 +255,143 @@ export default {
 					</label>
 				</div>
 			</div>
+			
+			<!-- Aggregation Dropdown -->
+			<div v-if="evaluationView.canAggregate && aggregationOptions && selAggregationValue" class="row mt-3 pt-2 align-items-center">
+				<div class="col-12 col-md-auto">
+					<select
+						v-model="selAggregationValue" 
+						@change="onAggregationChange"
+						class="form-select border-5 border-secondary">
+						  	<option
+								v-for="option in aggregationOptions"
+								:key="option.param + '-' + option.value"
+								:value="option.value"
+							 	:data-param="option.param"
+						  	>
+								{{ option.text }}
+						  	</option>
+					</select>
+				</div>
+			</div>
 		</div>
 		<!-- Scrollable content -->
 		<main ref="scrollArea" class="flex-grow-1 overflow-auto px-3 pt-3">
 			<!-- Info tables -->
 			<div class="row">
-				<!-- Left table -->
-				<div class="col-md-6">
-					<table class="table table-sm table-bordered align-middle">
-						<tbody>
-							<tr>
-								<th>Lehrveranstaltung</th>
-								<td>{{ lehrveranstaltung }}</td>
-							</tr>
-							<tr>
-								<th>Verbindlich ausgewählt</th>
-								<td>{{ verpflichtend }}</td>
-							</tr>
-							<tr>
-								<th>Evaluationsebene</th>
-								<td>{{ lvAufgeteilt }}</td>
-							</tr>
-							<tr>
-								<th>LV-Leitung</th>
-								<td>{{ lvLeitungen }}</td>
-							</tr>
-							<tr>
-								<th>Lehrende</th>
-								<td>{{ lehrende }}</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-				<!-- Right table -->
-				<div class="col-md-6">
-					<table class="table table-sm table-bordered align-middle">
-						<tbody>
-							<tr>
-								<th>Einladungen versandt</th>
-								<td>{{ evalData.codes_ausgegeben }}</td>
-							</tr>
-							<tr>
-								<th>Abgeschlossene Evaluierungen</th>
-								<td>
-									<div class="d-flex justify-content-between">
-										<span>{{ evalData.countSubmitted }}</span>
-										<span 
-											v-if="evalData.codes_ausgegeben > 0 && evalData.countSubmitted <= 5"
-											v-tooltip
-											title="Vorsicht bei Interpretation: Anzahl der Evaluierungen ist sehr gering, Anonymität könnte beeinträchtigt sein."
-										>
-										&lt;= 5<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
-										</span>
-										<span 
-											v-else-if="evalData.codes_ausgegeben > 0 && evalData.countSubmitted <= 10"
-											v-tooltip
-											title="Berücksichtigen bei Interpretation: Anzahl der Evaluierungen ist gering"
-										>
-										&lt;= 10<i class="fa fa-triangle-exclamation text-warning ms-2"></i>
-										</span>
+				<div class="col-12">
+					<div class="d-flex flex-wrap gap-3 mb-5 mb-lg-3">
+						<!-- Left table -->
+						<div class="evaluation-data-table-flex">
+							<table class="table table-bordered align-middle">
+								<tbody>
+									<tr>
+										<th>Lehrveranstaltung</th>
+										<td>{{ lehrveranstaltung }}</td>
+									</tr>
+									<tr>
+										<th>Verbindlich ausgewählt</th>
+										<td>{{ verpflichtend }}</td>
+									</tr>
+									<tr>
+										<th>Evaluationsebene</th>
+										<td>{{ lvAufgeteilt }}</td>
+									</tr>
+									<tr>
+										<th>LV-Leitung</th>
+										<td>{{ lvLeitungen }}</td>
+									</tr>
+									<tr>
+										<th>Lehrende</th>
+										<td>{{ lehrende }}</td>
+									</tr>
+									<tr>
+										<th>Evaluierungszeitfenster</th>
+										<td>{{ formattedEvalPeriod }}</td>
+									</tr>
+									<tr>
+										<th>Bearbeitungszeit (in min)</th>
+										<td>
+											<div class="d-flex justify-content-between">
+												<span>Ø {{ avgDuration }}</span>
+												<span>Min {{ evalData.minDuration }}</span>
+												<span>Max {{ evalData.maxDuration }} </span>
+											</div>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<!-- Rücklaufquote -->
+						<div class="evaluation-card-flex">
+							<div class="card" :class="ruecklaufClass">
+								<!-- Header -->
+								<div class="card-header text-center">
+						  			<span class="fw-bold">Rücklaufquote</span>
+								</div>
+								<!-- Body -->
+								<div class="card-body d-flex flex-column justify-content-center align-items-center">
+									<!-- Display RL-Quote -->
+									<div class="fw-bold display-5 mb-3">
+										{{ evalData.ruecklaufquote !== null ? evalData.ruecklaufquote + ' %' : '-' }}
 									</div>
-								</td>
-							</tr>
-							<tr>
-								<th>Rücklaufquote</th>
-								<td>
-									<div v-if="evalData.ruecklaufquote !== null" class="d-flex justify-content-between">
-										<span>{{ evalData.ruecklaufquote }}%</span>
-										<span 
-											v-if="evalData.ruecklaufquote < 30"
-											v-tooltip
-											title="Repräsentativität könnte durch geringe Rücklaufquote eingeschränkt sein"
+									<!-- abgeschlossen / versandt -->
+									<div class="fw-bold">
+										{{ evalData.countSubmitted }} abgeschlossen /
+										{{ evalData.codes_ausgegeben }} versandt
+									</div>
+									<!-- Warning icon and Tooltip -->
+									<div class="mt-3">
+										<div
+											v-for="(warning, index) in ruecklaufWarning"
+											:key="index"
+											v-tooltip="warning.title"
 										>
-										&lt; 30%<i class="fa fa-triangle-exclamation text-danger ms-2"></i>
-										</span>
+											<i
+												class="fa fa-triangle-exclamation fa-lg me-2"
+												:class="warning.type"
+											>
+											</i>
+											<small>{{ warning.text }}</small>
+										</div>
 									</div>
-								</td>
-							</tr>
-							<tr>
-								<th>Evaluierungszeitfenster</th>
-								<td>{{ formattedEvalPeriod }}</td>
-							</tr>
-							<tr>
-								<th>Bearbeitungszeit (in min)</th>
-								<td>
-									<div class="d-flex justify-content-between">
-										<span>Ø {{ avgDuration }}</span>
-										<span>Min {{ evalData.minDuration }}</span>
-										<span>Max {{ evalData.maxDuration }} </span>
-									</div>
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
-			<!-- Alert, only if no existing data or evaluation period still running -->
-			<div v-if="evaluationView.open === false" class="alert alert-warning d-flex align-items-center mt-3" role="alert">
-				<i class="fa fa-triangle-exclamation me-2"></i>
-				<div>{{ evaluationView.msg }}</div>
-			</div>
-		  	<!-- Dynamic content -->
-		  	<div v-else>
+								</div><!--.card-body -->
+								<!-- Footer -->
+								<div class="card-footer text-center">
+							  		<small>Abgeschlossene Evaluierungen / Einladungen versandt</small>
+								</div>
+							</div><!--.card -->		  
+						</div><!--.Rücklaufquote -->
+					</div><!--.d-flex -->
+				</div><!--.col -->
+			</div><!--.row -->
+			
+			<!-- Dynamic content -->
+			<div v-if="evaluationView.open === true">
 				<keep-alive>
 					<component
-						:evaluationView="evaluationView" 
+						:evaluationView="evaluationView"
+						:role="role" 
 						:is="selectedComponent" 
 						:lvevaluierung_id="lvevaluierung_id"
 						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
 						:lvevaluierung_template_id="lvTemplateId"
-						@open-einmeldung="changeView('einmeldung')"
+						@change-view="changeView"
 						class="d-block mt-5"
 					></component>
-				</keep-alive>
+				</keep-alive>				
+			</div>
+		  	<!-- Alert if no existing data or evaluation period still running -->
+		  	<div v-else class="card card-body py-5 d-flex mt-3" role="alert">
+		  		<div class="d-flex align-items-start">
+					<i class="fa fa-triangle-exclamation fa-2x text-warning me-3"></i>
+					<div>
+						<div class="fw-bold">Ansicht nicht verfügbar</div>
+						<div class="mt-3" v-for="(msg, index) in evaluationView.msg" :key="index">
+							{{ msg }}
+						</div>
+					</div>
+				</div>
 			</div><!--.end v-else-->
 		</main>
 	</div>

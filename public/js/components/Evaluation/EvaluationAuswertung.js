@@ -22,8 +22,10 @@ export default {
 		},
 		evaluationView: {
 			type: Object,
-		}
+		},
+		role: null,
 	},
+	emits: ['changeView'],
 	data() {
 		return {
 			auswertungData: [],
@@ -34,10 +36,10 @@ export default {
 	created() {
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			const apiCallAuswertungData = this.lvevaluierung_id
-					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id)
+					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 			const apiCallTextantworten = this.lvevaluierung_id
-					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id)
+					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 			this.$api
@@ -260,7 +262,11 @@ export default {
 				},
 				credits: { enabled: false }
 			};
-		}
+		},
+		changeView() {
+			this.$emit('changeView', 'reflexion');
+		},
+
 	},
 	template: `
 	<div class="evaluation-evaluation-auswertung">
@@ -270,7 +276,7 @@ export default {
 				v-if="auswertungHelpUrl"
   				:href="auswertungHelpUrl"
   				target="_blank"
-  				class="btn btn-primary btn-sm"
+  				class="btn btn-primary"
   			>
 				<i class="fa fa-external-link"></i>
 				Interpretationshilfe
@@ -313,6 +319,11 @@ export default {
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
 		</div>
+		<div class="bg-primary-subtle py-5 text-center">
+			<button class="btn btn-primary" @click="changeView()">
+				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
+			</button>
+		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
 			<div v-if="evaluationView.open && auswertungData.length > 0" class="row align-items-stretch g-3">
@@ -332,6 +343,11 @@ export default {
 				</div>-->
 			</div>
 			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+		</div>
+		<div class="bg-primary-subtle mt-5 py-5 text-center">
+			<button class="btn btn-primary" @click="changeView()">
+				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
+			</button>
 		</div>
 	</div>	
 	`

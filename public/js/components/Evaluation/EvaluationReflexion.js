@@ -1,10 +1,12 @@
 import EvaluationReflexionForm from "./EvaluationReflexionForm.js";
+import EvaluationReflexionUebersicht from "./EvaluationReflexionUebersicht.js";
 import ApiEvaluation from "../../api/evaluation";
 
 export default {
 	name: "EvaluationReflexion",
 	components: {
 		EvaluationReflexionForm,
+		EvaluationReflexionUebersicht
 	},
 	props:  {
 		lvevaluierung_id: {
@@ -17,38 +19,48 @@ export default {
 		},
 		evaluationView: {
 			type: Object,
-		}
+		},
+		role: null
 	},
-	emits: ['openEinmeldung'],
+	emits: ['changeView'],
 	data() {
 		return {
-			reflexionen: []
+			reflexionen: [],
+			reflexionenUebersicht: [],
 		}
 	},
 	created() {
 		const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id)
+				? ApiEvaluation.getReflexionDataByLve(this.lvevaluierung_id, this.role)
 				: ApiEvaluation.getReflexionDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
 
 		this.$api
 			.call(apiCall)
 			.then(result => {
-				this.reflexionen = result.data;
+				if (result.data)
+				{
+					this.reflexionen = result.data.reflexionen;
+					this.reflexionenUebersicht = result.data.reflexionenUebersicht;
+				}
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
-	computed: {
-
-	},
 	methods: {
-		openEinmeldung() {
-			this.$emit('openEinmeldung');
+		changeView(view) {
+			this.$emit('changeView', view);
 		},
 	},
 	template: `
 	<div class="evaluation-evaluation-reflexion">
 		<h3 class="mb-4">LV-Reflexion</h3>
-		<!-- Abschnitt Reflexionen der Lehrenden -->
+		<!-- Reflexion Übersicht-->
+		<evaluation-reflexion-uebersicht 
+			v-if="reflexionenUebersicht.show"
+			:uebersicht-data = "reflexionenUebersicht.data"
+		>
+		</evaluation-reflexion-uebersicht>
+		
+		<!-- Reflexion Form -->
 		<div class="evaluation-evaluation-reflexion-formulare mb-3">
 			<h4 class="mt-5 mb-4">LV-Reflexionen</h4>
 			<div v-if="evaluationView.open && reflexionen.length > 0" class="row py-4 mb-3 gy-3 bg-light">
@@ -59,7 +71,7 @@ export default {
 				>
 					<evaluation-reflexion-form 
 						:reflexion="reflexion"
-						@open-einmeldung="openEinmeldung"
+						@change-view="changeView"
 					>
 					</evaluation-reflexion-form>
 				</div>
