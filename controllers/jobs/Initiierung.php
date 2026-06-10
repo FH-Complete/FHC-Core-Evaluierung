@@ -264,7 +264,7 @@ class Initiierung extends JOB_Controller
 		{
 			$data = getData($result);
 			$now = new DateTime();
-			$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+			$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungStundenplan_model', 'LvevaluierungStundenplanModel');
 
 			// Foreach Evaluierung
 			foreach ($data as $item)
@@ -272,11 +272,11 @@ class Initiierung extends JOB_Controller
 				// Get Stundenplantermine
 				if ($item->lv_aufgeteilt)	// Gruppe
 				{
-					$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
+					$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLe($item->lehreinheit_id);
 				}
 				else	// Gesamt-LV
 				{
-					$result = $this->_ci->StundenplanModel->getTermineByLv(
+					$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLv(
 						$item->lehrveranstaltung_id,
 						$item->studiensemester_kurzbz
 					);
