@@ -465,7 +465,6 @@ class Evaluation extends FHCAPI_Controller
 			foreach ($gruppe['fbFragen'] as &$frage) {
 				$werte = $frage['antworten']['werte'];
 				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
 				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
 			}
 		}
@@ -519,7 +518,6 @@ class Evaluation extends FHCAPI_Controller
 			foreach ($gruppe['fbFragen'] as &$frage) {
 				$werte = $frage['antworten']['werte'];
 				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
 				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
 			}
 		}
@@ -1931,11 +1929,6 @@ class Evaluation extends FHCAPI_Controller
 						'werte' => [],
 						'frequencies' => [],
 						'bezeichnungen' => [],
-						'iMedian' => [
-							'actYear' => 0,
-							'actYearMin1' => 0,
-							'actYearMin2' => 0,
-						],    // default
 						'hodgesLehmann' => [
 							'actYear' => 0,
 							'actYearMin1' => 0,

@@ -136,7 +136,6 @@ export default {
 						}
 					},
 					plotLines: [
-						//{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
 						{
 							value: fbFragen.antworten.hodgesLehmann.actYear,
 							color: "grey",
@@ -170,11 +169,9 @@ export default {
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
-				//subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
 				subtitle: { text: 'Bewertungen der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
-					//data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
 					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.hodgesLehmann[key])),
 					visible: i === 0 // only current year visible by default
 				})),
