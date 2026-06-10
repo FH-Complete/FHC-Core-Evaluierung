@@ -92,21 +92,27 @@ class Evaluation extends FHCAPI_Controller
 				],
 				'updateVerpflichtend' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'updateReviewedLvInKf' => [
 					self::BERECHTIGUNG_KF . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'updateReviewedLvInStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveOrUpdateReflexion' => [
 					self::BERECHTIGUNG_INIT . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveMalveByKf' => [
 					self::BERECHTIGUNG_KF . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveMalveByStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 			]
 		);
@@ -1719,7 +1725,9 @@ class Evaluation extends FHCAPI_Controller
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
-		if (!$isKfl) $this->terminateWithError('Permission denied. Only KFL can save.');
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isKfl && !$isAdmin) $this->terminateWithError('Permission denied');
 
 		// Check if OE is Kompetenzfeld
 		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
