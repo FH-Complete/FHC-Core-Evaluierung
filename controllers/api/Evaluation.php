@@ -176,6 +176,9 @@ class Evaluation extends FHCAPI_Controller
 				$ruecklaufquote = round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2);
 			}
 
+			// Reflexion Start- und Endezeit
+			$reflexionZeitfenster = $this->evaluationlib->calculateReflexionZeitfenster($lve->endezeit);
+
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
 
@@ -230,6 +233,8 @@ class Evaluation extends FHCAPI_Controller
 				['ruecklaufquote' => $ruecklaufquote],
 				['startzeit' => $lve->startzeit],
 				['endezeit' => $lve->endezeit],
+				['startzeitReflexion' => $reflexionZeitfenster['von']->format('d.m.Y') ?? null],
+				['endezeitReflexion' => $reflexionZeitfenster['bis']->format('d.m.Y') ?? null],
 				['minDuration' => $durations ? min($durations) : 0],
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
@@ -300,7 +305,7 @@ class Evaluation extends FHCAPI_Controller
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
 
-			// Min startzeit / max endezeit overall Evaluierungen
+			// Evaluierungs- und Reflexionszeitraum: Min startzeit / max endezeit overall Evaluierungen
 			$periodTimes = $this->getPeriodTimes($lves);
 
 			// Check if Evaluation view is open
@@ -368,6 +373,8 @@ class Evaluation extends FHCAPI_Controller
 				['ruecklaufquote' => $ruecklaufquote],
 				['startzeit' => $periodTimes['minStartzeit']],
 				['endezeit' => $periodTimes['maxEndezeit']],
+				['startzeitReflexion' => $periodTimes['minStartzeitReflexion']],
+				['endezeitReflexion' => $periodTimes['maxEndezeitReflexion']],
 				['minDuration' => $durations ? min($durations) : 0],
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
@@ -1865,9 +1872,23 @@ class Evaluation extends FHCAPI_Controller
 		$startTimes = array_column($lves, 'startzeit');
 		$endTimes = array_column($lves, 'endezeit');
 
+		// Reflexions min Start / max Ende
+		$minStartzeitReflexionszeit = null;
+		$maxEndezeitReflexionszeit = null;
+		if ($startTimes)
+		{
+			$minStartzeitReflexionszeit = clone new DateTime(min($endTimes));
+			$minStartzeitReflexionszeit->modify('+1 day');
+
+			$maxEndezeitReflexionszeit = clone new DateTime(max($endTimes));
+			$maxEndezeitReflexionszeit->modify($this->config->item('reflexionZeitfensterDauer'));
+		}
+
 		return [
 			'minStartzeit' => $startTimes ? min($startTimes) : null,
 			'maxEndezeit'   => $endTimes ? max($endTimes) : null,
+			'minStartzeitReflexion'   => $startTimes ? $minStartzeitReflexionszeit->format('d.m.Y') : null,
+			'maxEndezeitReflexion'   => $endTimes ? $maxEndezeitReflexionszeit->format('d.m.Y') : null,
 		];
 	}
 

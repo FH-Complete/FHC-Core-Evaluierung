@@ -30,6 +30,8 @@ export default {
 				ruecklaufquote: null,
 				startzeit: null,
 				endezeit: null,
+				startzeitReflexion: null,
+				endezeitReflexion: null,
 				showAggregation: false,
 			},
 			selectedView: this.selected_view || 'auswertung',
@@ -141,6 +143,11 @@ export default {
 			if (!this.evalData.startzeit || !this.evalData.endezeit) return '-';
 
 			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
+		},
+		formattedReflexionPeriod() {
+			if (!this.evalData.startzeitReflexion || !this.evalData.endezeitReflexion) return '-';
+
+			return this.evalData.startzeitReflexion + ' - ' + this.evalData.endezeitReflexion;
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
@@ -308,6 +315,10 @@ export default {
 									<tr>
 										<th>Evaluierungszeitfenster</th>
 										<td>{{ formattedEvalPeriod }}</td>
+									</tr>
+									<tr>
+										<th>Reflexionszeitraum</th>
+										<td>{{ formattedReflexionPeriod }}</td>
 									</tr>
 									<tr>
 										<th>Bearbeitungszeit (in min)</th>
