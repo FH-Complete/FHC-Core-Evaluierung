@@ -35,7 +35,7 @@ export default {
 				})
 				.then(result => {
 					this.lists.oes = result.data
-					this.selOeKurzbz = result.data[0].oe_kurzbz;
+					this.selOeKurzbz = result.data[0]?.oe_kurzbz;
 
 					// MALVE Status
 					return this.$api.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))

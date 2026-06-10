@@ -1611,7 +1611,15 @@ class Evaluation extends FHCAPI_Controller
 	public function getEntitledKfs()
 	{
 		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+
+		// Kompetenzfelder for KF
 		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+
+		// Kompetenzfelder for Admins
+		if ($this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN))
+		{
+			$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_ADMIN) ?: [];
+		}
 
 		$condition = '
                 oe_kurzbz IN (\'' . implode('\',\'', $entitledOes) . '\') AND
