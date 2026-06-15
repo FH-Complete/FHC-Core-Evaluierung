@@ -425,7 +425,7 @@ export default {
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id) {
 			const url = this.$api.getUri() +
-					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/stg/' +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
 					'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
 
 			window.open(url, '_blank');
