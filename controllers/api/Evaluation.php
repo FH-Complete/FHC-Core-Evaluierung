@@ -789,6 +789,7 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionenUebersichtData = [];
 		$isReflexionszeitRaumAbgeschlossen = $this->isReflexionszeitraumAbgeschlossen($lve);
 		$showReflexionenUebersicht =
+			$isAdmin ||
 			$role === 'stg' ||
 			$role === 'kf' ||
 			($isLvLeitung && !$lveLv->lv_aufgeteilt);    // LV-Leitung darf Übersicht nur sehen, wenn Gesamt-LV
@@ -879,7 +880,7 @@ class Evaluation extends FHCAPI_Controller
 
 		// Übersicht Reflexionen
 		// -------------------------------------------------------------------------------------------------------------
-		$showReflexionenUebersicht = $isKfl || $isStgl;
+		$showReflexionenUebersicht = $isKfl || $isStgl || $isAdmin;
 		$reflexionenUebersichtData = [];
 
 		if ($showReflexionenUebersicht && $allReflexionszeitraumAbgeschlossen)
