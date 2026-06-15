@@ -154,7 +154,6 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			SELECT
 			  lv.lehrveranstaltung_id,
 			  lv.bezeichnung,
-			  lv.semester,
 			  lv.oe_kurzbz,
 			  lv.lehrtyp_kurzbz,
 			  lv.lehrveranstaltung_template_id

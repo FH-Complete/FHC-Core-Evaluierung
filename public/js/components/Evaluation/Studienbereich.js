@@ -328,12 +328,6 @@ export default {
 						widthGrow: 3
 					},
 					{
-						title: 'Semester',
-						field: 'semester',
-						headerFilter: "input",
-						minWidth: 100
-					},
-					{
 						title: "Rücklauf",
 						field: "ruecklauf",
 						headerFilter: "input",
