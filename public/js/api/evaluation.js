@@ -133,6 +133,16 @@ export default {
 			}
 		}
 	},
+	getLvTemplateListByKf(studiensemester_kurzbz, oe_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvTemplateListByKf',
+			params: {
+				studiensemester_kurzbz: studiensemester_kurzbz,
+				oe_kurzbz: oe_kurzbz,
+			}
+		}
+	},
 	updateVerpflichtend(lvevaluierung_lehrveranstaltung_id, isVerpflichtend) {
 		return {
 			method: 'post',

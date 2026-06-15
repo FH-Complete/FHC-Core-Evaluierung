@@ -136,4 +136,45 @@ class LvevaluierungCode_model extends DB_Model
 
 		return $this->execQuery($qry, array($lvevaluierung_lehrveranstaltung_ids));
 	}
+
+	/**
+	 *  Get aggregated Ruecklauf statistics (ausgegebene codes, beendete fragebögen, ruecklaufquote) for one or more Quellkurs evaluations.
+	 *  count_submitted_lvevaluierung:    ausgegebene codes
+	 *  sum_codes_ausgegeben:            tatsächlich verschickte und beendete Fragebögen
+	 *  ruecklaufquote:                    count_submitted_lvevaluierung / sum_codes_ausgegeben
+	 *
+	 * @param $lehrveranstaltung_template_ids
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getAggregatedRuecklaufDataByLvTemplateIds($lehrveranstaltung_template_ids, $studiensemester_kurzbz)
+	{
+		$qry = "
+			SELECT
+				lv.lehrveranstaltung_template_id,
+				COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes,
+				COALESCE(SUM(DISTINCT lve.codes_ausgegeben), 0) AS sum_codes_ausgegeben,
+				ROUND(
+					COUNT(lvec.lvevaluierung_code_id)::numeric 
+					/ NULLIF(SUM(DISTINCT lve.codes_ausgegeben), 0) * 100,
+					2
+				) AS ruecklaufquote
+			FROM 
+				lehre.tbl_lehrveranstaltung lv
+			JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv
+				USING (lehrveranstaltung_id)
+			JOIN extension.tbl_lvevaluierung lve
+				USING (lvevaluierung_lehrveranstaltung_id)
+			LEFT JOIN extension.tbl_lvevaluierung_code lvec
+				ON lvec.lvevaluierung_id = lve.lvevaluierung_id
+				AND lvec.endezeit IS NOT NULL
+			WHERE
+				lv.lehrveranstaltung_template_id IN ?
+				AND lvelv.studiensemester_kurzbz = ?
+			GROUP BY
+				lv.lehrveranstaltung_template_id
+		";
+
+		return $this->execQuery($qry, array($lehrveranstaltung_template_ids, $studiensemester_kurzbz));
+	}
 }

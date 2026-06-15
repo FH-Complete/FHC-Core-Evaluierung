@@ -127,8 +127,61 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
 				AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
 			ORDER BY
-			  	kurzbzlang,
 			  	lv_bezeichnung
+		';
+
+		return $this->execQuery($qry, $params);
+	}
+
+	/**
+	 *  Get Quellkurse that are scheduled for evaluation in the given Studiensemester and Kompetenzfeld.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $oe_kurzbz
+	 * @return mixed
+	 */
+	public function getLveLvTemplatesByKf($studiensemester_kurzbz, $oe_kurzbz)
+	{
+		if (is_string($oe_kurzbz) && !is_array($oe_kurzbz))
+		{
+			$oe_kurzbz = [$oe_kurzbz];
+		}
+
+		$params = [$studiensemester_kurzbz, $oe_kurzbz];
+
+		$qry = '
+			-- Alle Template LVs eines bestimmten Studiensemesters, wo eingeloggter user Kompetenzfeldleiter ist
+			SELECT
+			  lv.lehrveranstaltung_id,
+			  lv.bezeichnung,
+			  lv.semester,
+			  lv.oe_kurzbz,
+			  lv.lehrtyp_kurzbz,
+			  lv.lehrveranstaltung_template_id
+			FROM
+			  lehre.tbl_lehrveranstaltung lv
+			WHERE
+			  lv.lehrtyp_kurzbz = \'tpl\'
+			  AND lv.lehrveranstaltung_id IN (
+				SELECT
+				  lv.lehrveranstaltung_template_id
+				FROM
+				  lehre.tbl_studienplan stpl
+				  JOIN lehre.tbl_studienordnung sto USING (studienordnung_id)
+				  JOIN lehre.tbl_studienplan_semester stplsem USING (studienplan_id)
+				  JOIN lehre.tbl_studienplan_lehrveranstaltung stpllv ON (
+					stpllv.studienplan_id = stpl.studienplan_id
+					AND stpllv.semester = stplsem.semester
+				  )
+				  JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
+				  -- NUR solche, die in der LveLv Tabelle sind (also nicht von Evaluierung abgewählt worden sind)
+				  JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id) 
+				WHERE
+				  stplsem.studiensemester_kurzbz = ?
+				  AND lv.oe_kurzbz IN ?
+			  )
+			  ORDER BY
+			  	lv.bezeichnung
 		';
 
 		return $this->execQuery($qry, $params);

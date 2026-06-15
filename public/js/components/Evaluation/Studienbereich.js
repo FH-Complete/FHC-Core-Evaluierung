@@ -18,7 +18,8 @@ export default {
 			selStudiensemester: null,
 			selOeKurzbz: null,
 			table: null,
-			malve: null
+			malve: null,
+			templateTable: null,
 		}
 	},
 	created() {
@@ -76,7 +77,7 @@ export default {
 				},
 				ajaxResponse: (url, params, response) => response.data,
 				layout: 'fitColumns',
-				height: "calc(100vh - 350px)", // 350 for header and margin height
+				//height: "calc(100vh - 350px)", // 350 for header and margin height
 				autoResize: true,
 				resizableColumnFit: true,
 				selectable: false,
@@ -283,17 +284,138 @@ export default {
 				]
 			}
 		},
+		tabulatorOptionsTemplateTable() {
+			const self = this;
+			return {
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.selStudiensemester || !this.selOeKurzbz) {
+						return Promise.resolve({data: []});
+					}
+
+					return this.$api.call(ApiEvaluation.getLvTemplateListByKf(
+							this.selStudiensemester,
+							this.selOeKurzbz
+					))
+				},
+				ajaxResponse: (url, params, response) => response.data,
+				layout: 'fitColumns',
+				height: "calc(100vh - 350px)", // 350 for header and margin height
+				autoResize: true,
+				resizableColumnFit: true,
+				selectable: false,
+				index: 'lvevaluierung_lehrveranstaltung_id',
+				columnDefaults: {
+					headerTooltip: true
+				},
+				columns: [
+					{
+						title: 'LV-ID',
+						field: 'lehrveranstaltung_id',
+						headerFilter: "input",
+						minWidth: 100,
+						visible: false
+					},
+					{
+						title: 'LV-Bezeichnung',
+						field: 'bezeichnung',
+						headerFilter: "input",
+						bottomCalc: "count",
+						bottomCalcFormatter: function (cell) {
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : "Anzahl: " + num;
+						},
+						widthGrow: 3
+					},
+					{
+						title: 'Semester',
+						field: 'semester',
+						headerFilter: "input",
+						minWidth: 100
+					},
+					{
+						title: "Rücklauf",
+						field: "ruecklauf",
+						headerFilter: "input",
+						headerFilterFunc: (filterValue, rowValue, rowData) => {
+							if (filterValue === "") return true
+
+							const filter = String(filterValue)
+
+							const submitted = String(rowData.submittedCodes ?? "")
+							const issued = String(rowData.codesAusgegeben ?? "")
+
+							// match:
+							// 8  → 8/26
+							// 2  → 8/26
+							// 26 → 8/26
+							// 0  → 0/0, 13/0, 0/12
+							return (
+									submitted.includes(filter) ||
+									issued.includes(filter)
+							)
+						},
+						formatter: function (cell) {
+							const submittedCodes = cell.getData().submittedCodes;
+							const codesAusgegeben = cell.getData().codesAusgegeben;
+							return `${submittedCodes}/${codesAusgegeben}`;
+						},
+						hozAlign: "right",
+						minWidth: 100,
+						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+					},
+					{
+						title: 'RL-Quote',
+						field: 'ruecklaufQuote',
+						headerFilter: "input",
+						hozAlign: "right",
+						formatter: cell => {
+							const value = cell.getValue();
+							return value !== null ? `${value}%` : '-'
+						},
+						sorter: "number",
+						width: 200,
+						bottomCalc: values => {
+							const nums = values.filter(v => typeof v === 'number')
+							if (!nums.length) return null
+							return nums.reduce((a, b) => a + b, 0) / nums.length
+						},
+						bottomCalcFormatter: function (cell) {
+							const num = cell.getValue();
+							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+						}
+					},
+					{
+						title: 'LV-Evaluation',
+						formatter: (cell) => {
+							return `<button class="btn btn-outline-secondary">
+									  <i class="fa-solid fa-square-poll-horizontal me-2"></i>
+									  LV-Evaluation
+									</button>`;
+						},
+						cellClick: (e, cell) => {
+							self.openEvaluationByLvTemplate(cell.getData().lehrveranstaltung_id)
+						},
+						hozAlign: "center",
+						headerSort: false,
+						width: 140
+					},
+				]
+			}
+		},
 	},
 	methods: {
 		onStudiensemesterChange() {
-			if (!this.selStudiensemester || !this.table) return;
+			if (!this.selStudiensemester || !this.table || !this.templateTable) return;
 
 			this.table.replaceData();
+			this.templateTable.replaceData();
 		},
 		onOeChange() {
-			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table) return;
+			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table || !this.templateTable) return;
 
 			this.table.replaceData();
+			this.templateTable.replaceData();
 
 			this.$api
 				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
@@ -305,6 +427,13 @@ export default {
 			const url = this.$api.getUri() +
 					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/stg/' +
 					'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
+
+			window.open(url, '_blank');
+		},
+		openEvaluationByLvTemplate(lehrveranstaltung_id) {
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
+					'?lehrveranstaltung_template_id=' + lehrveranstaltung_id;
 
 			window.open(url, '_blank');
 		},
@@ -346,7 +475,10 @@ export default {
 				default:
 					break;
 			}
-		}
+		},
+		onTemplateTableBuilt() {
+			this.templateTable = this.$refs.kfTemplateTable.tabulator;
+		},
 	},
 	template: `
 	<div class="evaluation-studienbereich container-fluid overflow-hidden">
@@ -412,6 +544,22 @@ export default {
 					</button>
 					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
 				</template>
+			</core-filter-cmpt>
+		</div>
+		<div class="row-cols align-items-center mt-5 mb-3">
+	 		<h3>Auswertungsdaten - über Studiengänge aggregiert</h3>
+	  	</div>
+		<div class="evaluation-studienbereich-template-table">
+			<core-filter-cmpt
+				v-if="selStudiensemester && selOeKurzbz"
+				ref="kfTemplateTable"
+				uniqueId="tabStudienbereichTemplates"
+				table-only
+				:side-menu="false"
+				:tabulator-options="tabulatorOptionsTemplateTable"
+				:tabulator-events="[
+					{event: 'tableBuilt', handler: onTemplateTableBuilt},
+				]">
 			</core-filter-cmpt>
 		</div>
 	</div>

@@ -78,6 +78,10 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getLvTemplateListByKf' => [
+				self::BERECHTIGUNG_KF . ':r',
+				self::BERECHTIGUNG_ADMIN . ':r',
+			],
 				'getLvListByStg' => [
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
@@ -1693,6 +1697,62 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Get list of all Quellkurse that shall be evaluated in given Studiensemester and Kompetenzfeld.
+	 * (from Lvevaluierung-Lehrveranstaltung table)
+	 *
+	 * @return void
+	 */
+	public function getLvTemplateListByKf()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+
+		// Permission check
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!in_array($oe_kurzbz, $entitledOes) && !$isAdmin) $this->terminateWithError('Permission denied');
+
+		// Get LV Templates
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvTemplatesByKf(
+			$studiensemester_kurzbz,
+			$oe_kurzbz
+		);
+		$lvTemplates = $this->getDataOrTerminateWithError($result);
+
+		// LV Template IDs
+		$lvTemplateIds = array_column($lvTemplates, 'lehrveranstaltung_id');
+
+		// Exit if no LV Templates found
+		if (count($lvTemplateIds) === 0) $this->terminateWithSuccess([]);
+
+		// Aggregated Rücklaufdata
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLvTemplateIds($lvTemplateIds, $studiensemester_kurzbz);
+		$rlData = hasData($result) ? getData($result) : [];
+
+		// Helper: set key to identify by ID
+		$rlDataByTemplate = [];
+		foreach ($rlData as $item)
+		{
+			$rlDataByTemplate[$item->lehrveranstaltung_template_id] = $item;
+		}
+
+		// Add Rücklaufvalues to Lv Templates
+		foreach ($lvTemplates as $lvTemplate)
+		{
+			$agg = $rlDataByTemplate[$lvTemplate->lehrveranstaltung_id] ?? null;
+
+			$lvTemplate->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$lvTemplate->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$lvTemplate->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float)$agg->ruecklaufquote
+				: null;
+		}
+
+		$this->terminateWithSuccess($lvTemplates);
 	}
 
 	/**
