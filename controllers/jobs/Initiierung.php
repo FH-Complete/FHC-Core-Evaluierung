@@ -367,8 +367,8 @@ class Initiierung extends JOB_Controller
 					// Set new Start- and Endezeit
 					$newStartzeit = clone $now;	// Startdatum heute, Zeit jetzt (da mails auch gleich gesendet werden)
 					$newEndezeit  =(clone $now)
-						->modify('+3 days')
-						->setTime(23, 59, 59);	// Endedatum in 3 Tagen, 23:59:59
+						->modify('+7 days')
+						->setTime(23, 59, 59);	// Endedatum in 7 Tagen, 23:59:59
 
 					$item->startzeit = $newStartzeit->format('Y-m-d H:i:s');
 					$item->endezeit  = $newEndezeit->format('Y-m-d H:i:s');
