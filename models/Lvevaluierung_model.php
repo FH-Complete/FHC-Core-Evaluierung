@@ -159,8 +159,11 @@ class Lvevaluierung_model extends DB_Model
 			$params[] = $bis . ' 23:59:59';
 		}
 
-		$whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
-
+		$whereClause = '';
+		if(!empty($where)) {
+			$whereClause =" WHERE " . implode(' AND ', $where) . ' ';
+		}
+		
 		$qry = "
         WITH answers_pivoted AS (
 		SELECT
@@ -172,7 +175,7 @@ class Lvevaluierung_model extends DB_Model
 			MAX(CASE WHEN lvefg.sort = 1 AND lvef.sort = 2
 				THEN lvefa.wert::text END)                      AS pflichtfrage_2,
 	
-			-- Optionale Bereiche angeklickt? (any answer under gruppe typ='group')
+			-- Optionale Bereiche angeklickt (any answer under gruppe typ='group')
 			BOOL_OR(lvefg.typ = 'group')                        AS optionale_bereiche_angeklickt,
 	
 			-- Organisation (gruppe sort=3): 2x singleresponse
@@ -305,7 +308,7 @@ class Lvevaluierung_model extends DB_Model
 			ON sender.lvevaluierung_id = lve.lvevaluierung_id
 		LEFT JOIN gruppe lvg
 			ON lvg.lehreinheit_id = lve.lehreinheit_id
-			$whereClause
+	".$whereClause."
 	ORDER BY
 		lvelv.studiensemester_kurzbz,
 		lv.lehrveranstaltung_id,
@@ -313,7 +316,7 @@ class Lvevaluierung_model extends DB_Model
 		lvec.lvevaluierung_code_id
 		";
 		
-		return $this->execReadOnlyQuery($qry, $params);
+		return $this->execQuery($qry, $params);
 	}
 
 

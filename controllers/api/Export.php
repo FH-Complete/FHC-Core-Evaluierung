@@ -34,9 +34,9 @@ class Export extends FHCAPI_Controller
 	public function exportAllToExcel() {
 		$this->load->helper('download');
 
-		$studiensemester = $this->input->post('studiensemester');
-		$von = $this->input->post('von');
-		$bis = $this->input->post('bis');
+		$studiensemester = $this->input->get('studiensemester');
+		$von = $this->input->get('von');
+		$bis = $this->input->get('bis');
 
 		$filenameParts = ['LV_Evaluierung_Rohdaten'];
 		if (!empty($studiensemester)) $filenameParts[] = $studiensemester;
