@@ -55,6 +55,9 @@ export default {
 		site_url_opStgKvp() {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selOeKurzbz;
 		},
+		site_url_opLvTemplateKvp() {
+			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByTplId/';
+		},
 		isDisabledSubmitMalveBtn() {
 			return this.malve?.length > 0;
 		},
@@ -400,6 +403,33 @@ export default {
 						hozAlign: "center",
 						headerSort: false,
 						width: 140
+					},
+					{
+						title: 'MALVE-Quellkurs-Weiterentwicklung (OP)',
+						formatter(cell) {
+							const lvTemplateId = cell.getData().lehrveranstaltung_id;
+							const url = `${self.site_url_opLvTemplateKvp}${lvTemplateId}`;
+
+							return `
+                         <a
+                            href="${url}"
+                            target="_blank"
+                            role="button"
+                            class="btn btn-outline-secondary me-2"
+                         >
+                            <span
+                               v-tooltip
+                               title="Schnittstelle zur Maßnahmenableitung für die einzelnen LV-Quellkurse in OP"
+                            >
+                               <i class="fa-solid fa-external-link me-2"></i>Quellkurs-Weiterentwicklung
+                            </span>
+                         </a>`
+
+
+						},
+						hozAlign: "center",
+						headerSort: false,
+						width: 240
 					},
 				]
 			}
