@@ -314,7 +314,11 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+			
+			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div>Keine Daten verfügbar.</div>
+			</div>
 		</div>
 		<div class="bg-primary-subtle py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">
@@ -339,7 +343,10 @@ export default {
 					</div>
 				</div>-->
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div>Keine Daten verfügbar.</div>
+			</div>
 		</div>
 		<div class="bg-primary-subtle mt-5 py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">

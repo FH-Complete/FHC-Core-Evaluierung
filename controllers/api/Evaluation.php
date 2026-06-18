@@ -206,14 +206,23 @@ class Evaluation extends FHCAPI_Controller
 			elseif (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
 			{
 				$isEvaluationViewOpen = false;
-				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context
+					. '. Zeitfenster: '
+					. (new DateTime($lve->startzeit))->format('d.m.Y')
+					. ' - '
+					. (new DateTime($lve->endezeit))->format('d.m.Y');
+
 			}
 			elseif ($role === 'stg' || $role === 'kf')
 			{
 				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context
+						. '. Zeitfenster: '
+						. $reflexionZeitfenster['von']->format('d.m.Y')
+						. ' - '
+						. $reflexionZeitfenster['bis']->format('d.m.Y');
 				}
 			}
 
@@ -321,13 +330,14 @@ class Evaluation extends FHCAPI_Controller
 			if (empty($lves))
 			{
 				$isEvaluationViewOpen = false;
-				$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet';
+				$isEvaluationViewOpenMsg[]= 'Noch keine Evaluierung gestartet';
 			}
 
 			// Check each Evaluierung
 			foreach ($lves as $lve)
 			{
 				$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
+				$reflexionZeitfenster = $this->evaluationlib->calculateReflexionZeitfenster($lve->endezeit);
 
 				if (!$this->hasSetEvaluierungszeitraum($lve))
 				{
@@ -346,14 +356,23 @@ class Evaluation extends FHCAPI_Controller
 				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context
+						.'. Zeitfenster: '
+						. (new DateTime($lve->startzeit))->format('d.m.Y')
+						. ' - '
+						. (new DateTime($lve->endezeit))->format('d.m.Y');
+
 					continue;
 				}
 
 				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context
+						. '. Zeitfenster: '
+						. $reflexionZeitfenster['von']->format('d.m.Y')
+						. ' - '
+						. $reflexionZeitfenster['bis']->format('d.m.Y');
 				}
 			}
 

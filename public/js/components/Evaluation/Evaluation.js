@@ -145,9 +145,10 @@ export default {
 			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
 		},
 		formattedReflexionPeriod() {
-			if (!this.evalData.startzeitReflexion || !this.evalData.endezeitReflexion) return '-';
-
-			return this.evalData.startzeitReflexion + ' - ' + this.evalData.endezeitReflexion;
+			// if (!this.evalData.startzeitReflexion || !this.evalData.endezeitReflexion) return '-';
+			//
+			// return this.evalData.startzeitReflexion + ' - ' + this.evalData.endezeitReflexion;
+			return '2 Wochen nach Evaluierungsende';
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
@@ -393,17 +394,16 @@ export default {
 				</keep-alive>				
 			</div>
 		  	<!-- Alert if no existing data or evaluation period still running -->
-		  	<div v-else class="card card-body py-5 d-flex mt-3" role="alert">
-		  		<div class="d-flex align-items-start">
-					<i class="fa fa-triangle-exclamation fa-2x text-warning me-3"></i>
-					<div>
-						<div class="fw-bold">Ansicht nicht verfügbar</div>
-						<div class="mt-3" v-for="(msg, index) in evaluationView.msg" :key="index">
-							{{ msg }}
-						</div>
-					</div>
-				</div>
-			</div><!--.end v-else-->
+			<div v-else class="border rounded p-5 mt-3 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div class="pb-3">{{selectedView.charAt(0).toUpperCase() + selectedView.slice(1)}} nicht verfügbar.</div>
+				<hr>
+				<ul class="mt-3 text-start ps-3 mb-0">
+					<li v-for="(msg, index) in evaluationView.msg" :key="index">
+						{{ msg }}
+					</li>
+				</ul>
+			</div>
 		</main>
 	</div>
 	`
