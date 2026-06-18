@@ -44,7 +44,7 @@ export default {
 			
 		},
 		exportAll() {
-			const sem = this.curSem != 'Alle' ? this.curSem : ''
+			const sem = this.curSem != 'Alle' && this.curSem?.studiensemester_kurzbz != 'Alle' ? this.curSem : ''
 
 			const params = new URLSearchParams();
 			if (sem) params.set('studiensemester', sem);
@@ -53,7 +53,7 @@ export default {
 			const url = `/extensions/FHC-Core-Evaluierung/api/Export/exportAllToExcel?${params.toString()}`;
 			
 			window.open(FHC_JS_DATA_STORAGE_OBJECT.app_root + FHC_JS_DATA_STORAGE_OBJECT.ci_router + url)
-		},
+		}
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
@@ -109,7 +109,7 @@ export default {
 				class="btn btn-primary w-100 w-md-auto" 
 				@click.prevent="exportAll()"
 			>
-				ExportBtn
+				Export
 			</button>
 		</div>
 	</div>
