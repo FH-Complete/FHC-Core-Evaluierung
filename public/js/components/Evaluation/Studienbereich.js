@@ -87,6 +87,13 @@ export default {
 				},
 				columns: [
 					{
+						title: 'LV-ID',
+						field: 'lehrveranstaltung_id',
+						headerFilter: "input",
+						minWidth: 100,
+						visible: false
+					},
+					{
 						title: 'STG-Kurzbz',
 						field: 'kurzbzlang',
 						headerFilter: "input",
