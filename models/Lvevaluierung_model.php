@@ -271,4 +271,89 @@ class Lvevaluierung_model extends DB_Model
 		return $this->execReadOnlyQuery($qry, $params);
 	}
 
+	// =================== EXPORT WITH CURSOR ===================
+	
+
+	public function getDistinctFragebogenIds($studiensemester, $von, $bis)
+	{
+		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		$qry = "
+        SELECT DISTINCT lve.fragebogen_id
+        FROM extension.tbl_lvevaluierung_lehrveranstaltung lvelv
+        LEFT JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+        $whereClause
+    ";
+		return $this->execReadOnlyQuery($qry, $params);
+	}
+
+	public function getExportRowCount($studiensemester, $von, $bis)
+	{
+		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		$qry = "
+        SELECT COUNT(*) AS cnt
+        FROM extension.tbl_lvevaluierung_lehrveranstaltung lvelv
+            JOIN  lehre.tbl_lehrveranstaltung lv  USING (lehrveranstaltung_id)
+            JOIN  public.tbl_studiengang      stg USING (studiengang_kz)
+            LEFT JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+            LEFT JOIN extension.tbl_lvevaluierung_code lvec ON lvec.lvevaluierung_id = lve.lvevaluierung_id
+            $whereClause
+    ";
+		return $this->execReadOnlyQuery($qry, $params);
+	}
+
+	public function buildBaseWhereAndParams($studiensemester, $von, $bis)
+	{
+		$where = [];
+		$params = [];
+		if (!empty($studiensemester)) { $where[] = 'lvelv.studiensemester_kurzbz = ?'; $params[] = $studiensemester; }
+		if (!empty($von)) { $where[] = 'lve.insertamum >= ?'; $params[] = $von . ' 00:00:00'; }
+		if (!empty($bis)) { $where[] = 'lve.insertamum <= ?'; $params[] = $bis . ' 23:59:59'; }
+		$whereClause = !empty($where) ? "\nWHERE " . implode(' AND ', $where) : '';
+		return [$whereClause, $params];
+	}
+
+	public function buildBaseSql($whereClause)
+	{
+		return "
+        WITH sender AS (
+            SELECT lvevaluierung_id, MIN(insertamum) AS linkversand_datum, MIN(insertvon) AS linkversand_von
+            FROM extension.tbl_lvevaluierung_prestudent GROUP BY lvevaluierung_id
+        ),
+        gruppe AS (
+            SELECT DISTINCT ON (lehreinheit_id) lehreinheit_id, verband, gruppe, gruppe_kurzbz, semester
+            FROM lehre.tbl_lehreinheitgruppe ORDER BY lehreinheit_id, gruppe_kurzbz
+        )
+        SELECT
+            lv.lehrveranstaltung_id, lv.bezeichnung AS lv_titel, lv.bezeichnung_english AS lv_titel_english,
+            lv.semester AS lv_semester, lv.orgform_kurzbz AS lv_orgform,
+            stg.bezeichnung AS studiengang, stg.typ AS studiengang_typ,
+            lvelv.verpflichtend AS zur_eval_ausgewaehlt,
+            CASE WHEN lvelv.lv_aufgeteilt THEN
+                COALESCE(
+                    CASE WHEN lvg.verband IS NOT NULL
+                        THEN CONCAT(lvg.semester, ' - ', lvg.verband, ' - ', lvg.gruppe) END,
+                    lvg.gruppe_kurzbz
+                )
+                ELSE 'Gesamt'
+            END AS gruppen_info,
+            lve.lvevaluierung_id IS NOT NULL AS lv_leitung_hat_datum_eingetragen,
+            lve.startzeit, lve.endezeit,
+            sender.linkversand_datum, sender.linkversand_von,
+            lve.fragebogen_id,
+            lvec.lvevaluierung_code_id,
+            lvec.startzeit IS NOT NULL AS code_verwendet,
+            lvec.endezeit IS NOT NULL AS lv_eval_abgeschlossen,
+            lvec.startzeit::date AS durchfuehrungsdatum,
+            lvec.startzeit::time AS code_startzeit,
+            lvec.endezeit::time AS code_endzeit
+        FROM extension.tbl_lvevaluierung_lehrveranstaltung lvelv
+            JOIN  lehre.tbl_lehrveranstaltung lv  USING (lehrveranstaltung_id)
+            JOIN  public.tbl_studiengang      stg USING (studiengang_kz)
+            LEFT JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+            LEFT JOIN extension.tbl_lvevaluierung_code lvec ON lvec.lvevaluierung_id = lve.lvevaluierung_id
+            LEFT JOIN sender ON sender.lvevaluierung_id = lve.lvevaluierung_id
+            LEFT JOIN gruppe lvg ON lvg.lehreinheit_id = lve.lehreinheit_id
+            $whereClause
+        ORDER BY lvelv.studiensemester_kurzbz, lv.lehrveranstaltung_id, lve.lvevaluierung_id, lvec.lvevaluierung_code_id
+    ";
+	}
+
 }
