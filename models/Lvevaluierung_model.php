@@ -276,26 +276,28 @@ class Lvevaluierung_model extends DB_Model
 
 	public function getDistinctFragebogenIds($studiensemester, $von, $bis)
 	{
-		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		$qry = "
+		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		
+		$qry = "
         SELECT DISTINCT lve.fragebogen_id
         FROM extension.tbl_lvevaluierung_lehrveranstaltung lvelv
         LEFT JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
-        $whereClause
-    ";
+        ".$whereClause;
+		
 		return $this->execReadOnlyQuery($qry, $params);
 	}
 
 	public function getExportRowCount($studiensemester, $von, $bis)
 	{
-		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		$qry = "
+		list($whereClause, $params) = $this->buildBaseWhereAndParams($studiensemester, $von, $bis);		
+		$qry = "
         SELECT COUNT(*) AS cnt
         FROM extension.tbl_lvevaluierung_lehrveranstaltung lvelv
             JOIN  lehre.tbl_lehrveranstaltung lv  USING (lehrveranstaltung_id)
             JOIN  public.tbl_studiengang      stg USING (studiengang_kz)
             LEFT JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
             LEFT JOIN extension.tbl_lvevaluierung_code lvec ON lvec.lvevaluierung_id = lve.lvevaluierung_id
-            $whereClause
-    ";
+            ".$whereClause;
+		
 		return $this->execReadOnlyQuery($qry, $params);
 	}
 
@@ -329,7 +331,7 @@ class Lvevaluierung_model extends DB_Model
             CASE WHEN lvelv.lv_aufgeteilt THEN
                 COALESCE(
                     CASE WHEN lvg.verband IS NOT NULL
-                        THEN CONCAT(lvg.semester, ' - ', lvg.verband, ' - ', lvg.gruppe) END,
+                        THEN CONCAT(lvg.semester, lvg.verband, lvg.gruppe) END,
                     lvg.gruppe_kurzbz
                 )
                 ELSE 'Gesamt'
@@ -351,7 +353,7 @@ class Lvevaluierung_model extends DB_Model
             LEFT JOIN extension.tbl_lvevaluierung_code lvec ON lvec.lvevaluierung_id = lve.lvevaluierung_id
             LEFT JOIN sender ON sender.lvevaluierung_id = lve.lvevaluierung_id
             LEFT JOIN gruppe lvg ON lvg.lehreinheit_id = lve.lehreinheit_id
-            $whereClause
+            ".$whereClause."
         ORDER BY lvelv.studiensemester_kurzbz, lv.lehrveranstaltung_id, lve.lvevaluierung_id, lvec.lvevaluierung_code_id
     ";
 	}

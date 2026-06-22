@@ -20,7 +20,6 @@ class Export extends FHCAPI_Controller
 	{
 		parent::__construct(array(
 				'getExportRowCount' => 'extension/lvevaluierung_export:rw',
-				'exportAllToExcel' => 'extension/lvevaluierung_export:rw',
 				'exportAllToExcelCursor' => 'extension/lvevaluierung_export:rw'
 			)
 		);
@@ -54,67 +53,18 @@ class Export extends FHCAPI_Controller
 		$this->_uid = getAuthUid();
 	}
 
-	public function exportAllToExcel() {
-		$this->load->helper('download');
-		
-		$studiensemester = $this->input->get('studiensemester');
-		$von = $this->input->get('von');
-		$bis = $this->input->get('bis');
-		
-		$filenameParts = ['LV_Evaluierung_Rohdaten'];
-		if (!empty($studiensemester)) $filenameParts[] = $studiensemester;
-		if (!empty($von))             $filenameParts[] = 'von_' . $von;
-		if (!empty($bis))             $filenameParts[] = 'bis_' . $bis;
-		if (count($filenameParts) === 1) $filenameParts[] = 'gesamt';
-		$filename = implode('_', $filenameParts) . '.xlsx';
-		$tempPath = "/var/fhcomplete/" . $filename;
-
-		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
-		$result = $this->getExportData($studiensemester, $von, $bis);
-		
-		if (isError($result)) {
-			return $this->terminateWithError($result);
-		}
-
-		$data = getData($result);
-		$rows = $data['rows'];
-		$headers = $data['headers'];
-		$columnWidths = $data['columnWidths'];
-
-		// row threshold for PhpSpreadsheet based on a strict 128M php.ini memory_limit.
-		// - This export has ~35 columns. 1,200 rows = ~42,000 cells.
-		// - PhpSpreadsheet 1.7 (PHP 7.0) consumes ~1.8 KB to 2 KB of RAM per cell.
-		//   42,000 cells x 2 KB = ~82 MB - combined with codeigniter, db result array and
-		//   phpspreadsheet autosize layout overhead a final memory footprint of ~110 mb is assumed
-		// Anything higher risks a "Fatal Error: Allowed memory size exhausted".
-
-		if (count($rows) <= 1200) {
-			// below certain threshold use pretty excel export librarywith PhpSpreadsheet
-			$this->exportViaPhpSpreadsheet($tempPath, $headers, $rows, $columnWidths);
-		} else { 
-			//Large dataset: performant streaming with Spout
-			$this->exportViaSpout($tempPath, $headers, $rows, $columnWidths);
-		}
-		
-		if (file_exists($tempPath)) {
-			$this->terminateWithFileOutput('application/octet-stream', file_get_contents($tempPath), basename($tempPath));
-		}
-
-		$this->terminateWithError('No file at ' . $tempPath);
-	}
-
-	private function exportViaPhpSpreadsheet($tempPath, array $headers, array $rows, array $columnWidths)
+	private function exportViaPhpSpreadsheet($tempPath, array $rows, array $headers, array $columnWidths)
 	{
 		$spreadsheet = new Spreadsheet();
 		$sheet = $spreadsheet->getActiveSheet();
 		$sheet->setTitle('Evaluierungsdaten');
 
-		// 1. Write Headers
+		// Write Headers
 		$headerValues = array_values($headers);
 		$sheet->fromArray($headerValues, null, 'A1');
 		$sheet->getRowDimension(1)->setRowHeight(30);
 
-		// 2. Write Data Rows
+		// Write Data Rows
 		$rowData = [];
 		foreach ($rows as $row) {
 			$rowData[] = array_values((array) $row);
@@ -127,18 +77,18 @@ class Export extends FHCAPI_Controller
 		$highestColumnIndex = count($headers);
 		$highestColumnLetter = Coordinate::stringFromColumnIndex($highestColumnIndex);
 
-		// 3. Dynamic row heights for data rows
+		// Dynamic row heights for data rows
 		for ($r = 2; $r <= $highestRow; $r++) {
 			$sheet->getRowDimension($r)->setRowHeight(45);
 		}
 
-		// 4. Set deliberate Column Widths
+		// Set deliberate Column Widths
 		foreach ($columnWidths as $index => $width) {
 			$colLetter = Coordinate::stringFromColumnIndex($index + 1);
 			$sheet->getColumnDimension($colLetter)->setWidth($width);
 		}
 
-		// 5. Stylize the Sheet Layout
+		// Stylize the Sheet Layout
 		$headerRange = "A1:{$highestColumnLetter}1";
 		$fullRange   = "A1:{$highestColumnLetter}{$highestRow}";
 
@@ -175,57 +125,6 @@ class Export extends FHCAPI_Controller
 		// Save File
 		$writer = new PhpSpreadsheetWriter($spreadsheet);
 		$writer->save($tempPath);
-	}
-
-	private function exportViaSpout($tempPath, array $headers, array $rows, array $columnWidths)
-	{
-		$writer = WriterFactory::create(Type::XLSX);
-		$writer->openToFile($tempPath);
-
-		$wrapStyle = (new StyleBuilder())
-			->setShouldWrapText(true)
-			->build();
-
-		// Write Header
-		$writer->addRow(array_values($headers), $wrapStyle);
-
-		// Stream Body
-		foreach ($rows as $row) {
-			$writer->addRow(array_values((array) $row), $wrapStyle);
-		}
-
-		$writer->close();
-
-		// Apply the XML parsing patch for absolute dimensions
-//		$this->applyXlsxColumnFormatting($tempPath, $columnWidths, 30, 45);
-	}
-
-	public function getExportData($studiensemester = null, $von = null, $bis = null)
-	{
-		$baseResult = $this->LvevaluierungModel->getExportBaseRows($studiensemester, $von, $bis);
-		if (!isSuccess($baseResult)) return $baseResult;
-		$baseRows = getData($baseResult);
-		
-		if (empty($baseRows))
-			return success(['rows' => [], 'headers' => $this->getFixedHeaders(), 'columnWidths' => []]);
-
-		$fragebogenIds = array_values(array_unique(array_filter(array_column($baseRows, 'fragebogen_id'))));
-		$codeIds = array_values(array_unique(array_filter(array_column($baseRows, 'lvevaluierung_code_id'))));
-
-		$strukturResult = $this->LvevaluierungModel->getFragebogenStruktur($fragebogenIds);
-		if (!isSuccess($strukturResult)) return $strukturResult;
-		$struktur = getData($strukturResult);
-
-		$antwortenResult = $this->LvevaluierungModel->getAntwortenByCodeIds($codeIds);
-		if (!isSuccess($antwortenResult)) return $antwortenResult;
-		$antwortenData = getData($antwortenResult);
-		$antworten = $antwortenData ?? [];
-
-		$rows = $this->pivotExportData($baseRows, $struktur, $antworten);
-		$headers = array_merge($this->getFixedHeaders(), $this->buildFragebogenHeaders($struktur));
-		$columnWidths = $this->buildColumnWidths(array_keys($headers), $struktur);
-		
-		return success(['rows' => $rows, 'headers' => $headers,'columnWidths' => $columnWidths,]);
 	}
 
 	private function buildColumnWidths(array $headerKeys, array $struktur)
@@ -350,106 +249,18 @@ class Export extends FHCAPI_Controller
 		$headers['optionale_bereiche_angeklickt'] = 'Optionale Bereiche angeklickt';
 		return $headers;
 	}
-
-	/**
-	 * Box/Spout 2.7 has no API for column width or row height — that
-	 * feature was proposed years ago (box/spout PR #715) but never merged,
-	 * so it's simply not available in this library version.
-	 *
-	 * Workaround: an .xlsx file is just a zip archive of XML parts (OOXML
-	 * spec). After Spout finishes writing the file normally, we reopen
-	 * that zip, pull out the one XML part that defines column/row layout
-	 * (xl/worksheets/sheet1.xml), inject a <cols> block and per-row
-	 * "ht"/"customHeight" attributes via string manipulation, and write
-	 * the modified XML back into the same zip entry. Excel/LibreOffice
-	 * read these attributes the same way regardless of what tool wrote
-	 * them, so the result is indistinguishable from a "real" width-aware
-	 * writer having produced it.
-	 *
-	 * Fragility to be aware of if this ever breaks after a Spout/PHP
-	 * update:
-	 * - Assumes a single worksheet at the fixed path "sheet1.xml". If the
-	 *   export ever writes multiple sheets, this only touches the first.
-	 * - The row-rewriting regex assumes Spout emits <row r="N" ...> in a
-	 *   simple single-line form. If a future Spout version changes its
-	 *   row tag formatting, the regex may stop matching (worst case:
-	 *   silently no-op, since formatting failures here don't throw).
-	 * - Failure here is treated as non-fatal on purpose (formatting is
-	 *   cosmetic) — if $zip->open() or the XML fetch fails, the function
-	 *   just returns and the export still downloads, just unstyled.
-	 *
-	 * If we ever upgrade to a library with native support for this
-	 * (OpenSpout 3.x+), this whole method goes away.
-	 */
-	private function applyXlsxColumnFormatting($filePath, array $columnWidths, $headerRowHeight, $dataRowHeight)
-	{
-		$zip = new \ZipArchive();
-		if ($zip->open($filePath) !== true) return; // formatting is cosmetic, never block the download
-
-		$sheetPath = 'xl/worksheets/sheet1.xml';
-		$xml = $zip->getFromName($sheetPath);
-		if ($xml === false) { $zip->close(); return; }
-
-		$colsXml = '<cols>';
-		foreach ($columnWidths as $index => $width) {
-			$colNum = $index + 1;
-			$colsXml .= sprintf('<col min="%d" max="%d" width="%s" customWidth="1"/>', $colNum, $colNum, $width);
-		}
-		$colsXml .= '</cols>';
-
-		// Sheet-wide default row height instead of rewriting every <row> tag --
-		// at hundreds of thousands of rows, a per-row regex pass is the
-		// actual bottleneck. Header vs. data row height distinction is
-		// dropped here; $headerRowHeight is unused on purpose (kept for
-		// call-site symmetry with the small-dataset PhpSpreadsheet path).
-		if (preg_match('/<sheetFormatPr[^>]*\/>/', $xml)) {
-			$xml = preg_replace(
-				'/<sheetFormatPr[^>]*\/>/',
-				'<sheetFormatPr defaultRowHeight="' . $dataRowHeight . '" customHeight="1"/>' . $colsXml,
-				$xml,
-				1
-			);
-		} else {
-			$xml = preg_replace('/(<sheetData)/', $colsXml . '$1', $xml, 1);
-		}
-		
-//		if (preg_match('/<sheetFormatPr[^\/]*\/>/', $xml)) {
-//			$xml = preg_replace('/(<sheetFormatPr[^\/]*\/>)/', '$1' . $colsXml, $xml, 1);
-//		} else {
-//			$xml = preg_replace('/(<sheetData)/', $colsXml . '$1', $xml, 1);
-//		}
-//
-//		$xml = preg_replace_callback('/<row r="(\d+)"([^>]*)>/', function ($m) use ($headerRowHeight, $dataRowHeight) {
-//			$rowNum = (int) $m[1];
-//			$attrs  = preg_replace('/\s*(ht|customHeight)="[^"]*"/', '', $m[2]); // strip any existing
-//			$height = $rowNum === 1 ? $headerRowHeight : $dataRowHeight;
-//			return sprintf('<row r="%d"%s ht="%s" customHeight="1">', $rowNum, $attrs, $height);
-//		}, $xml);
-
-		$zip->deleteName($sheetPath);
-		$zip->addFromString($sheetPath, $xml);
-		$zip->close();
-	}
 	
+
 	// =================== EXPORT WITH CURSOR ===================
 
 	public function exportAllToExcelCursor()
 	{
-		set_time_limit(300); // this export can legitimately run several minutes; don't use 0/unlimited — bounded is safer in case of a runaway loop bug
-		ini_set('max_execution_time', 300); // belt-and-suspenders; some setups only honor one or the other depending on SAPI
-		ini_set('memory_limit', '768M');
+		$startTime = microtime(true);
+		set_time_limit(1500); // 25min export
+		ini_set('max_execution_time', 1500);
+//		ini_set('memory_limit', '768M'); // 10k in phpspreadsheet working
 		
 		$this->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
-		
-		register_shutdown_function(function () {
-			$error = error_get_last();
-			if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
-				$this->logLib->logInfoDB('exportAllToExcel FATAL: '
-					. $error['message']
-					. ' in ' . $error['file'] . ':' . $error['line']
-					. ' | peak memory: ' . memory_get_peak_usage(true));
-			}
-		});
 
 		$studiensemester = $this->input->get('studiensemester');
 		$von = $this->input->get('von');
@@ -465,10 +276,23 @@ class Export extends FHCAPI_Controller
 		$rowCount = (int) getData($countResult)[0]->cnt;
 		$this->logLib->logInfoDB('row count: ' . $rowCount . ' | memory: ' . memory_get_usage(true));
 
+		// TODO: filename?
 		$tempPath = sys_get_temp_dir() . '/lvevaluierung_export_' . uniqid() . '.xlsx';
 
 		if ($rowCount <= 2000) {
-			$this->exportWithPhpSpreadsheet($studiensemester, $von, $bis, $tempPath);
+
+			$result = $this->getExportData($studiensemester, $von, $bis);
+
+			if (isError($result)) {
+				return $this->terminateWithError($result);
+			}
+
+			$data = getData($result);
+			$rows = $data['rows'];
+			$headers = $data['headers'];
+			$columnWidths = $data['columnWidths'];
+			
+			$this->exportViaPhpSpreadsheet($tempPath, $rows, $headers, $columnWidths);
 		} else {
 			$writer = WriterFactory::create(Type::XLSX);
 			$writer->openToFile($tempPath);
@@ -485,7 +309,7 @@ class Export extends FHCAPI_Controller
 				function ($row) use ($writer, $wrapStyle, &$rowsWritten) {
 					$writer->addRow(array_values((array) $row), $wrapStyle);
 					$rowsWritten++;
-					if ($rowsWritten % 2000 === 0) {
+					if ($rowsWritten % 15000 === 0) {
 						$this->logLib->logInfoDB('rows written: ' . $rowsWritten . ' | memory: ' . memory_get_usage(true));
 					}
 				},
@@ -499,7 +323,7 @@ class Export extends FHCAPI_Controller
 				$this->logLib->logInfoDB('streamExportRows failed: ' . $result->msg);
 				return $this->terminateWithError($result->msg);
 			}
-			if ($columnWidths) $this->applyXlsxColumnFormattingStreamed($tempPath, $columnWidths, 30, 45);
+			if ($columnWidths) $this->applyXlsxColumnFormattingStreamed($tempPath, $columnWidths, 45);
 		}
 
 		if (!file_exists($tempPath) || filesize($tempPath) === 0) {
@@ -507,9 +331,39 @@ class Export extends FHCAPI_Controller
 			return $this->terminateWithError('Export-Datei konnte nicht erstellt werden.');
 		}
 
+		$elapsed = round(microtime(true) - $startTime, 1);
+		$this->logLib->logInfoDB('stream finished, total rows: ' . $rowsWritten . ' | elapsed: ' . $elapsed . 's | sem=' . $studiensemester . ' von=' . $von . ' bis=' . $bis);
 		$this->terminateWithFileOutput('application/octet-stream', file_get_contents($tempPath), basename($tempPath));
 	}
 
+	public function getExportData($studiensemester = null, $von = null, $bis = null)
+	{
+		$baseResult = $this->LvevaluierungModel->getExportBaseRows($studiensemester, $von, $bis);
+		if (!isSuccess($baseResult)) return $baseResult;
+		$baseRows = getData($baseResult);
+
+		if (empty($baseRows))
+			return success(['rows' => [], 'headers' => $this->getFixedHeaders(), 'columnWidths' => []]);
+
+		$fragebogenIds = array_values(array_unique(array_filter(array_column($baseRows, 'fragebogen_id'))));
+		$codeIds = array_values(array_unique(array_filter(array_column($baseRows, 'lvevaluierung_code_id'))));
+
+		$strukturResult = $this->LvevaluierungModel->getFragebogenStruktur($fragebogenIds);
+		if (!isSuccess($strukturResult)) return $strukturResult;
+		$struktur = getData($strukturResult);
+
+		$antwortenResult = $this->LvevaluierungModel->getAntwortenByCodeIds($codeIds);
+		if (!isSuccess($antwortenResult)) return $antwortenResult;
+		$antwortenData = getData($antwortenResult);
+		$antworten = $antwortenData ?? [];
+
+		$rows = $this->pivotExportData($baseRows, $struktur, $antworten);
+		$headers = array_merge($this->getFixedHeaders(), $this->buildFragebogenHeaders($struktur));
+		$columnWidths = $this->buildColumnWidths(array_keys($headers), $struktur);
+
+		return success(['rows' => $rows, 'headers' => $headers,'columnWidths' => $columnWidths,]);
+	}
+	
 	public function streamExportRows(callable $onHeader, callable $onRow, $studiensemester, $von, $bis, $chunkSize = 2000)
 	{
 		$fragebogenResult = $this->LvevaluierungModel->getDistinctFragebogenIds($studiensemester, $von, $bis);
@@ -570,7 +424,20 @@ class Export extends FHCAPI_Controller
 		return success(true);
 	}
 
-	private function applyXlsxColumnFormattingStreamed($filePath, array $columnWidths, $headerRowHeight, $dataRowHeight)
+
+	/**
+	 * Box/Spout 2.7 has no API for column width/row height (proposed in PR #715, never merged), 
+	 * so this patches the generated .xlsx afterward by editing the OOXML xl/worksheets/sheet1.xml part directly 
+	 * inside the zip. Two failures shaped the implementation: loading the full worksheet XML into one string blew
+	 * memory at 330k+ rows (~600MB uncompressed), so the rewrite streams through a small chunked buffer instead.
+	 * 
+	 * This builds the result as a fully separate archive and only rename()s it over the original after
+	 * confirming the rebuild succeeded and is non-empty. Failures anywhere in here are non-fatal by 
+	 * design — formatting is cosmetic and should never break the download, and the original file is never opened
+	 * in write mode, so it can't be corrupted by this function. Goes away entirely if we ever move off Spout 2.7
+	 * to something with native width/height support.
+	 */
+	private function applyXlsxColumnFormattingStreamed($filePath, array $columnWidths, $dataRowHeight)
 	{
 		$sourceZip = new \ZipArchive();
 		if ($sourceZip->open($filePath) !== true) return; // read-only open; original is never at risk
@@ -586,8 +453,6 @@ class Export extends FHCAPI_Controller
 		}
 		$colsXml .= '</cols>';
 
-		// Stream-rewrite sheet1.xml into its own standalone temp file --
-		// memory use here is bounded by chunk size, not row count.
 		$tempXmlPath = $filePath . '.sheet1.tmp.xml';
 		$out = fopen($tempXmlPath, 'wb');
 
@@ -633,13 +498,10 @@ class Export extends FHCAPI_Controller
 			return; // unexpected file shape -- original untouched
 		}
 
-		// Build a brand new archive rather than editing $filePath in place.
-		// The source handle is ONLY ever read from -- never deleteName/addFile
-		// on it -- so there's no write-back to corrupt regardless of what
-		// happens below.
 		$tempZipPath = $filePath . '.rebuild.tmp.xlsx';
 		$newZip = new \ZipArchive();
 		if ($newZip->open($tempZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+			$this->logLib->logInfoDB('zip rebuild open failed for ' . $tempZipPath);
 			unlink($tempXmlPath);
 			$sourceZip->close();
 			return;
@@ -650,8 +512,6 @@ class Export extends FHCAPI_Controller
 			if ($name === $sheetPath) {
 				$newZip->addFile($tempXmlPath, $sheetPath);
 			} else {
-				// every other entry (workbook.xml, styles.xml, rels, content
-				// types...) is KB-sized -- safe to load whole
 				$newZip->addFromString($name, $sourceZip->getFromName($name));
 			}
 		}
@@ -661,15 +521,9 @@ class Export extends FHCAPI_Controller
 		unlink($tempXmlPath);
 
 		if (!$closeOk || !file_exists($tempZipPath) || filesize($tempZipPath) === 0) {
+			$this->logLib->logInfoDB('zip rebuild close failed or produced empty file for ' . $tempZipPath);
 			if (file_exists($tempZipPath)) unlink($tempZipPath);
-			return; // rebuild failed -- original at $filePath is still intact
-		}
-
-		if ($newZip->open($tempZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-			$this->logLib->logInfoDB('zip rebuild open failed for ' . $tempZipPath);
-			unlink($tempXmlPath);
-			$sourceZip->close();
-			return;
+			return; // original at $filePath is still intact
 		}
 
 		rename($tempZipPath, $filePath); // same filesystem, effectively atomic
