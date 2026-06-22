@@ -156,7 +156,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			  lv.bezeichnung,
 			  lv.oe_kurzbz,
 			  lv.lehrtyp_kurzbz,
-			  lv.lehrveranstaltung_template_id
+			  lv.sprache
 			FROM
 			  lehre.tbl_lehrveranstaltung lv
 			WHERE
