@@ -15,7 +15,7 @@ export default {
 	},
 	template: `
 	<!-- Abschnitt Übersicht -->
-	<div v-if="uebersichtData.meta" class="evaluation-evaluation-reflexion-uebersicht mb-3">
+	<div v-if="uebersichtData.meta" class="evaluation-evaluation-reflexion-uebersicht mb-3 pb-5 pt-1 px-5 bg-body-secondary">
 		<h4 class="mt-5 mb-3">Übersicht</h4>
 		<div class="row mt-4">
 			<div class="col-12">
@@ -25,18 +25,18 @@ export default {
 						:key="key"
 						class="evaluation-card-flex" 
 					>
-						<div class="card h-100">
+						<div class="card h-100 border-0">
 							<!-- Header -->
 							<div class="card-header bg-white">
-								<span class="fw-bold">{{ row.label }}</span>
+								<span class="fw-bold">Antworten kumuliert</span>
 							</div>
 							<!-- Body -->
 							<div class="card-body">
 								<!-- Table -->
-								<table class="table mb-3">
+								<table class="table table-striped-columns mb-3">
 									<thead>
 										<tr>
-											<th>Antworten kumuliert</th>
+											<th>{{ row.label }}</th>
 											<th class="text-end">Σ</th>
 											<th class="text-end fw-normal" v-if="uebersichtData.meta.showUebersichtOptionale">
 												Σ (optional)
