@@ -291,6 +291,30 @@ class EvaluationLib
 		return $data;
 	}
 
+	/**
+	 * Get Lehrveranstaltung Infos.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @param $studiensemester_kurzbz
+	 * @return array|mixed
+	 */
+	public function getLvBezeichnung($lehrveranstaltung_id)
+	{
+		// LV data
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addSelect('
+			tbl_lehrveranstaltung.bezeichnung,
+			tbl_lehrveranstaltung.bezeichnung_english
+		');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$data = hasData($result) ? getData($result)[0] : [];
+
+		// LV bezeichnung
+		return getUserLanguage() === 'English'
+			? $data->bezeichnung_english
+			: $data->bezeichnung;
+	}
+
 	// TODO HLM formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
 	/**
 	 * Calculate Hodges-Lehmann estimator (HLE) for a single question

@@ -461,7 +461,8 @@ export default {
 		openEvaluationByLvTemplate(lehrveranstaltung_id) {
 			const url = this.$api.getUri() +
 					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
-					'?lehrveranstaltung_template_id=' + lehrveranstaltung_id;
+					'?lehrveranstaltung_template_id=' + lehrveranstaltung_id +
+					'&studiensemester=' + this.selStudiensemester;
 
 			window.open(url, '_blank');
 		},

@@ -187,6 +187,41 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	}
 
 	/**
+	 * Get LveLvs by given Quellkurs and Studiensemester.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getLveLvsByLvTemplateId($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$params = [$lehrveranstaltung_template_id, $studiensemester_kurzbz];
+
+		$qry = '
+			SELECT
+				lvelv.*,
+				stg.kurzbzlang,
+				lv.lehrveranstaltung_id,
+				lv.lehrtyp_kurzbz,
+				lv.lehrveranstaltung_template_id,
+				lv.semester,
+				lv.orgform_kurzbz,
+				lv.bezeichnung,
+				lv.sprache
+			FROM
+				lehre.tbl_lehrveranstaltung lv
+				JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id)
+				JOIN public.tbl_studiengang stg USING (studiengang_kz)
+			WHERE
+				lv.lehrveranstaltung_template_id = ?
+				AND lvelv.studiensemester_kurzbz = ?
+		';
+
+		return $this->execQuery($qry, $params);
+
+	}
+
+	/**
 	 * Get Lvs that are scheduled for evaluation in the given Studiensemester and Studiengang (can be number or array).
 	 *
 	 * @param $studiensemester_kurzbz

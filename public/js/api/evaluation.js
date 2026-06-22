@@ -18,6 +18,16 @@ export default {
 			}
 		}
 	},
+	getEvaluationDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
 	getAuswertungDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',
@@ -34,6 +44,16 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLveLv',
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+	getAuswertungDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},
@@ -72,6 +92,16 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLveLv',
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+	getReflexionDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},

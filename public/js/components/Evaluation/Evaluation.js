@@ -10,13 +10,16 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: [
-		'role',
-		'lvevaluierung_id',
-		'lvevaluierung_lehrveranstaltung_id',
-		'lehrveranstaltung_template_id',
-		'selected_view'
-	],
+	props: {
+		role: null,
+		lvevaluierung_id: null,
+		lvevaluierung_lehrveranstaltung_id: null,
+		lehrveranstaltung_template_id: null,
+		selected_view: null,
+		studiensemester: {
+			default: null
+		}
+	},
 	data() {
 		return {
 			evalData: {
@@ -57,10 +60,18 @@ export default {
 		}
 	},
 	created() {
-		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
-			const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role)
-				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id || this.lehrveranstaltung_template_id) {
+			let apiCall = null;
+
+			if (this.lehrveranstaltung_template_id && this.studiensemester) {
+				apiCall = ApiEvaluation.getEvaluationDataByLvTemplate(this.lehrveranstaltung_template_id, this.studiensemester);
+			}
+			else if (this.lvevaluierung_lehrveranstaltung_id) {
+				apiCall = ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+			}
+			else if (this.lvevaluierung_id) {
+				apiCall = ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role);
+			}
 
 			this.$api
 				.call(apiCall)
@@ -222,7 +233,14 @@ export default {
 					`${this.role}?${selectedOption.param}=${selectedOption.value}&selected_view=${this.selectedView}`;
 
 			window.open(url, '_self');
-		}
+		},
+		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id) {
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
+					'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id
+
+			window.open(url, '_blank');
+		},
 	},
 	template: `
 	<div class="evaluation-evaluation container-fluid d-flex flex-column vh-100 p-0">
@@ -292,10 +310,14 @@ export default {
 						<!-- Left table -->
 						<div class="evaluation-data-table-flex">
 							<table class="table table-bordered align-middle">
-								<tbody>
+								<tbody v-if="lvevaluierung_id || lvevaluierung_lehrveranstaltung_id">
+									<tr>
+										<th class="w-25 text-nowrap">Studiensemester</th>
+										<td class="fw-bold">{{ evalData.studiensemester_kurzbz }}</td>
+									</tr>
 									<tr>
 										<th>Lehrveranstaltung</th>
-										<td>{{ lehrveranstaltung }}</td>
+										<td class="fw-bold">{{ lehrveranstaltung }}</td>
 									</tr>
 									<tr>
 										<th>Verbindlich ausgewählt</th>
@@ -329,6 +351,29 @@ export default {
 												<span>Min {{ evalData.minDuration }}</span>
 												<span>Max {{ evalData.maxDuration }} </span>
 											</div>
+										</td>
+									</tr>
+								</tbody>
+								<tbody v-if="lehrveranstaltung_template_id">
+									<tr>
+										<th class="w-25 text-nowrap">Studiensemester</th>
+										<td class="fw-bold">{{ evalData.studiensemester_kurzbz }}</td>
+									</tr>
+									<tr>
+										<th>Lehrveranstaltung</th>
+										<td class="fw-bold">{{ evalData.bezeichnung }}</td>
+									</tr>
+									<tr>
+										<th class="align-content-start">Evaluierte Lehrveranstaltungen</th>
+										<td>
+										<div class="mb-2" v-for="(lveLv, index) in evalData.lveLvs" :key="index">
+											<a
+												href="#"
+												@click.prevent="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"
+											>
+												{{ lveLv.kurzbzlang }}-{{ lveLv.semester }}: {{lveLv.bezeichnung}} - {{ lveLv.orgform_kurzbz }}
+											</a>
+										</div>
 										</td>
 									</tr>
 								</tbody>
@@ -387,7 +432,8 @@ export default {
 						:is="selectedComponent" 
 						:lvevaluierung_id="lvevaluierung_id"
 						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
-						:lvevaluierung_template_id="lvTemplateId"
+						:lehrveranstaltung_template_id="lehrveranstaltung_template_id"
+						:studiensemester="studiensemester"
 						@change-view="changeView"
 						class="d-block mt-5"
 					></component>
