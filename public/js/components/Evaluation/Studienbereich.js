@@ -52,9 +52,6 @@ export default {
 		site_url_opLvKvp() {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
-		site_url_opStgKvp() {
-			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selOeKurzbz;
-		},
 		site_url_opLvTemplateKvp() {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByTplId/';
 		},
