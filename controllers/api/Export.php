@@ -19,6 +19,7 @@ class Export extends FHCAPI_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
+				'getExportRowCount' => 'extension/lvevaluierung_export:rw',
 				'exportAllToExcel' => 'extension/lvevaluierung_export:rw',
 				'exportAllToExcelCursor' => 'extension/lvevaluierung_export:rw'
 			)
@@ -674,8 +675,22 @@ class Export extends FHCAPI_Controller
 		rename($tempZipPath, $filePath); // same filesystem, effectively atomic
 	}
 	
-	
+	public function getExportRowCount()
+	{
+		$studiensemester = $this->input->get('studiensemester');
+		$von = $this->input->get('von');
+		$bis = $this->input->get('bis');
 
+
+		$countResult = $this->LvevaluierungModel->getExportRowCount($studiensemester, $von, $bis);
+		if (isError($countResult)) {
+			$this->logLib->logInfoDB('getExportRowCount failed: ' . $countResult->msg);
+			return $this->terminateWithError($countResult->msg);
+		}
+		$rowCount = (int)getData($countResult)[0]->cnt;
+
+		$this->terminateWithSuccess($rowCount);
+	}
 	
 	
 }
