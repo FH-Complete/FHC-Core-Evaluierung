@@ -146,6 +146,7 @@ class Initiierung extends JOB_Controller
 							$this->_ci->initiierunglib->hasHierarchicalDuplicateGruppen($data))
 						{
 							$groupedByLe = [];
+							$this->logInfo('Evaluierung not created for ' . $lveLv->lvevaluierung_lehrveranstaltung_id. '. Gruppenevaluierung - but no unique assignment.');
 						}
 					}
 
