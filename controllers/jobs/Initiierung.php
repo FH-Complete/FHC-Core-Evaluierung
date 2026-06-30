@@ -1185,7 +1185,7 @@ class Initiierung extends JOB_Controller
 
 		// Define index to check if today is report day and to get the previous report day
 		$today = new DateTime('today');
- $today = new DateTime('2026-06-06 00:00:00'); // TODO comment. for testing only
+ // $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
 		$mailtagIndex = array_search(
 			$today->format('Y-m-d H:i:s'),
 			array_map(function ($date)
@@ -1399,7 +1399,7 @@ class Initiierung extends JOB_Controller
 
 		// Define index to check if today is report day and to get the previous report day
 		$today = new DateTime('today');
-	$today = new DateTime('2026-06-06 00:00:00'); // TODO comment. for testing only
+	// $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
 		$mailtagIndex = array_search(
 			$today->format('Y-m-d H:i:s'),
 			array_map(function ($date)
