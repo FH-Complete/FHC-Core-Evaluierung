@@ -23,6 +23,8 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
 	}
 
 	/**
@@ -909,7 +911,6 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendReflexionStartReminder');
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
@@ -1135,5 +1136,522 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('End Job sendReflexionStartReminder');
+	}
+
+	/**
+	 * Job to send monthly summary Sammelmails to STGLs containing
+	 * newly available LVs with completed verpflichtende LV-Reflexionen
+	 * and LVs whose verpflichtende LV-Reflexion period ended without submission.
+	 * Monthly report days are determined by the configured Zeitfenster by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function sendReflexionReadyInfoToStgl($studiensemester_kurzbz)
+	{
+		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToStgl');
+
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			return;
+		}
+
+		// Reflexion mail period of Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+			return;
+		}
+
+		$mailZeitfenster = getData($result)[0];
+
+		// Monthly report dates within reporting period
+		$mailtage = [];
+		$startdatum = new DateTime($mailZeitfenster->startdatum);
+		$endedatum = new DateTime($mailZeitfenster->endedatum);
+
+		while ($startdatum <= $endedatum)
+		{
+			$mailtage[] = clone $startdatum;
+			$startdatum->modify('+1 month');
+		}
+
+		// Define index to check if today is report day and to get the previous report day
+		$today = new DateTime('today');
+ $today = new DateTime('2026-06-06 00:00:00'); // TODO comment. for testing only
+		$mailtagIndex = array_search(
+			$today->format('Y-m-d H:i:s'),
+			array_map(function ($date)
+			{
+				return $date->format('Y-m-d H:i:s');
+			}, $mailtage),
+			true
+		);
+
+		// Return if today is not Berichtstag (do not send Sammelmail)
+		if ($mailtagIndex === false)
+		{
+			$this->logInfo('No mails sent. Today is not report day.');
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+			return;
+		}
+
+		// Berichtszeitraum ermitteln
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Berichtsperiode Startdatum
+		// ab 2. Mail im Studiensemester
+		if ($mailtagIndex > 0)
+		{
+			// Daten seit letzt gesendeten Mails abfragen
+			$berichtszeitraumVon = $mailtage[$mailtagIndex - 1];
+		}
+		// wenn 1. Mail im Studiensemester
+		else
+		{
+			$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+			$result = $this->_ci->StudiensemesterModel->getStartEndeFromStudiensemester($studiensemester_kurzbz);
+
+			// Daten von Studiensemesterbeginn abfragen
+			$berichtszeitraumVon = new DateTime(getData($result)[0]->start);
+		}
+
+		// Berichtsperiode Endedatum
+		$berichtszeitraumBis = $today;
+
+		/**
+		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
+		 * var_dump($berichtszeitraumVon->format('Y-m-d H:i:s'));
+		 * var_dump($berichtszeitraumBis->format('Y-m-d H:i:s'));
+		 * var_dump('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
+		 * */
+
+		// Reflexionsdaten ermitteln und für mail strukturieren
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Verpflichtende Reflexionen inserted in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenInsertedVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s')
+		);
+		$reflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		// Missing Reflexionen in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenMissedAbgabeVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s'),
+			$studiensemester_kurzbz
+		);
+		$missingReflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		$dataByStg = [];
+
+		// Reflexionen und Missing mergen vorkommenden STGs initialisieren
+		foreach (array_merge($reflexionenByLveLv, $missingReflexionenByLveLv) as $reflexion)
+		{
+			$studiengang_kz = $reflexion->studiengang_kz;
+
+			if (!isset($dataByStg[$studiengang_kz]))
+			{
+				$dataByStg[$studiengang_kz] = [
+					'stg_bezeichnung' => $reflexion->stg_bezeichnung,
+					'stg_kurzbz' => $reflexion->stgKurzbz,
+					'gesamtlv' => [],
+					'gruppe' => [],
+					'missing' => []
+				];
+			}
+		}
+
+		/**
+		 * Loop LVs mit verpflichtenden Reflexionen, die im Berichtszeitraum erstellt wurden
+		 * bei Gruppen: mindestens eine Reflexion im Berichtszeitraum erstellt
+		 * bei Gesamt-LV: Reflexion im Berichtszeitraum erstellt
+		 **/
+		foreach ($reflexionenByLveLv as $reflexion)
+		{
+			if ($reflexion->lv_aufgeteilt)
+			{
+				$dataByStg[$reflexion->studiengang_kz]['gruppe'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+				// var_dump( 'Fertig alle Gruppen  ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+			else
+			{
+
+				$dataByStg[$reflexion->studiengang_kz]['gesamtlv'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+				// var_dump( 'Fertig Gesamt-LV ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+		}
+
+		/**
+		 * Loop LVs mit fehlenden verpflichtende Reflexionen, wo die Reflexionszeit im Berichtszeitraums geendet hat und:
+		 * bei Gesamt-LV: keine Reflexion der LV-Leitung ( optionale werden nicht berücksichtigt)
+		 * bei Gruppen: Reflexionszeit sind - für alle - beendet und mind eine davon hat keine Reflexion
+		 * */
+		foreach ($missingReflexionenByLveLv as $reflexion)
+		{
+			$dataByStg[$reflexion->studiengang_kz]['missing'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+			// var_dump( 'Missing ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+		}
+
+		// Sammelmails an STGL senden
+		//--------------------------------------------------------------------------------------------------------------
+		foreach ($dataByStg as $studiengang_kz => $row)
+		{
+			// Get STGL mail address
+			$stglMailReceiver_arr = $this->_getSTGLMailAddress($studiengang_kz);
+
+			// Mail text
+			$reflexionenData = $this->_buildReflexionenMailText($row);
+
+			// Continue if no mail text
+			if (isEmptyString($reflexionenData)) continue;
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			// Send mail
+			foreach ($stglMailReceiver_arr as $stgl)
+			{
+				$data = [
+					'vorname' => $stgl['vorname'],
+					'nachname' => $stgl['nachname'],
+					'stg_bezeichnung' => $row['stg_bezeichnung'],
+					'studiensemester' => $studiensemester_kurzbz,
+					'reflexionenData' => $reflexionenData,
+					'link' => $link
+				];
+
+				$mailSent = sendSanchoMail(
+					'LVE_STGL_TEXT_3',
+					$data,
+					$stgl['to'],
+					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['stg_kurzbz']. ' ' . $studiensemester_kurzbz,
+					'sancho_header_lvevaluierung.jpg',
+					'sancho_footer_lvevaluierung.jpg'
+				);
+
+				if ($mailSent)
+				{
+					$this->logInfo('LVE_STGL_TEXT_3 to ' . $stgl['to']);
+				}
+				else
+				{
+					$this->logError('Failed to send LVE_STGL_TEXT_3 to ' . $stgl['to']);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+	}
+
+	/**
+	 *  Job to send monthly summary Sammelmails to KFLs containing
+	 *  newly available LVs with completed verpflichtende LV-Reflexionen
+	 *  and LVs whose verpflichtende LV-Reflexion period ended without submission.
+	 *  Monthly report days are determined by the configured Zeitfenster by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function sendReflexionReadyInfoToKfl($studiensemester_kurzbz)
+	{
+		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToKfl');
+
+		if (isEmptyString($studiensemester_kurzbz))
+		{
+			$this->logError('Missing param Studiensemester');
+			return;
+		}
+
+		// Reflexion mail period of Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl for ' . $studiensemester_kurzbz);
+			return;
+		}
+
+		$mailZeitfenster = getData($result)[0];
+
+		// Monthly report dates within reporting period
+		$mailtage = [];
+		$startdatum = new DateTime($mailZeitfenster->startdatum);
+		$endedatum = new DateTime($mailZeitfenster->endedatum);
+
+		while ($startdatum <= $endedatum)
+		{
+			$mailtage[] = clone $startdatum;
+			$startdatum->modify('+1 month');
+		}
+
+		// Define index to check if today is report day and to get the previous report day
+		$today = new DateTime('today');
+	$today = new DateTime('2026-06-06 00:00:00'); // TODO comment. for testing only
+		$mailtagIndex = array_search(
+			$today->format('Y-m-d H:i:s'),
+			array_map(function ($date)
+			{
+				return $date->format('Y-m-d H:i:s');
+			}, $mailtage),
+			true
+		);
+
+		// Return if today is not Berichtstag (do not send Sammelmail)
+		if ($mailtagIndex === false)
+		{
+			$this->logInfo('No mails sent. Today is not report day.');
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+			return;
+		}
+
+		// Berichtszeitraum ermitteln
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Berichtsperiode Startdatum
+		// ab 2. Mail im Studiensemester
+		if ($mailtagIndex > 0)
+		{
+			// Daten seit letzt gesendeten Mails abfragen
+			$berichtszeitraumVon = $mailtage[$mailtagIndex - 1];
+		}
+		// wenn 1. Mail im Studiensemester
+		else
+		{
+			$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+			$result = $this->_ci->StudiensemesterModel->getStartEndeFromStudiensemester($studiensemester_kurzbz);
+
+			// Daten von Studiensemesterbeginn abfragen
+			$berichtszeitraumVon = new DateTime(getData($result)[0]->start);
+		}
+
+		// Berichtsperiode Endedatum
+		$berichtszeitraumBis = $today;
+
+		/**
+		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
+		 * var_dump($berichtszeitraumVon->format('Y-m-d H:i:s'));
+		 * var_dump($berichtszeitraumBis->format('Y-m-d H:i:s'));
+		 * var_dump('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
+		 * */
+
+		// Reflexionsdaten ermitteln und für mail strukturieren
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Verpflichtende Reflexionen inserted in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenInsertedVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s')
+		);
+		$reflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		// Missing Reflexionen in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenMissedAbgabeVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s'),
+			$studiensemester_kurzbz
+		);
+		$missingReflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		$dataByKf = [];
+
+		// Reflexionen und Missing mergen vorkommenden STGs initialisieren
+		foreach (array_merge($reflexionenByLveLv, $missingReflexionenByLveLv) as $reflexion)
+		{
+			$oe_kurzbz = $reflexion->oe_kurzbz;
+
+			if (!isset($dataByKf[$oe_kurzbz]))
+			{
+				$dataByKf[$oe_kurzbz] = [
+					'oe_kurzbz' => $reflexion->oe_kurzbz,
+					'oe_bezeichnung' => $reflexion->oe_bezeichnung,
+					'stg_kurzbz' => $reflexion->stgKurzbz,
+					'gesamtlv' => [],
+					'gruppe' => [],
+					'missing' => []
+				];
+			}
+		}
+
+		/**
+		 * Loop LVs mit verpflichtenden Reflexionen, die im Berichtszeitraum erstellt wurden
+		  * bei Gruppen: mindestens eine Reflexion im Berichtszeitraum erstellt
+		  * bei Gesamt-LV: Reflexion im Berichtszeitraum erstellt
+		 **/
+		foreach ($reflexionenByLveLv as $reflexion)
+		{
+			if ($reflexion->lv_aufgeteilt)
+			{
+				$dataByKf[$reflexion->oe_kurzbz]['gruppe'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//				var_dump('Fertig alle Gruppen  ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+
+			}
+			else
+			{
+				$dataByKf[$reflexion->oe_kurzbz]['gesamtlv'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//				var_dump('Fertig Gesamt-LV ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+		}
+
+		/**
+		 * Loop LVs mit fehlenden verpflichtende Reflexionen, wo die Reflexionszeit im Berichtszeitraums geendet hat und:
+		 * bei Gesamt-LV: keine Reflexion der LV-Leitung ( optionale werden nicht berücksichtigt)
+		 * bei Gruppen: Reflexionszeit sind - für alle - beendet und mind eine davon hat keine Reflexion
+		 * */
+		foreach ($missingReflexionenByLveLv as $reflexion)
+		{
+			$dataByKf[$reflexion->oe_kurzbz]['missing'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//			var_dump('Missing ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+		}
+
+		// Sammelmails für KFL senden
+		//--------------------------------------------------------------------------------------------------------------
+		foreach ($dataByKf as $oe_kurzbz => $row)
+		{
+			// Get KFL mail address
+			$leitungMailReceiver_arr = $this->_getLeitungMailAddress($oe_kurzbz);
+
+			// Mail text
+			$reflexionenData = $this->_buildReflexionenMailText($row);
+
+			// Continue if no mail text
+			if (isEmptyString($reflexionenData)) continue;
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+			// Send mail
+			foreach ($leitungMailReceiver_arr as $leitung)
+			{
+				$data = [
+					'vorname' => $leitung['vorname'],
+					'nachname' => $leitung['nachname'],
+					'oe_bezeichnung' =>$row['oe_bezeichnung'],
+					'studiensemester' => $studiensemester_kurzbz,
+					'reflexionenData' => $reflexionenData,
+					'link' => $link
+				];
+
+				$mailSent = sendSanchoMail(
+					'LVE_KFL_TEXT_2',
+					$data,
+					$leitung['to'],
+					'LV-Evaluation: Neu verfügbare Ergebnisse im Kompetenzfeld ' . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
+					'sancho_header_lvevaluierung.jpg',
+					'sancho_footer_lvevaluierung.jpg'
+				);
+
+				if ($mailSent)
+				{
+					$this->logInfo('LVE_KFL_TEXT_2 to ' . $leitung['to']);
+				} else
+				{
+					$this->logError('Failed to send LVE_KFL_TEXT_2 to ' . $leitung['to']);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl for ' . $studiensemester_kurzbz);
+	}
+
+	/**
+	 * Build mail text for
+	 * @param $row
+	 * @return string
+	 */
+	private function _buildReflexionenMailText($row)
+	{
+		$reflexionenData = '';
+
+		if (!isEmptyArray($row['gesamtlv']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse inklusive LV-Reflexion der LV-Leitung (Gesamt)</b><br>';
+			$reflexionenData .= implode('<br>', $row['gesamtlv']);
+			$reflexionenData .= '<br><br>';
+		}
+
+		if (!isEmptyArray($row['gruppe']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse inklusive LV-Reflexionen aller Lehrenden (Gruppe)</b><br>';
+			$reflexionenData .= implode('<br>', $row['gruppe']);
+			$reflexionenData .= '<br><br>';
+		}
+
+		if (!isEmptyArray($row['missing']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse ohne vollständige LV-Reflexion(en) (Ablauf des Zeitraumes)</b><br>';
+			$reflexionenData .= implode('<br>', $row['missing']);
+		}
+
+		return $reflexionenData;
+	}
+
+	// Get STGL mail address
+	private function _getSTGLMailAddress($studiengang_kz)
+	{
+		$stglMailAdress_arr = [];
+
+		$result = $this->StudiengangModel->getLeitung($studiengang_kz);
+
+		if (hasData($result))
+		{
+			foreach (getData($result) as $stgl)
+			{
+				$stglMailAdress_arr[] = [
+					'to' => $stgl->uid . '@' . DOMAIN,
+					'vorname' => $stgl->vorname,
+					'nachname' => $stgl->nachname
+				];
+			}
+		}
+
+		return $stglMailAdress_arr;
+	}
+
+	private function _getLeitungMailAddress($oe_kurzbz)
+	{
+		$leitungMailAdress_arr = [];
+
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_organisationseinheit oe', 'oe_kurzbz');
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_benutzer b', 'uid');
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_person p', 'person_id');
+
+		$result = $this->_ci->BenutzerfunktionModel->loadWhere(
+			[
+				'oe.oe_kurzbz' => $oe_kurzbz,
+				'b.aktiv' => TRUE,
+				'funktion_kurzbz' => 'Leitung',
+				'(datum_von IS NULL OR datum_von <= NOW())' => NULL,
+				'(datum_bis IS NULL OR datum_bis >= NOW())' => NULL
+			]
+		);
+
+		if (hasData($result))
+		{
+			foreach (getData($result) as $leitung)
+			{
+				$leitungMailAdress_arr[] = [
+					'to' => $leitung->uid . '@' . DOMAIN,
+					'vorname' => $leitung->vorname,
+					'nachname' => $leitung->nachname
+				];
+			}
+		}
+
+		return $leitungMailAdress_arr;
 	}
 }
