@@ -435,6 +435,7 @@ export default {
 	  	</div>
 	  	<div class="evaluation-studiengaenge-table">
 			<core-filter-cmpt
+				v-if="selStudiensemester && selStgKz && selOrgform"
 				ref="stgTable"
 				uniqueId="tabStudiengaenge"
 				table-only
