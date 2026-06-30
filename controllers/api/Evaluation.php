@@ -1934,8 +1934,14 @@ class Evaluation extends FHCAPI_Controller
 		$condition = '
                 oe_kurzbz IN (\'' . implode('\',\'', $entitledOes) . '\') AND
                 aktiv = TRUE AND
-                organisationseinheittyp_kurzbz = \'Kompetenzfeld\'
+                ( 
+                	organisationseinheittyp_kurzbz = \'Kompetenzfeld\' OR 
+			 		organisationseinheittyp_kurzbz = \'Fachgebiet\' 
+				)
             ';
+
+		$this->OrganisationseinheitModel->addSelect('*');
+		$this->OrganisationseinheitModel->addSelect('organisationseinheittyp_kurzbz || \' \' || bezeichnung AS bezeichnung');
 
 		$result = $this->OrganisationseinheitModel->loadWhere($condition);
 

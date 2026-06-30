@@ -537,7 +537,7 @@ export default {
 							type="select"
 							v-model="selOeKurzbz"
 							name="oe_kurzbz"
-							:label="$p.t('lehre/kompetenzfeld')"
+							:label="$p.t('lehre/organisationseinheit')"
 							@change="onOeChange"
 						>
 							<option v-for="oe in lists.oes" :key="oe.oe_kurzbz" :value="oe.oe_kurzbz">
