@@ -2063,6 +2063,13 @@ class Evaluation extends FHCAPI_Controller
 		$oe_kurzbz = $this->input->get('oe_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
+		// Show Malve only for KFL users. Use Benutzerfunktion instead of Berechtigung_KF,
+		// because Berechtigung_KF is also assigned to Fachkoordinatoren.
+		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isKFL && !$isBerechtigt_ADMIN) $this->terminateWithSuccess(null);
+
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 		$result = $this->LvevaluierungMalveModel->loadWhere([
 			'oe_kurzbz' => $oe_kurzbz,
