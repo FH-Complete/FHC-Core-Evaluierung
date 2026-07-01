@@ -4,28 +4,111 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 
 class Evaluation extends FHCAPI_Controller
 {
+	const BERECHTIGUNG_KF = 'extension/lvevaluierung_kf';
 	const BERECHTIGUNG_STG = 'extension/lvevaluierung_stg';
+	const BERECHTIGUNG_INIT = 'extension/lvevaluierung_init';
+	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
+
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
-
-		parent::__construct(array(
-				'getEvaluationDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getEvaluationDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getAuswertungHelpUrl' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getTextantwortenByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLve' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'getReflexionDataByLveLv' => array('extension/lvevaluierung_stg:r','extension/lvevaluierung_init:r'),
-				'saveOrUpdateReflexion' => 'extension/lvevaluierung_init:r',
-				'getEntitledStgs' => 'extension/lvevaluierung_stg:r',
-				'getOrgformsByStg' => 'extension/lvevaluierung_stg:r',
-				'getLvListByStg' => 'extension/lvevaluierung_stg:r',
-				'updateVerpflichtend' => 'extension/lvevaluierung_stg:rw',
-				'updateReviewedLvInStg' => 'extension/lvevaluierung_stg:rw',
-			)
+		parent::__construct([
+				'getEvaluationDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEvaluationDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungHelpUrl' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getTextantwortenByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getReflexionDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEntitledKfs' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getEntitledStgs' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getOrgformsByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvListByKf' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvListByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getMalveByKf' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'updateVerpflichtend' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'updateReviewedLvInKf' => [
+					self::BERECHTIGUNG_KF . ':rw',
+				],
+				'updateReviewedLvInStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+				'saveOrUpdateReflexion' => [
+					self::BERECHTIGUNG_INIT . ':rw',
+				],
+				'saveMalveByKf' => [
+					self::BERECHTIGUNG_KF . ':rw',
+				],
+				'saveMalveByStg' => [
+					self::BERECHTIGUNG_STG . ':rw',
+				],
+			]
 		);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
@@ -52,37 +135,30 @@ class Evaluation extends FHCAPI_Controller
 	public function getEvaluationDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// Permission check
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-
-		// LV-Leitungen, if required
-		$lvLeitungen = [];
-		if ($this->_lvLeitungRequired)
-		{
-			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-			$lvLeitungen = hasData($result) ? getData($result) : [];
-		}
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
-		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
 
-//		$this->addMeta('this uid', $this->_uid);
-//		$this->addMeta('$lvLeitungen', $lvLeitungen);
-//		$this->addMeta('$lehrende', $lehrende);
-//		$this->addMeta('$isKfl', $isKfl);
-//		$this->addMeta('$isStgl', $isStgl);
-
+		// Permission Check
 		if (
-			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
+			$isLektorOfLv ||
+			$isLvLeitung ||
 			$isKfl ||
-			$isStgl
+			$isStgl ||
+			$isAdmin
 		) {
 
 			// Abgeschickte Frageboegen, Ruecklaufquote
@@ -97,17 +173,45 @@ class Evaluation extends FHCAPI_Controller
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
 
-			// Evaluation open check
-			$isEvaluationViewOpen = $this->isEvaluationViewOpen($lve);
-			$isEvaluationViewOpenMsg = null;
+			// Check if Evaluation view is open
+			// ---------------------------------------------------------------------------------------------------------
+			$isEvaluationViewOpen = true;
+			$isEvaluationViewOpenMsg = [];
 
-			if (!$isEvaluationViewOpen) {
-				$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv);
-				$isLektorOfLve = in_array($this->_uid, array_column($lektorOfLve, 'uid'));
+			$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
 
-				$isEvaluationViewOpenMsg = (($isKfl || $isStgl) && !$isLektorOfLve)
-					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+			if (!$this->hasSetEvaluierungszeitraum($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[] = 'Evaluierung noch nicht gestartet'. $context;
+			}
+			elseif (!$this->hasSentEvaluierungscodes($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungscodes noch nicht versendet'. $context;
+			}
+			elseif (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
+			{
+				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+			}
+			elseif ($role === 'stg' || $role === 'kf')
+			{
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context;
+				}
+			}
+
+			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
+			// ---------------------------------------------------------------------------------------------------------
+			$canAggregate = $role === 'stg' || $role === 'kf';
+			$aggregationOptions = null;
+
+			if ($canAggregate)
+			{
+				$aggregationOptions = $this->getAggregationSelectOptions($lveLv->lvevaluierung_lehrveranstaltung_id);
 			}
 
 			$data = array_merge(
@@ -128,7 +232,9 @@ class Evaluation extends FHCAPI_Controller
 				'data' => $data,
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
-					'msg'  => $isEvaluationViewOpenMsg,
+					'msg' => $isEvaluationViewOpenMsg,
+					'canAggregate' => $canAggregate,
+					'aggregationOptions' => $aggregationOptions
 				],
 			];
 
@@ -140,7 +246,9 @@ class Evaluation extends FHCAPI_Controller
 				'data' => null,
 				'evaluationView' => [
 					'open' => false,
-					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation'
+					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'canAggregate' => false,
+					'aggregationOptions' => []
 				],
 			];
 
@@ -161,35 +269,19 @@ class Evaluation extends FHCAPI_Controller
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
-		// Permission check
+		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-
-		// LV-Leitungen, if required
-		$lvLeitungen = [];
-		if ($this->_lvLeitungRequired)
-		{
-			$result = $this->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-			$lvLeitungen = hasData($result) ? getData($result) : [];
-		}
+		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
-//		$this->addMeta('this uid', $this->_uid);
-//		$this->addMeta('$lvLeitungen', $lvLeitungen);
-//		$this->addMeta('$lehrende', $lehrende);
-//		$this->addMeta('$isKfl', $isKfl);
-//		$this->addMeta('$isStgl', $isStgl);
-
-		if (
-			in_array($this->_uid, array_column($lvLeitungen, 'mitarbeiter_uid')) ||
-			in_array($this->_uid, array_column($lehrende, 'uid')) ||
-			$isKfl ||
-			$isStgl
-		) {
-
+		// Permission Check
+		if ($isKfl || $isStgl || $isAdmin)
+		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
 			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
 			$countSubmitted = count($submittedLveCodes);
@@ -205,40 +297,59 @@ class Evaluation extends FHCAPI_Controller
 			// Min startzeit / max endezeit overall Evaluierungen
 			$periodTimes = $this->getPeriodTimes($lves);
 
-			// Evaluation open check
+			// Check if Evaluation view is open
+			// ---------------------------------------------------------------------------------------------------------
 			$isEvaluationViewOpen = true;
-			$now = new DateTime();
+			$isEvaluationViewOpenMsg = [];
 
-			if (empty($lves)) {
+			// No Evaluierung at all
+			if (empty($lves))
+			{
 				$isEvaluationViewOpen = false;
+				$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet';
 			}
 
-			// Prüfe: irgendeine LVE hat keine Codes oder kein Endezeit
-			foreach ($lves as $lve) {
-				if ($lve->codes_ausgegeben === null || $lve->codes_ausgegeben === 0 || $lve->endezeit === null) {
+			// Check each Evaluierung
+			foreach ($lves as $lve)
+			{
+				$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
+
+				if (!$this->hasSetEvaluierungszeitraum($lve))
+				{
 					$isEvaluationViewOpen = false;
-					break;
+					$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet'. $context;
+					continue;
+				}
+
+				if (!$this->hasSentEvaluierungscodes($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungcodes noch nicht versendet'. $context;
+					continue;
+				}
+
+				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+					continue;
+				}
+
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context;
 				}
 			}
 
-			// Prüfe: irgendeine Evaluierungsperiode ist noch nicht abgeschlossen
-			$maxEndezeit = new DateTime($periodTimes['maxEndezeit']);
-			if ($isEvaluationViewOpen && $now < $maxEndezeit) {
-				$isEvaluationViewOpen = false;
-			}
+			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
+			// ---------------------------------------------------------------------------------------------------------
+			$canAggregate = $isKfl || $isStgl || $isAdmin;
+			$aggregationOptions = null;
 
-			if (($isKfl || $isStgl) && !in_array($this->_uid, array_column($lehrende, 'mitarbeiter_uid'))) {
-				$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForAllLvesInLveLv($lvevaluierung_lehrveranstaltung_id);
-				if (!$isReflexionszeitRaumAbgeschlossen) {
-					$isEvaluationViewOpen = false;
-				}
-			}
-			// Evaluation Open Message
-			$isEvaluationViewOpenMsg = null;
-			if (!$isEvaluationViewOpen) {
-				$isEvaluationViewOpenMsg = ($isKfl || $isStgl)
-					? 'Keine Daten vorhanden oder LV-Reflexionszeitraum noch nicht abgeschlossen.'
-					: 'Keine Daten vorhanden oder Evaluierungszeitfenster noch nicht abgeschlossen.';
+			if ($canAggregate)
+			{
+				$aggregationOptions = $this->getAggregationSelectOptions($lveLv->lvevaluierung_lehrveranstaltung_id);
 			}
 
 			$data = array_merge(
@@ -259,7 +370,9 @@ class Evaluation extends FHCAPI_Controller
 				'data' => $data,
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
-					'msg'  => $isEvaluationViewOpenMsg,
+					'msg' => $isEvaluationViewOpenMsg,
+					'canAggregate' => $canAggregate,
+					'aggregationOptions' => $aggregationOptions
 				],
 			];
 
@@ -271,7 +384,9 @@ class Evaluation extends FHCAPI_Controller
 				'data' => null,
 				'evaluationView' => [
 					'open' => false,
-					'msg' => 'Keine Berechtigung zur Ansicht dieser Evaluation'
+					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'canAggregate' => false,
+					'aggregationOptions' => []
 				],
 			];
 
@@ -288,15 +403,43 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		// Return if Evaluation not accessible
-		if (!$this->isEvaluationViewOpen($lve))
+		// KFL, STGL, Last inserted LV-Leitung, Admin
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
 		{
-			$this->terminateWithSuccess([]);
+			$this->terminateWithError('Permission denied');
 		}
 
+		// Exit Auswertung view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
+		{
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		}
+
+		// Get Auswertungen
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -328,22 +471,29 @@ class Evaluation extends FHCAPI_Controller
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		// Return if Evaluation period is still running
-		$periodTimes = $this->getPeriodTimes($lves);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
-		if ($now < $periodTimes['maxEndezeit'])
+		// KFL, STGL
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKfl && !$isStgl && !$isAdmin)
 		{
-			$this->terminateWithSuccess([]);
+			$this->terminateWithError('Permission denied');
 		}
 
-		// Return if students did not get codes yet
-		$codes = array_column($lves, 'codes_ausgegeben');
-		if (in_array(null, $codes, true)) {
-			$this->terminateWithSuccess([]);
+		// Exit Auswertung view
+		foreach ($lves as $lve)
+		{
+			if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+			if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
-		// Get Auswertungdata
+		// Get Auswertungen
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -389,15 +539,43 @@ class Evaluation extends FHCAPI_Controller
 	public function getTextantwortenByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
-		// Return if Evaluation period is still running
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
-		if ($now < $lve->endezeit) {
-			$this->terminateWithSuccess([]);
+		// KFL, STGL, Last inserted LV-Leitung, Admin
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
+		{
+			$this->terminateWithError('Permission denied');
 		}
 
+		// Exit Auswertung view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
+		{
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		}
+
+		// Get Textantworten
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -416,15 +594,29 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
 
-		// Return if Evaluation period is still running
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$periodTimes = $this->getPeriodTimes($lves);
-		$now = (new DateTime())->format('Y-m-d H:i:s');
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		if ($now < $periodTimes['maxEndezeit']) {
-			$this->terminateWithSuccess([]);
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKfl && !$isStgl && !$isAdmin)
+		{
+			$this->terminateWithError('Permission denied');
 		}
 
+		// Exit Textantworten view
+		foreach ($lves as $lve)
+		{
+			if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+			if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		}
+
+		// Get Textantworten
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungAntwort_model', 'LvevaluierungAntwortModel');
 		$result = $this->LvevaluierungAntwortModel->getTextantwortenByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
@@ -434,50 +626,192 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($textantworten);
 	}
 
+	private function getAggregationSelectOptions($lvevaluierung_lehrveranstaltung_id)
+	{
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		$options = [];
+
+		// Always option Evaluation auf LV-Ebene
+		// NOTE: for Gesamt-LV and also for Gruppenevaluierung (= aggregated on LV-Ebene)
+		if (!empty($lveLv))
+		{
+			$options[] = [
+				'value' => (int)$lvevaluierung_lehrveranstaltung_id,
+				'param' => 'lvevaluierung_lehrveranstaltung_id',
+				'text' => 'Ansicht Evaluation auf LV-Ebene'
+			];
+		}
+
+		// If Gruppenevaluierung: Add options for Gruppen LVEs
+		if ($lveLv->lv_aufgeteilt)
+		{
+			if (!empty($lves))
+			{
+				$this->load->model('person/Person_model', 'PersonModel');
+
+				$items = [];
+				$counts = [];
+
+				// Loop Evaluierungen
+				foreach ($lves as $lve)
+				{
+					// Get Lektor
+					$result = $this->LehreinheitmitarbeiterModel->getLektorenByLe($lve->lehreinheit_id);
+					$lektor = hasData($result) ? getData($result)[0] : null; // NOTE: aufgrund Gruppenlogik nur ein Lektor
+
+					$uid = isset($lektor->mitarbeiter_uid) ? $lektor->mitarbeiter_uid : null;
+					$nachname = isset($lektor->nachname) ? $lektor->nachname : 'Name fehlt';
+
+					// Counter for lektor
+					if (!isset($counts[$uid]))
+					{
+						$counts[$uid] = 0;
+					}
+
+					// Count up if same lektor
+					$counts[$uid]++;
+
+					$items[] = [
+						'uid' => $uid,
+						'nachname' => $nachname,
+						'id' => $lve->lvevaluierung_id
+					];
+				}
+
+				// Sort by nachname
+				usort($items, function ($a, $b)
+				{
+					return strcmp($a['nachname'], $b['nachname']);
+				});
+
+				// Build options
+				$index = [];
+
+				foreach ($items as $item)
+				{
+					$uid = $item['uid'];
+					$label = '';
+
+					// Add Gruppen label for duplicate lecturers, e.g.:
+					// Lector A - Gruppe 1
+					// Lector A - Gruppe 2
+					if ($uid !== null && isset($counts[$uid]) && $counts[$uid] > 1)
+					{
+						if (!isset($index[$uid]))
+						{
+							$index[$uid] = 1;
+						} else
+						{
+							$index[$uid]++;
+						}
+
+						$label = ' - Gruppe ' . $index[$uid];
+					}
+
+					$options[] = [
+						'value' => $item['id'],    // lvevaluierung_id
+						'param' => 'lvevaluierung_id',
+						'text' => 'Ansicht Evaluationsgruppe: ' . $item['nachname'] . $label
+					];
+				}
+			}
+		}
+
+		return $options;
+	}
+
 	// -----------------------------------------------------------------------------------------------------------------
 	// LV-REFLEXION
 	// -----------------------------------------------------------------------------------------------------------------
 	public function getReflexionDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
+		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$result = $this->LehrveranstaltungModel->getLvLeitung(
-			$lveLv->lehrveranstaltung_id,
-			$lveLv->studiensemester_kurzbz
-		);
-		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
-		// Skip if Evaluation period is still running or students did not get codes yet
-		if (!$this->isEvaluationViewOpen($lve))
+		// Lehrende
+		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
+
+		// Permission check
+		if (
+			!$isLektorOfLv &&
+			!$isLvLeitung &&
+			!$isKfl &&
+			!$isStgl &&
+			!$isAdmin
+		)
 		{
-			$this->terminateWithSuccess([]);
+			$this->terminateWithError('Permission denied');
 		}
 
-		// Build Reflexionen by Lehrende
-		$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
+		// Exit Reflexionen view
+		if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+		if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+		if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		if ($role === 'stg' || $role === 'kf')
+		{
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+		}
 
-		// Filter Reflexionen (nicht alle dürfen alle Reflexionen sehen)
-		$filteredReflexionen = $this->filterReflexionenByPermission(
-			$reflexionen,
-			$lveLv,
-			$lvLeitung->mitarbeiter_uid
-		);
+		// Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
+		// Build Reflexionen by Lehrende
+		$reflexionen = $this->buildReflexionenByLve($lve, $lveLv);
+
+		// Übersicht Reflexionen (before possible filtering in next step)
+		// -------------------------------------------------------------------------------------------------------------
+		$reflexionenUebersichtData = [];
+		$isReflexionszeitRaumAbgeschlossen = $this->isReflexionszeitraumAbgeschlossen($lve);
+		$showReflexionenUebersicht =
+			$role === 'stg' ||
+			$role === 'kf' ||
+			($isLvLeitung && !$lveLv->lv_aufgeteilt);    // LV-Leitung darf Übersicht nur sehen, wenn Gesamt-LV
+
+		if ($showReflexionenUebersicht && $isReflexionszeitRaumAbgeschlossen)
+		{
+			$reflexionenUebersichtData = $this->buildReflexionenUebersichtData($reflexionen); // note: use the unfiltered reflexionen
+		}
+
+		// Filter Reflexionen and add checks
+		// -------------------------------------------------------------------------------------------------------------
+		/* Filter Reflexionen if necessary (nicht alle dürfen alle Reflexionen sehen)
+			Ausnahme: STGL und KFL, wenn Reflexionszeit abgeschlossen ist (dürfen immer alles sehen) */
+		if (!(($role === 'stg' || $role === 'kf') && $isReflexionszeitRaumAbgeschlossen))
+		{
+			$reflexionen = $this->filterVisibleReflexionenForLehrende(
+				$reflexionen,
+				$lveLv
+			);
+		}
 
 		$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
-			$filteredReflexionen,
+			$reflexionen,
 			$lve,
 			$lveLv,
 			$isKfl,
-			$isStgl,
-			$lvLeitung->mitarbeiter_uid
+			$isStgl
 		);
 
-		$this->terminateWithSuccess($checkedReflexionen);
+		$resultData = [
+			'reflexionen' => $checkedReflexionen,
+			'reflexionenUebersicht' => [
+				'show' => $showReflexionenUebersicht,
+				'data' => $reflexionenUebersichtData,
+			]
+		];
+
+		$this->terminateWithSuccess($resultData);
 	}
 	public function getReflexionDataByLveLv()
 	{
@@ -488,31 +822,38 @@ class Evaluation extends FHCAPI_Controller
 
 		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
 		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$result = $this->LehrveranstaltungModel->getLvLeitung(
-			$lveLv->lehrveranstaltung_id,
-			$lveLv->studiensemester_kurzbz
-		);
-		$lvLeitung = hasData($result) ? getData($result)[0] : null;
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
+		if (!$isKfl && !$isStgl && !$isAdmin)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
 		$reflexionenByLveLv = [];
+		$allReflexionszeitraumAbgeschlossen = true;
 		foreach ($lves as $lve)
 		{
 			// Skip if Evaluation period is still running or students did not get codes yet
-			if (!$this->isEvaluationViewOpen($lve))
+			if (!$this->hasSetEvaluierungszeitraum($lve)) continue;
+			if (!$this->hasSentEvaluierungscodes($lve)) continue;
+			if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) continue;
+			if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 			{
+				$allReflexionszeitraumAbgeschlossen = false;
 				continue;
 			}
 
 			// Build Reflexionen
-			$reflexionen = $this->buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung);
+			$reflexionen = $this->buildReflexionenByLve($lve, $lveLv);
 
 			$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
 				$reflexionen,
 				$lve,
 				$lveLv,
 				$isKfl,
-				$isStgl,
-				$lvLeitung->mitarbeiter_uid
+				$isStgl
 			);
 
 			$reflexionenByLveLv = array_merge(
@@ -521,8 +862,27 @@ class Evaluation extends FHCAPI_Controller
 			);
 		}
 
-		$this->terminateWithSuccess($reflexionenByLveLv);
+		// Übersicht Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
+		$showReflexionenUebersicht = $isKfl || $isStgl;
+		$reflexionenUebersichtData = [];
+
+		if ($showReflexionenUebersicht && $allReflexionszeitraumAbgeschlossen)
+		{
+			$reflexionenUebersichtData = $this->buildReflexionenUebersichtData($reflexionenByLveLv);
+		}
+
+		$resultData = [
+			'reflexionen' => $reflexionenByLveLv,
+			'reflexionenUebersicht' => [
+				'show' => $showReflexionenUebersicht,
+				'data' => $reflexionenUebersichtData,
+			]
+		];
+
+		$this->terminateWithSuccess($resultData);
 	}
+
 	public function saveOrUpdateReflexion()
 	{
 		$lvevaluierung_reflexion_id = $this->input->post('lvevaluierung_reflexion_id');
@@ -543,7 +903,7 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 
-		$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, null, true);
+		$lektorOfLve = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
 		if (!in_array($this->_uid, array_column($lektorOfLve, 'uid')) ||
 			$mitarbeiterUid != $this->_uid)
 		{
@@ -658,54 +1018,282 @@ class Evaluation extends FHCAPI_Controller
 
 		return $verpflichtend;
 	}
-	private function buildReflexionenByLehrendeOfLve($lve, $lveLv, $lvLeitung){
 
-		// Get Lehrende
-		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, $lvLeitung, true);
-
-		// ReflexionData
+	/**
+	 * Builds reflexion dataset for a given LVE evaluation.
+	 *
+	 * Combines existing Reflexionen with expected lecturers derived from the Evaluierungsebene (Gruppe or Gesamt-LV)
+	 * Ensures that every expected lecturer has a reflexion entry, even if none exists yet (null reflexion fallback).
+	 *
+	 * @param $lve
+	 * @param $lveLv
+	 * @param $lvLeitung
+	 * @return array
+	 */
+	private function buildReflexionenByLve($lve, $lveLv)
+	{
 		$data = [];
+
+		// Get Reflexionen
+		$result = $this->LvevaluierungReflexionModel->loadWhere([
+			'lvevaluierung_id' => $lve->lvevaluierung_id,
+		]);
+
+		$reflexionen = hasData($result) ? getData($result) : [];
+
+		// Get all Lehrende of Lve that have to do Reflexion
+		$lektoren = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
+
+		$lektorenByUid = [];
 		foreach ($lektoren as $lektor) {
-			$isVerpflichtend = $this->isReflexionVerpflichtendForUid($lveLv, $lektor->uid);
+			$lektorenByUid[$lektor->uid] = $lektor;
+		}
 
-			// Get Reflexion
-			$result = $this->LvevaluierungReflexionModel->loadWhere([
-				'lvevaluierung_id' => $lve->lvevaluierung_id,
-				'mitarbeiter_uid' => $lektor->uid,
-			]);
-			$reflexion = hasData($result) ? getData($result)[0] : null;
+		// Store lektoren with reflexionen done
+		$reflexionenUids = [];
 
-			// ReflexionData immer zurückgeben mit Lektoren Info.
-			// Eigentliche LV-Reflexion kann null sein -> frontend bildet dann leeres Formular zum Bearbeiten
+		foreach ($reflexionen as $reflexion)
+		{
+			$reflexionenUids[] = $reflexion->mitarbeiter_uid;
+
+			// Lektor holen (einfach gehalten → über LV)
+			$lektor = isset($lektorenByUid[$reflexion->mitarbeiter_uid])
+				? $lektorenByUid[$reflexion->mitarbeiter_uid]
+				: null;
+
+			$leGruppeBezeichnung = '';
+			if ($lveLv->lv_aufgeteilt)
+			{
+				$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+				$leGruppeBezeichnung = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+			}
+			else
+			{
+
+				$result = $this->evaluationlib->getLehreinheitgruppenByLv($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz, $reflexion->mitarbeiter_uid);
+				$leGruppen = hasData($result) ? getData($result) : [];
+				$leGruppeBezeichnung = implode(', ', array_column($leGruppen, 'gruppe_bezeichnung'));
+			}
+
 			$data[] = [
-				'lvevaluierung_reflexion_id' => !is_null($reflexion) ? $reflexion->lvevaluierung_reflexion_id : null,
+				'lvevaluierung_reflexion_id' => $reflexion->lvevaluierung_reflexion_id,
 				'lvevaluierung_id' => $lve->lvevaluierung_id,
-				'mitarbeiter_uid' => $lektor->uid,
-				'lveReflexion' => $reflexion, // kann null sein
+				'mitarbeiter_uid' => $reflexion->mitarbeiter_uid,
+				'lveReflexion' => $reflexion,
 				'vorname' => $lektor->vorname,
 				'nachname' => $lektor->nachname,
-				'isVerpflichtend' => $isVerpflichtend,
-				'isLvLeitung' => $lektor->isLvLeitung
+				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
+				'isLvLeitung' => $lektor->isLvLeitung,
+				'gruppeBezeichnung'	=> $leGruppeBezeichnung
+			];
+		}
+
+		// Add wrapper for missing Reflexionen
+		foreach ($lektoren as $lektor)
+		{
+			if (in_array($lektor->uid, $reflexionenUids)) continue;
+
+			$leGruppeBezeichnung = '';
+			if ($lveLv->lv_aufgeteilt)
+			{
+				$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+				$leGruppeBezeichnung = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+			}
+			else
+			{
+
+				$result = $this->evaluationlib->getLehreinheitgruppenByLv($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz, $lektor->uid);
+				$leGruppen = hasData($result) ? getData($result) : [];
+				$leGruppeBezeichnung = implode(', ', array_column($leGruppen, 'gruppe_bezeichnung'));
+			}
+
+			$data[] = [
+				'lvevaluierung_reflexion_id' => null,
+				'lvevaluierung_id' => $lve->lvevaluierung_id,
+				'mitarbeiter_uid' => $lektor->uid,
+				'lveReflexion' => null,
+				'vorname' => $lektor->vorname,
+				'nachname' => $lektor->nachname,
+				'isVerpflichtend' => $lveLv->lv_aufgeteilt ? true : $lektor->isLvLeitung,
+				'isLvLeitung' => $lektor->isLvLeitung,
+				'gruppeBezeichnung' => $leGruppeBezeichnung
 			];
 		}
 
 		// Sort: LV-Leitung first
-		usort($data, function($a, $b) {
+		usort($data, function ($a, $b)
+		{
 			if ($a['isLvLeitung'] === $b['isLvLeitung']) return 0;
 			return $a['isLvLeitung'] ? -1 : 1;
 		});
 
 		return $data;
-
 	}
 
-	private function filterReflexionenByPermission(
+	private function buildReflexionenUebersichtData($reflexionenData)
+	{
+		// Get Antwort-Praesenz values
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexionAntwortPraesenz_model', 'LvevaluierungReflexionAntwortPraesenzModel');
+		$result = $this->LvevaluierungReflexionAntwortPraesenzModel->loadByUserLang();
+		$antwortenPraesenz = hasData($result) ? getData($result) : [];
+
+		// Get Antwort-Nachvollziehbarkeit values
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexionAntwortNachvollziehbar_model', 'LvevaluierungReflexionAntwortNachvollziehbarModel');
+		$result = $this->LvevaluierungReflexionAntwortNachvollziehbarModel->loadByUserLang();
+		$antwortenNachvollziehbar = hasData($result) ? getData($result) : [];
+
+
+		// Init basic structure
+		$reflexionenUebersichtData = [
+			'verpflichtend' => [
+				'praesenz_kurzbz' => [
+					'label' => 'LV in Präsenz',
+					'values' => []
+				],
+				'nachvollziehbar_kurzbz' => [
+					'label' => 'Ergebnisse nachvollziehbar',
+					'values' => []
+				],
+				'massnahmennoetig' => [
+					'label' => 'Maßnahmen abgeleitet',
+					'values' => [
+						'ja' => ['label' => 'Ja', 'anzahl' => 0],
+						'nein' => ['label' => 'Nein', 'anzahl' => 0]
+					]
+				]
+			],
+			'optional' => [
+				'praesenz_kurzbz' => [
+					'label' => 'LV in Präsenz',
+					'values' => []
+				],
+				'nachvollziehbar_kurzbz' => [
+					'label' => 'Ergebnisse nachvollziehbar',
+					'values' => []
+				],
+				'massnahmennoetig' => [
+					'label' => 'Maßnahmen abgeleitet',
+					'values' => [
+						'ja' => ['label' => 'Ja', 'anzahl' => 0],
+						'nein' => ['label' => 'Nein', 'anzahl' => 0]
+					]
+				]
+			],
+			'meta' => [
+				'gesamtReflexionen' => 0,
+				'ausgefuellteReflexionen' => 0,
+				'ausfuellquote' => 0,
+				'ausfuellquoteProzent' => 0,
+				'hasOptionalReflexionen' => false
+			]
+		];
+
+		// Init Antwortmöglichkeiten with 0 (e.g. ja = 0, nein = 0, unknown = 0,...)
+		foreach ($antwortenPraesenz as $antwort) {
+			$key = $antwort->praesenz_kurzbz;
+			$label = $antwort->bezeichnung;
+
+			$reflexionenUebersichtData['verpflichtend']['praesenz_kurzbz']['values'][$key] = [
+				'label' => $label,
+				'anzahl' => 0
+			];
+			$reflexionenUebersichtData['optional']['praesenz_kurzbz']['values'][$key] = [
+				'label' => $label,
+				'anzahl' => 0
+			];
+		}
+
+		foreach ($antwortenNachvollziehbar as $antwort) {
+			$key = $antwort->nachvollziehbar_kurzbz;
+			$label = $antwort->bezeichnung;
+
+			// Shorten Bezeichnung, that includes an example inside brackets
+			// Concrete: Kann ich nicht beurteilen (zB. weil nicht genügend N) --> remove the example part
+			$pos = strpos($label, '(');
+			if ($pos !== false) {
+				$label = trim(substr($label, 0, $pos));
+			}
+
+			$reflexionenUebersichtData['verpflichtend']['nachvollziehbar_kurzbz']['values'][$key] = [
+				'label' => $label,
+				'anzahl' => 0
+			];
+			$reflexionenUebersichtData['optional']['nachvollziehbar_kurzbz']['values'][$key] = [
+				'label' => $label,
+				'anzahl' => 0
+			];
+		}
+
+		$gesamtVerpflichtendeReflexionen = 0;
+		$ausgefuellteVerpflichtendeReflexionen = 0;
+		$showUebersichtOptionale = false;
+
+		// Build
+		foreach ($reflexionenData as $item) {
+			$isVerpflichtend = $item['isVerpflichtend'];
+
+			// true if at least one optional Reflexion done
+			if (!$isVerpflichtend && $item['lveReflexion'] !== null) {
+				$showUebersichtOptionale = true;
+			}
+
+			// Gesamt verpflichtend zählen (egal ob ausgefüllt oder nicht)
+			if ($isVerpflichtend) {
+				$gesamtVerpflichtendeReflexionen++;
+			}
+
+			// skip if no reflexion
+			if ($item['lveReflexion'] === null) continue;
+
+			// Count ausgefüllte verpflichtende
+			if ($isVerpflichtend) {
+				$ausgefuellteVerpflichtendeReflexionen++;
+			}
+
+			$pflichtStatus = $isVerpflichtend ? 'verpflichtend' : 'optional';
+
+			$lveReflexion = $item['lveReflexion'];
+
+			// praesenz
+			if (isset($reflexionenUebersichtData[$pflichtStatus]['praesenz_kurzbz']['values'][$lveReflexion->praesenz_kurzbz])) {
+				$reflexionenUebersichtData[$pflichtStatus]['praesenz_kurzbz']['values'][$lveReflexion->praesenz_kurzbz]['anzahl']++;
+			}
+
+			// nachvollziehbar
+			if (isset($reflexionenUebersichtData[$pflichtStatus]['nachvollziehbar_kurzbz']['values'][$lveReflexion->nachvollziehbar_kurzbz])) {
+				$reflexionenUebersichtData[$pflichtStatus]['nachvollziehbar_kurzbz']['values'][$lveReflexion->nachvollziehbar_kurzbz]['anzahl']++;
+			}
+
+			// massnahmennoetig
+			$key = $lveReflexion->massnahmennoetig ? 'ja' : 'nein';
+			$reflexionenUebersichtData[$pflichtStatus]['massnahmennoetig']['values'][$key]['anzahl']++;
+
+
+		}
+		// Calculate Ausfüllquote
+		$ausfuellquote = $gesamtVerpflichtendeReflexionen > 0
+			? $ausgefuellteVerpflichtendeReflexionen / $gesamtVerpflichtendeReflexionen
+			: 0;
+
+		$reflexionenUebersichtData['meta'] = [
+			'gesamtVerpflichtendeReflexionen' => $gesamtVerpflichtendeReflexionen, // Reflexionen to be done
+			'ausgefuellteVerpflichtendeReflexionen' => $ausgefuellteVerpflichtendeReflexionen, // indeed done
+			'ausfuellquote' => $ausfuellquote,
+			'ausfuellquoteProzent' => round($ausfuellquote * 100, 1),
+			'showUebersichtOptionale' => $showUebersichtOptionale,    // at least one optional done
+		];
+
+		return $reflexionenUebersichtData;
+	}
+
+	private function filterVisibleReflexionenForLehrende(
 		$reflexionen,
-		$lveLv,
-		$lvLeitungUid
+		$lveLv
 	)
 	{
 		$data = [];
+
+		$lvLeitung = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
 		foreach ($reflexionen as $reflexion) {
 			// Gruppen-Evaluierung: nur eigene Reflexion sichtbar
@@ -723,11 +1311,12 @@ class Evaluation extends FHCAPI_Controller
 				}
 
 				// Wenn nicht LV-Leitung: auch Reflexion von LV-Leitung sichtbar
-				if ($this->_uid !== $lvLeitungUid &&
-					$reflexion['mitarbeiter_uid'] === $lvLeitungUid)
+				if (
+					$this->_uid !== $lvLeitung[0]->mitarbeiter_uid &&
+					$reflexion['mitarbeiter_uid'] === $lvLeitung[0]->mitarbeiter_uid
+				)
 				{
 					$data[] = $reflexion;
-
 				}
 			}
 		}
@@ -738,13 +1327,14 @@ class Evaluation extends FHCAPI_Controller
 		$lve,
 		$lveLv,
 		$isKfl,
-		$isStgl,
-		$lvLeitungUid
+		$isStgl
 	)
 	{
 		$data = [];
 
 		$check = $this->checkBearbeitungOffenForReflexion($lve);
+
+		$lvLeitung = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 
 		foreach ($reflexionen as $reflexion)
 		{
@@ -758,19 +1348,19 @@ class Evaluation extends FHCAPI_Controller
 				'showEinmeldungButton' => true,
 			];
 
-			// KFL / STGL, aber nur wenn nicht selbst Bearbeiter der Reflexion ist
-			if (($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid)
-			{
-				$reflexion['isBearbeitungOffen'] = false;
-				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
-			}
+			$isReadOnly =
+				($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid
 
-			// Gesamt LV + fremde LV Leitung Reflexion
-			if (
-				!$lveLv->lv_aufgeteilt
-				&& $this->_uid !== $lvLeitungUid
-				&& $reflexion['mitarbeiter_uid'] === $lvLeitungUid
-			) {
+				|| (
+					!$lveLv->lv_aufgeteilt
+					&& !$isKfl
+					&& !$isStgl
+					&& $reflexion['mitarbeiter_uid'] === $lvLeitung[0]->mitarbeiter_uid
+					&& $this->_uid !== $lvLeitung[0]->mitarbeiter_uid
+				);
+
+			if ($isReadOnly)
+			{
 				$reflexion['isBearbeitungOffen'] = false;
 				$reflexion['sperreGrund'][] = 'Nur Ansicht möglich';
 			}
@@ -913,31 +1503,303 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($data);
 	}
 
-	// -----------------------------------------------------------------------------------------------------------------
-	// Helper methods
-	// -----------------------------------------------------------------------------------------------------------------
 	/**
-	 * Return if Evaluation has not been ended yet, Evaluation period is still running or codes were not even sent.
+	 * Get MALVE by Studiengang and Studiensemester.
 	 *
-	 * @param $lve
-	 * @return bool
+	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
+	 * @return void
 	 */
-	private function isEvaluationViewOpen($lve)
+	public function getMalveByStg()
 	{
-		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$studiengang_kz = $this->input->get('studiengang_kz');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
-		// Für KFL und STGL Evaluierungsansicht öffnen, wenn LV-Reflexionszeitraum abgeschlossen
-		if ($isKfl || $isStgl)
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
+
+		if (hasData($result))
 		{
-			$isReflexionszeitRaumAbgeschlossen = $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
-			if (!$isReflexionszeitRaumAbgeschlossen)
+			$studiengang = getData($result)[0];
+
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			$data = $this->getDataOrTerminateWithError($result);
+
+			$this->terminateWithSuccess($data);
+		}
+		else
+		{
+			$this->terminateWithError('No Studiengang found to get MALVE data');
+		}
+	}
+
+	/**
+	 * Save MALVE by Studiengang and Studiensemester.
+	 *
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this STG.
+	 *
+	 * @return void
+	 */
+	public function saveMalveByStg()
+	{
+		$studiengang_kz = $this->input->post('studiengang_kz');
+		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
+
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
+
+		if (hasData($result))
+		{
+			$studiengang = getData($result)[0];
+
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+
+			// Check if already exist
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			// If not exist
+			if (!hasData($result))
 			{
-				return false;
+				// Insert
+				$result = $this->LvevaluierungMalveModel->insert([
+					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'insertvon' => $this->_uid
+				]);
+
+				if (isError($result))
+				{
+					$this->terminateWithError(getError($result));
+				}
+				else
+				{
+					$insertId = getData($result);
+
+					// Get new record
+					$record = $this->LvevaluierungMalveModel->load($insertId);
+
+					if (!hasData($record))
+					{
+						$this->terminateWithError('Inserted record not found');
+					}
+
+					$this->terminateWithSuccess(getData($record));
+				}
 			}
 		}
+		else
+		{
+			$this->terminateWithError('No Studiengang found to get MALVE data');
+		}
+	}
 
+	// -----------------------------------------------------------------------------------------------------------------
+	// Evaluation Kompetenzfeld
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Get Kompetenzfelder for which the user is entitled.
+	 *
+	 * @return void
+	 */
+	public function getEntitledKfs()
+	{
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+
+		$condition = '
+                oe_kurzbz IN (\'' . implode('\',\'', $entitledOes) . '\') AND
+                aktiv = TRUE AND
+                organisationseinheittyp_kurzbz = \'Kompetenzfeld\'
+            ';
+
+		$result = $this->OrganisationseinheitModel->loadWhere($condition);
+
+		$oes = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($oes);
+	}
+
+	/**
+	 * Get Lv-List Data of all Lvs that shall be evaluated in given Studiensemester and Kompetenzfeld.
+	 * (from Lvevaluierung-Lehrveranstaltung table)
+	 *
+	 * @return void
+	 */
+	public function getLvListByKf()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+
+		// Permission check
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+	$this->addMeta('uid', $this->_uid);
+	$this->addMeta('$isAdmin', $isAdmin);
+		if (!in_array($oe_kurzbz, $entitledOes) && !$isAdmin) $this->terminateWithError('Permission denied');
+	$this->addMeta('$entitledOes', $entitledOes);
+	$this->addMeta('$oe_kurzbz', $oe_kurzbz);
+
+		// Get LV List
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByKf(
+			$studiensemester_kurzbz,
+			$oe_kurzbz
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		// Get Ruecklauf data
+		$lveLvIds = array_column($data, 'lvevaluierung_lehrveranstaltung_id');
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLveLv($lveLvIds);
+		$rlData = hasData($result) ? getData($result) : [];
+
+		// Add Ruecklauf values to data
+		foreach ($data as $item)
+		{
+			$lveLvId = $item->lvevaluierung_lehrveranstaltung_id;
+			$agg = current(array_filter($rlData, function ($r) use ($lveLvId)
+			{
+				return $r->lvevaluierung_lehrveranstaltung_id === $lveLvId;
+			}));
+			$item->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$item->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$item->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float)$agg->ruecklaufquote
+				: null;
+		}
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Get MALVE by Kompetenzfeld and Studiensemester.
+	 *
+	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
+	 * @return void
+	 */
+	public function getMalveByKf()
+	{
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+		$result = $this->LvevaluierungMalveModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Save MALVE by Kompetenzfeld and Studiensemester.
+	 *
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this Kompetenzfeld.
+	 *
+	 * @return void
+	 */
+	public function saveMalveByKF()
+	{
+		$oe_kurzbz = $this->input->post('oe_kurzbz');
+		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
+
+		$isKfl = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
+		if (!$isKfl) $this->terminateWithError('Permission denied. Only KFL can save.');
+
+		// Check if OE is Kompetenzfeld
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->OrganisationseinheitModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			'organisationseinheittyp_kurzbz' => 'Kompetenzfeld',
+			'aktiv' => TRUE
+		]);
+
+		if (hasData($result))
+		{
+			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+
+			// Check if MALVE already exist
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $oe_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			// If not exist
+			if (!hasData($result))
+			{
+				// Insert
+				$result = $this->LvevaluierungMalveModel->insert([
+					'oe_kurzbz' => $oe_kurzbz,
+					'studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'insertvon' => $this->_uid
+				]);
+
+				if (isError($result))
+				{
+					$this->terminateWithError(getError($result));
+				}
+				else
+				{
+					$insertId = getData($result);
+
+					// Get new record
+					$record = $this->LvevaluierungMalveModel->load($insertId);
+
+					if (!hasData($record))
+					{
+						$this->terminateWithError('Inserted record not found');
+					}
+
+					$this->terminateWithSuccess(getData($record));
+				}
+			}
+		}
+		else
+		{
+			$this->terminateWithError('No Kompetenzfeld found to get MALVE data');
+		}
+	}
+
+	/**
+	 * Update reviewed Evaluierungen for given Lehrveranstaltung, reviewed by Kompetenzfeldleitung.
+	 *
+	 * @return void
+	 */
+	public function updateReviewedLvInKf()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$isReviewed = $this->input->post('isReviewed');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			['reviewed_kf' => $isReviewed]
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+
+	private function hasSetEvaluierungszeitraum($lve)
+	{
+		return $lve->startzeit !== null && $lve->endezeit !== null;
+	}
+
+	private function hasSentEvaluierungscodes($lve)
+	{
+		return $lve->codes_gemailt === true && $lve->codes_ausgegeben !== null;
+	}
+
+	private function isEvaluierungszeitraumAbgeschlossen($lve)
+	{
 		// Genereller Evaluierungsansicht öffnen, wenn Codes versendet und Evaluierungszeitfenster abgeschlossen
 		$now = (new DateTime())->format('Y-m-d H:i:s');
 		return !(
@@ -945,6 +1807,24 @@ class Evaluation extends FHCAPI_Controller
 			$lve->endezeit === null ||
 			$now < $lve->endezeit
 		);
+	}
+
+	private function isReflexionszeitraumAbgeschlossen($lve)
+	{
+		return $this->LvevaluierungReflexionModel->isReflexionszeitraumAbgeschlossenForLve($lve->lvevaluierung_id);
+	}
+
+	private function getEvaluationViewOpenMsgContextText($lve, $isLvAufgeteilt)
+	{
+		if ($isLvAufgeteilt)
+		{
+			$result = $this->evaluationlib->getLehreinheitgruppenByLe($lve->lehreinheit_id);
+			$gruppe = hasData($result) ? getData($result)[0]->gruppe_bezeichnung : '';
+
+			return ' für Gruppe ' . $gruppe;
+		}
+
+		return ' für Gesamt-LV';
 	}
 	/**
 	 * Calculate all durations in minutes.
@@ -956,7 +1836,7 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$durations = array_map(function($item) {
 			$start = new DateTime($item->startzeit);
-			$end   = new DateTime($item->endezeit);
+			$end = new DateTime($item->endezeit);
 
 			// duration in minutes
 			return round(($end->getTimestamp() - $start->getTimestamp()) / 60, 2);
@@ -1018,12 +1898,12 @@ class Evaluation extends FHCAPI_Controller
 							'actYear' => 0,
 							'actYearMin1' => 0,
 							'actYearMin2' => 0,
-						],	// default
+						],    // default
 						'hodgesLehmann' => [
 							'actYear' => 0,
 							'actYearMin1' => 0,
 							'actYearMin2' => 0,
-						]	// default
+						]    // default
 					]
 				];
 			}

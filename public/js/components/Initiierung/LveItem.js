@@ -66,7 +66,7 @@ export default {
 				this.$api
 					.call(ApiInitiierung.generateCodesAndSendLinksToStudent(lveDetail.lvevaluierung_id))
 					.then(result => {
-						if (result.data !== null) {
+						if (result?.data !== null) {
 							// Update data
 							lveDetail.codes_gemailt = result.data.codes_gemailt;
 							lveDetail.codes_ausgegeben = result.data.codes_ausgegeben;
@@ -109,19 +109,18 @@ export default {
 		getSavedEvaluierungInfoString(lveLvDetail) {
 			const isUpdate = lveLvDetail.updateamum != null;
 
-			const lektor = isUpdate
-					? lveLvDetail.updatevonFullName
-					: lveLvDetail.insertvonFullName;
+			if (isUpdate) {
+				const lektor = lveLvDetail.updatevonFullName;
+				const date = lveLvDetail.updateamum;
 
-			const date = isUpdate
-					? lveLvDetail.updateamum
-					: lveLvDetail.insertamum;
+				return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
+			}
 
-			return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
+			return '';
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +
-					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/lehre/' +
 					'?lvevaluierung_id=' + lvevaluierung_id;
 
 			window.open(url, '_blank');
@@ -259,9 +258,7 @@ export default {
 				</fieldset><!--.fieldset LV-Evaluierungen-->
 			</div><!--.end card-body -->
 			<!-- Codes versenden -->
-			<div class="card-body mb-3" 
-				v-if="lveLvDetail.lvevaluierung_id || lveLvDetail.sentByAnyEvaluierungOfLv.length > 0"
-			>
+			<div class="card-body mb-3" v-if="lveLvDetail.editableCheck.isRenderedSendMail">
 				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
 				<div class="row gx-5">
 					<div class="col-6 col-md-5">

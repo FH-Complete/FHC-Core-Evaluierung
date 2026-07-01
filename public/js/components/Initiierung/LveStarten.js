@@ -4,6 +4,7 @@ import ApiFhc from "../../api/fhc.js";
 import ApiInitiierung from "../../api/initiierung.js";
 import Switcher from "./Switcher.js";
 import LveItem from "./LveItem.js";
+import DateHelper from "../../helpers/DateHelper";
 
 export default {
 	name: "LveStarten",
@@ -110,6 +111,21 @@ export default {
 					this.selLveLvDetails = lv_aufgeteilt
 							? data.groupedByLe
 							: data.groupedByLv;
+
+					// If start- and endezeit is null, set default values
+					this.selLveLvDetails.forEach(item => {
+						// default startzeit: now
+						if (!item.startzeit) {
+							item.startzeit = DateHelper.formatToSqlTimestamp(new Date());
+						}
+						// default endezeit: now + 3 days
+						if (!item.endezeit) {
+							item.endezeit = DateHelper.formatToSqlTimestamp(
+								DateHelper.addDays(new Date(), 3)
+							);
+						}
+					});
+
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
@@ -178,13 +194,6 @@ export default {
 					lv.kurzbzlang.toLowerCase().includes(query) ||
 					lv.lehrveranstaltung_id.toString().includes(query)
 			);
-		},
-		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
-			const url = this.$api.getUri() +
-				'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/' +
-				'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
-
-			window.open(url, '_blank');
 		}
 	},
 	template: `
@@ -298,12 +307,6 @@ export default {
 								</span>
 							</div>
 						</button>
-<!--						<button -->
-<!--							class="btn btn-outline-secondary btn-sm position-absolute end-0 top-50 translate-middle-y me-5 fw-normal fs-6 text-reset z-3"-->
-<!--							@click="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"-->
-<!--						>-->
-<!--							<i class="fa fa-square-poll-horizontal"></i>-->
-<!--						</button>-->
 					</h2>
 					<div 
 						:ref="'flush-collapse' + lveLv.lvevaluierung_lehrveranstaltung_id" 

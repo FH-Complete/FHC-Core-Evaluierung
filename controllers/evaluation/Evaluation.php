@@ -8,24 +8,49 @@ class Evaluation extends Auth_Controller
 	 */
 	public function __construct()
 	{
-		/** @noinspection PhpUndefinedClassConstantInspection */
-		parent::__construct(array(
-			'index'=> 'extension/lvevaluierung_init:rw'	// TODO!
-			)
+		parent::__construct(
+			[
+				'index'=> [
+					'extension/lvevaluierung_init:rw',
+					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:rw',
+					'extension/lvevaluierung_admin:rw',
+				],
+				'lehre'=> [
+					'extension/lvevaluierung_init:rw',
+					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:rw',
+					'extension/lvevaluierung_admin:rw',
+				],
+				'stg'=> [
+					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:r',
+					'extension/lvevaluierung_admin:rw',
+				],
+				'kf'=> [
+					'extension/lvevaluierung_kf:rw',
+					'extension/lvevaluierung_admin:rw',
+				]
+			]
 		);
-
-		$this->load->library('PermissionLib');
 	}
-
-	/**
-	 * Index Controller
-	 * @return void
-	 */
 	public function index()
 	{
-		if ($this->permissionlib->isBerechtigt('extension/lvevaluierung_init:rw'))	// TODO!
-		{
-			$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation.php');
-		}
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
+	}
+
+	public function lehre()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
+	}
+
+	public function stg()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
+	}
+
+	public function kf()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
 	}
 }

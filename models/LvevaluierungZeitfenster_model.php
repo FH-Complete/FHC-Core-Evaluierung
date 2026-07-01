@@ -9,6 +9,16 @@ class LvevaluierungZeitfenster_model extends DB_Model
 		$this->pk = 'lvevaluierung_zeitfenster_id';
 	}
 
+	public function getZeitfenster($typ, $lvevaluierung_lehrveranstaltung_id)
+	{
+		$this->addJoin('extension.tbl_lvevaluierung_lehrveranstaltung', 'studiensemester_kurzbz');
+
+		return $this->loadWhere([
+			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id,
+			'typ' => $typ,
+		]);
+	}
+
 	/**
 	 * Checks if different actions are possible now or if the time period is over
 	 *

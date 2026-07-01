@@ -414,13 +414,13 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithError('Cannot send. No Students assigned to this course');
 		}
 
-		$lveLvPrestudenten = $this->getLveLvPrestudentenOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
-		$mailedPrestudentIds =array_column($lveLvPrestudenten, 'prestudent_id');
+		$result = $this->initiierunglib->filterUnmailedStudentMailReceivers(
+			$lveLv->lvevaluierung_lehrveranstaltung_id,
+			$studenten
+		);
 
-		// Filter studenten to keep only unmailed
-		$unmailedStudenten = array_values(array_filter($studenten, function ($s) use ($mailedPrestudentIds) {
-			return !in_array($s->prestudent_id, $mailedPrestudentIds, true);
-		}));
+		if (isError($result)) return $this->terminateWithError(getError($result));
+		$unmailedStudenten = hasData($result) ? getData($result) : [];
 
 		// Return if all Students of LV or LE already got mail
 		if (count($unmailedStudenten) === 0)
@@ -428,7 +428,7 @@ class Initiierung extends FHCAPI_Controller
 			$this->terminateWithSuccess();
 		}
 
-		if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $unmailedStudenten[0], $lveLv->lehrveranstaltung_id))
+		if ($this->initiierunglib->generateAndSendCodeForStudent($lve, $unmailedStudenten[0], $lveLv->lehrveranstaltung_id, $this->_uid))
 		{
 			$this->LvevaluierungModel->update(
 				$lvevaluierung_id,
@@ -516,23 +516,26 @@ class Initiierung extends FHCAPI_Controller
 			$lvevaluierung_id = isset($item->lvevaluierung_id) ? $item->lvevaluierung_id : null;
 			$studenten = isset($item->studenten) ? $item->studenten : [];
 			$sentByAnyEvaluierungOfLv = isset($item->sentByAnyEvaluierungOfLv) ? $item->sentByAnyEvaluierungOfLv : [];
+			$hasStartAndEndezeit= $item->startzeit && $item->endezeit;
+			$isSentToAllStudents = count($sentByAnyEvaluierungOfLv) >= count($studenten);
 
 			$isDisabledEvaluierungInfo = [];
 			$isDisabledEvaluierung = false;
 
 			// Status für Mailversand
+			$isRenderedSendMail = true;
 			$isDisabledSendMailInfo = [];
 
 			$isRenderedBtnAuswertung = true;
 
 			// Case: noch keine Evaluierung und noch nicht alle Studierende gemailt
-			if (!$lvevaluierung_id && count($sentByAnyEvaluierungOfLv) < count($studenten))
+			if ((!$lvevaluierung_id || !$hasStartAndEndezeit) && !$isSentToAllStudents)
 			{
-				$isDisabledSendMailInfo[]= 'Cannot send. Save dates first';	// todo besser zu isDisabledEvaluierungInfo?
+				$isRenderedSendMail = false;
+				$isDisabledSendMailInfo[]= 'Vor Versand: Start- und/oder Endedatum speichern';	// todo besser zu isDisabledEvaluierungInfo?
 			}
-
 			// Case: All students were already mailed
-			if (count($sentByAnyEvaluierungOfLv) >= count($studenten))
+			if ($isSentToAllStudents)
 			{
 				$isDisabledEvaluierung = true;
 			}
@@ -547,14 +550,17 @@ class Initiierung extends FHCAPI_Controller
 			// If Lvevaluierung Endzeit is not valid -> do not allow sending email to student
 			if ($this->_minTimeBufferBeforeEndezeit)
 			{
-				$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
-				if ($isEndezeitValid === false)
+				if ($hasStartAndEndezeit && !$isSentToAllStudents)
 				{
-					$isDisabledSendMailInfo[]= $this->p->t(
-						'global',
-						'endedatumMussInZukunftLiegen',
-						['minutes' => $this->_minTimeBufferBeforeEndezeit]
-					);
+					$isEndezeitValid = $this->checkEndezeitValid($item->endezeit);
+					if ($isEndezeitValid === false)
+					{
+						$isDisabledSendMailInfo[]= $this->p->t(
+							'global',
+							'endedatumMussInZukunftLiegen',
+							['minutes' => $this->_minTimeBufferBeforeEndezeit]
+						);
+					}
 				}
 			}
 
@@ -597,7 +603,7 @@ class Initiierung extends FHCAPI_Controller
 			}
 
 			// Button disable logic
-			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) || count($sentByAnyEvaluierungOfLv) >= count($studenten);
+			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) && $isSentToAllStudents;
 
 			// If no issues collected to disable sending mails
 			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
@@ -610,6 +616,7 @@ class Initiierung extends FHCAPI_Controller
 			$item->editableCheck = [
 				'isDisabledEvaluierung' => $isDisabledEvaluierung,
 				'isDisabledEvaluierungInfo' => $isDisabledEvaluierungInfo,
+				'isRenderedSendMail' => $isRenderedSendMail,
 				'isDisabledSendMail' => $isDisabledSendMail,
 				'isDisabledSendMailInfo' => $isDisabledSendMailInfo,
 				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung
