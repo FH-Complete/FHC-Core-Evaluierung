@@ -60,7 +60,66 @@ class Initiierung extends JOB_Controller
 		}
 		else
 		{
-			$this->logInfo(getData($result));
+			$this->logInfo('Lehrveranstaltungen zur Evaluierung übernommen für '. $studiensemester_kurzbz);
+
+			// Unique STGs, die in den gerade übertragenen LVs vorkommen
+			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getDistinctStgsByStSem($studiensemester_kurzbz);
+			$data = hasData($result) ? getData($result) : [];
+
+			// Endedatum für Abwahl von Evaluierungen
+			$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+				'typ' => 'stgauswahl',
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			if (!hasData($result))
+			{
+				$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
+				$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for ' . $studiensemester_kurzbz);
+				return;
+			}
+
+			$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			foreach ($data as $row)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($row->studiengang_kz);
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $row->stgKurzbz,
+						'stg_bezeichnung' => $row->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'abwahl_enddatum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_1',
+						$data,
+						$stgl['to'],
+						'Start der LV-Evaluation für  ' . $studiensemester_kurzbz . ' - Abwahl einzelner LVs in ' . $row->stgKurzbz . ' möglich',
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_1 to ' . $stgl['to']);
+					} else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_1 to ' . $stgl['to']);
+					}
+				}
+			}
 		}
 
 		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
