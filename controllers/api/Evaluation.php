@@ -1792,7 +1792,7 @@ class Evaluation extends FHCAPI_Controller
 	 */
 	private function isAllowedToSwitchVerpflichtung($lvevaluierung_lehrveranstaltung_id)
 	{
-		return $this->LvevaluierungZeitfensterModel->isBearbeitungOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
+		return $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
 	}
 
 	/**
