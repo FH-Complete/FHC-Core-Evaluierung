@@ -442,7 +442,7 @@ class Initiierung extends JOB_Controller
 					foreach ($unmailedStudenten as $student)
 					{
 						// Generate Code and send Mail
-						if ($this->initiierunglib->generateAndSendCodeForStudent($item, $student, $item->lehrveranstaltung_id, 'system'))
+						if ($this->initiierunglib->generateAndSendCodeForStudent($item, $student, $item->lehrveranstaltung_id, 'rescueEval'))
 						{
 							// Count up
 							$mailCounter++;
