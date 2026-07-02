@@ -136,6 +136,8 @@ class Initiierung extends JOB_Controller
 	 */
 	public function createEvaluierungen($studiensemester_kurzbz)
 	{
+		$this->logInfo('Start Job createEvaluierungen for ' . $studiensemester_kurzbz);
+
 		if (isEmptyString($studiensemester_kurzbz))
 		{
 			$this->logError('Missing param Studiensemester');
@@ -205,7 +207,7 @@ class Initiierung extends JOB_Controller
 							$this->_ci->initiierunglib->hasHierarchicalDuplicateGruppen($data))
 						{
 							$groupedByLe = [];
-							$this->logInfo('Evaluierung not created for ' . $lveLv->lvevaluierung_lehrveranstaltung_id. '. Gruppenevaluierung - but no unique assignment.');
+							$this->logInfo('Evaluierung not created for LveLv ID ' . $lveLv->lvevaluierung_lehrveranstaltung_id. ': Gruppenevaluierung - but no unique assignment.');
 						}
 					}
 
