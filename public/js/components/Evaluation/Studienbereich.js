@@ -511,7 +511,7 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studienbereich container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Kompetenzfeldleitung</h1>
+		<h1 class="mb-5">LV-Evaluation | Übersicht Kompetenzfeld</h1>
 	 	<div class="row align-items-center mb-3">
 	 		<h2>{{selStudiensemester}} - {{ selOeFullName }}</h2>
 			<div class="col-md-12">

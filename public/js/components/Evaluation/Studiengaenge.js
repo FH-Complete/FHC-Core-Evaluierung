@@ -383,7 +383,7 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
+		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengang</h1>
 	 	<div class="row align-items-center mb-3">
 	 		<h2>{{selStudiensemester}} - {{ selStgFullName }}</h2>
 			<div class="col-md-12">
