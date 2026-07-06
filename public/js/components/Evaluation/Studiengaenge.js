@@ -183,6 +183,17 @@ export default {
 						hozAlign: "right",
 						minWidth: 100,
 						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							return submittedTotal + "/" + ausgegebenTotal;
+						}
 					},
 					{
 						title:'RL-Quote',
