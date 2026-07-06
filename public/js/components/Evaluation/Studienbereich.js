@@ -207,14 +207,24 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc: values => {
-							const nums = values.filter(v => typeof v === 'number')
-							if (!nums.length) return null
-							return nums.reduce((a, b) => a + b, 0) / nums.length
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
 						},
 						bottomCalcFormatter: function (cell) {
-							const num = cell.getValue();
-							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+							const value = cell.getValue();
+							return value !== null ? value.toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -376,14 +386,24 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc: values => {
-							const nums = values.filter(v => typeof v === 'number')
-							if (!nums.length) return null
-							return nums.reduce((a, b) => a + b, 0) / nums.length
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
 						},
 						bottomCalcFormatter: function (cell) {
-							const num = cell.getValue();
-							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+							const value = cell.getValue();
+							return value !== null ? value.toFixed(2) + "%" : "–";
 						}
 					},
 					{
