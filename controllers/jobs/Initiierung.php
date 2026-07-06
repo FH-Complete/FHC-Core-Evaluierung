@@ -1653,7 +1653,7 @@ class Initiierung extends JOB_Controller
 
 		if (!isEmptyArray($row['missing']))
 		{
-			$reflexionenData .= '<b>LV-Evaluierungsergebnisse ohne vollständige LV-Reflexion(en) (Ablauf des Zeitraumes)</b><br>';
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse ohne vollständige LV-Reflexion(en)</b><br>';
 			$reflexionenData .= implode('<br>', $row['missing']);
 		}
 
