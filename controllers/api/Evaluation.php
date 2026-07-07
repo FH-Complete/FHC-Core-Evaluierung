@@ -174,6 +174,14 @@ class Evaluation extends FHCAPI_Controller
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
 		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
 
+		// Ansicht label
+		if ($role === 'stg')
+			$viewLabel = 'Studiengang';
+		elseif ($role === 'kf')
+			$viewLabel = 'Kompetenzfeld';
+		else
+			$viewLabel = '';
+
 		// Permission Check
 		if (
 			$isLektorOfLv ||
@@ -269,6 +277,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
 					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
 					'canAggregate' => $canAggregate,
 					'aggregationOptions' => $aggregationOptions
 				],
@@ -283,6 +292,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => false,
 					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -300,6 +310,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getEvaluationDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$role = $this->input->get('role');
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
@@ -314,6 +325,9 @@ class Evaluation extends FHCAPI_Controller
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
+
+		// Ansicht label
+		$viewLabel = $role === 'stg' ? 'Studiengang' : 'Kompetenzfeld';
 
 		// Permission Check
 		if ($isBerechtigt_KF || $isBerechtigt_STG || $isBerechtigt_ADMIN)
@@ -419,6 +433,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
 					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
 					'canAggregate' => $canAggregate,
 					'aggregationOptions' => $aggregationOptions
 				],
@@ -433,6 +448,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => false,
 					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -450,6 +466,9 @@ class Evaluation extends FHCAPI_Controller
 		// KFL, Admin
 		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
 		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Ansicht label
+		$viewLabel = 'Kompetenzfeld';
 
 		// Permission Check
 		if ($isBerechtigt_KF || $isBerechtigt_ADMIN)
@@ -545,6 +564,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
 					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
 					'canAggregate' => false,    // No dropdown for Evaluation view auf Quellkursebene (Gesamt-/Gruppen-Ansicht)
 					'aggregationOptions' => false    // No dropdown for Evaluation view auf Quellkursebene (Gesamt-/Gruppen-Ansicht)
 				],
@@ -558,6 +578,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => false,
 					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],

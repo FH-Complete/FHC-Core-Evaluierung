@@ -16,6 +16,7 @@ $includesArray = array(
 	'customCSSs' => array(
         'public/css/components/primevue.css',
 		'vendor/vuejs/vuedatepicker_css/main.css',
+		'public/extensions/FHC-Core-Evaluierung/css/Evaluierung.css',
 	)
 );
 

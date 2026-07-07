@@ -553,11 +553,13 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studienbereich container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Kompetenzfeld</h1>
-	 	<div class="row align-items-center mb-3">
-	 		<h2>{{selStudiensemester}} - {{ selOeFullName }}</h2>
-			<div class="col-md-12">
-				<div class="d-flex justify-content-end align-items-center">
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht Kompetenzfeld</small></h1>
+	 	<div class="row align-items-start mb-3">
+	 		<div class="col-12 col-md mb-4 mb-lg-0">
+	 			<h2 class="h4">{{selStudiensemester}} - {{ selOeFullName }}</h2>
+			</div>
+			<div class="col-12 col-md-auto ">
+				<div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-end">
 					<div class="me-2">
 						<form-input
 							type="select"
@@ -618,9 +620,9 @@ export default {
 			</core-filter-cmpt>
 		</div>
 		<div class="row-cols align-items-center mt-5 mb-3">
-	 		<h3>Auswertungsdaten - über Studiengänge aggregiert</h3>
-	  	</div>
-		<div class="evaluation-studienbereich-template-table">
+	 		<h4>Auswertungsdaten über Studiengänge aggregiert</h4>
+	  	
+			<div class="evaluation-studienbereich-template-table">
 			<core-filter-cmpt
 				v-if="selStudiensemester && selOeKurzbz"
 				ref="kfTemplateTable"
@@ -632,6 +634,7 @@ export default {
 					{event: 'tableBuilt', handler: onTemplateTableBuilt},
 				]">
 			</core-filter-cmpt>
+		</div>
 		</div>
 	</div>
 	`

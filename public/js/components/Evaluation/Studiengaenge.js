@@ -404,12 +404,16 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengang</h1>
-	 	<div class="row align-items-center mb-3">
-	 		<h2>{{selStudiensemester}} - {{ selStgFullName }}</h2>
-			<div class="col-md-12">
-				<div class="d-flex justify-content-end align-items-center">
-					<div class="me-2">
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht Studiengang</small></h1>
+	 	<div class="row align-items-start mb-3">
+	 		<div class="col-12 col-md mb-4 mb-lg-0">
+				<h2 class="h4">
+					{{ selStudiensemester }} - {{ selStgFullName }}
+				</h2>
+			</div>
+			<div class="col-12 col-md-auto">
+				<div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-end">
+					<div class="me-md-2 mb-2 mb-md-0">
 						<form-input
 							type="select"
 							v-model="selStudiensemester"

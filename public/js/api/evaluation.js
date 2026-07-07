@@ -9,12 +9,13 @@ export default {
 			}
 		}
 	},
-	getEvaluationDataByLveLv(lvevaluierung_lehrveranstaltung_id) {
+	getEvaluationDataByLveLv(lvevaluierung_lehrveranstaltung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLveLv',
 			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				role: role
 			}
 		}
 	},

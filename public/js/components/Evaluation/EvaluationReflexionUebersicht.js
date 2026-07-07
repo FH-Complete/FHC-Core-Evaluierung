@@ -69,7 +69,7 @@ export default {
 							</div>
 							<!-- Body -->
 							<div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
-								<div class="fw-bold display-5 mb-3">
+								<div class="fw-bold display-6 mb-3">
 									{{ uebersichtData.meta.ausfuellquoteProzent }} %
 								</div>
 								<div class="fw-bold">

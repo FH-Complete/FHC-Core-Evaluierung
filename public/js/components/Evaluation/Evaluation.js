@@ -46,6 +46,7 @@ export default {
 			evaluationView: {
 				open: false,
 				msg: [],
+				label: '',
 				canAggregate: false
 			},
 			// Used to build Dropdown to switch Ansicht LV- or Gruppenebene.
@@ -67,7 +68,7 @@ export default {
 				apiCall = ApiEvaluation.getEvaluationDataByLvTemplate(this.lehrveranstaltung_template_id, this.studiensemester);
 			}
 			else if (this.lvevaluierung_lehrveranstaltung_id) {
-				apiCall = ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+				apiCall = ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.role);
 			}
 			else if (this.lvevaluierung_id) {
 				apiCall = ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role);
@@ -87,6 +88,7 @@ export default {
 						// Permissions on view / GUI
 						this.evaluationView.open = data.evaluationView.open;
 						this.evaluationView.msg  = data.evaluationView.msg;
+						this.evaluationView.label  = data.evaluationView.label;
 						this.evaluationView.canAggregate = data.evaluationView.canAggregate;
 
 						if (this.evaluationView.canAggregate === true && this.evaluationView.aggregationOptions !== null) {
@@ -245,13 +247,14 @@ export default {
 	template: `
 	<div class="evaluation-evaluation container-fluid d-flex flex-column vh-100 p-0">
 		<!-- Fixed Header -->
-		<div class="bg-white py-3 px-3 flex-shrink-0">
-			<div class="d-flex justify-content-between align-items-center flex-wrap">
+		<div class="bg-white px-3 flex-shrink-0">
+			<div class="d-flex justify-content-between align-items-center flex-wrap fhc-page-header">
 				<div>
-					<h1 class="d-none d-lg-inline-block mb-0">
-						LV-Evaluation <small>{{ evalData.bezeichnung }}</small>
+					<h1 class="h2 d-none d-lg-inline-block mb-0">
+						LV-Evaluation {{ evalData.bezeichnung }}
+						<small class="fw-normal" v-if="evaluationView.label"> | Ansicht {{evaluationView.label}}</small>
 					</h1>
-					<h1 class="d-lg-none mb-0">LV-Evaluation</h1>
+					<h1 class="h2 d-lg-none mb-0">LV-Evaluation</h1>
 				</div>
 				<div class="btn-group btn-group-lg mt-2 mt-lg-0" role="group">
 					<input type="radio" class="btn-check" id="option1" 
@@ -389,7 +392,7 @@ export default {
 								<!-- Body -->
 								<div class="card-body d-flex flex-column justify-content-center align-items-center">
 									<!-- Display RL-Quote -->
-									<div class="fw-bold display-5 mb-3">
+									<div class="fw-bold display-6 mb-3">
 										{{ evalData.ruecklaufquote !== null ? evalData.ruecklaufquote + ' %' : '-' }}
 									</div>
 									<!-- abgeschlossen / versandt -->
