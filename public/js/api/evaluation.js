@@ -9,12 +9,23 @@ export default {
 			}
 		}
 	},
-	getEvaluationDataByLveLv(lvevaluierung_lehrveranstaltung_id) {
+	getEvaluationDataByLveLv(lvevaluierung_lehrveranstaltung_id, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLveLv',
 			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				role: role
+			}
+		}
+	},
+	getEvaluationDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getEvaluationDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},
@@ -34,6 +45,16 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLveLv',
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+	getAuswertungDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},
@@ -72,6 +93,16 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLveLv',
 			params: {
 				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+			}
+		}
+	},
+	getReflexionDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getReflexionDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},
@@ -127,6 +158,16 @@ export default {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvListByKf',
+			params: {
+				studiensemester_kurzbz: studiensemester_kurzbz,
+				oe_kurzbz: oe_kurzbz,
+			}
+		}
+	},
+	getLvTemplateListByKf(studiensemester_kurzbz, oe_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvTemplateListByKf',
 			params: {
 				studiensemester_kurzbz: studiensemester_kurzbz,
 				oe_kurzbz: oe_kurzbz,

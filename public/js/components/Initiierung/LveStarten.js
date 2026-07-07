@@ -198,7 +198,7 @@ export default {
 	},
 	template: `
 	<div class="lve-initiierung-body container-fluid d-flex flex-column min-vh-100">
-		<h1 class="mb-5">LV-Evaluation<small class="fs-5 fw-normal text-muted"> | Übersicht LV-Leitung und Lehrende</small></h1>
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht LV-Leitung und Lehrende</small></h1>
 		
 		<!-- Dropdowns -->
 		<div class="row">

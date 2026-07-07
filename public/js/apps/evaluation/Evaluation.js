@@ -63,6 +63,9 @@ const router = VueRouter.createRouter({
 				lehrveranstaltung_template_id: route.query.lehrveranstaltung_template_id && route.query.lehrveranstaltung_template_id !== 'null'
 						? Number(route.query.lehrveranstaltung_template_id)
 						: null,
+				studiensemester: route.query.studiensemester && route.query.studiensemester !== 'null'
+						? route.query.studiensemester
+						: null,
 				selected_view: route.query.selected_view || null
 			})
 		}

@@ -10,13 +10,16 @@ export default {
 		EvaluationReflexion,
 		EvaluationEinmeldung,
 	},
-	props: [
-		'role',
-		'lvevaluierung_id',
-		'lvevaluierung_lehrveranstaltung_id',
-		'lehrveranstaltung_template_id',
-		'selected_view'
-	],
+	props: {
+		role: null,
+		lvevaluierung_id: null,
+		lvevaluierung_lehrveranstaltung_id: null,
+		lehrveranstaltung_template_id: null,
+		selected_view: null,
+		studiensemester: {
+			default: null
+		}
+	},
 	data() {
 		return {
 			evalData: {
@@ -30,6 +33,8 @@ export default {
 				ruecklaufquote: null,
 				startzeit: null,
 				endezeit: null,
+				startzeitReflexion: null,
+				endezeitReflexion: null,
 				showAggregation: false,
 			},
 			selectedView: this.selected_view || 'auswertung',
@@ -41,6 +46,7 @@ export default {
 			evaluationView: {
 				open: false,
 				msg: [],
+				label: '',
 				canAggregate: false
 			},
 			// Used to build Dropdown to switch Ansicht LV- or Gruppenebene.
@@ -55,10 +61,18 @@ export default {
 		}
 	},
 	created() {
-		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
-			const apiCall = this.lvevaluierung_id
-				? ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role)
-				: ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id || this.lehrveranstaltung_template_id) {
+			let apiCall = null;
+
+			if (this.lehrveranstaltung_template_id && this.studiensemester) {
+				apiCall = ApiEvaluation.getEvaluationDataByLvTemplate(this.lehrveranstaltung_template_id, this.studiensemester);
+			}
+			else if (this.lvevaluierung_lehrveranstaltung_id) {
+				apiCall = ApiEvaluation.getEvaluationDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.role);
+			}
+			else if (this.lvevaluierung_id) {
+				apiCall = ApiEvaluation.getEvaluationDataByLve(this.lvevaluierung_id, this.role);
+			}
 
 			this.$api
 				.call(apiCall)
@@ -74,6 +88,7 @@ export default {
 						// Permissions on view / GUI
 						this.evaluationView.open = data.evaluationView.open;
 						this.evaluationView.msg  = data.evaluationView.msg;
+						this.evaluationView.label  = data.evaluationView.label;
 						this.evaluationView.canAggregate = data.evaluationView.canAggregate;
 
 						if (this.evaluationView.canAggregate === true && this.evaluationView.aggregationOptions !== null) {
@@ -141,6 +156,12 @@ export default {
 			if (!this.evalData.startzeit || !this.evalData.endezeit) return '-';
 
 			return this.DateHelper.formatDate(this.evalData.startzeit) + ' - ' + this.DateHelper.formatDate(this.evalData.endezeit);
+		},
+		formattedReflexionPeriod() {
+			// if (!this.evalData.startzeitReflexion || !this.evalData.endezeitReflexion) return '-';
+			//
+			// return this.evalData.startzeitReflexion + ' - ' + this.evalData.endezeitReflexion;
+			return '2 Wochen nach Evaluierungsende';
 		},
 		avgDuration() {
 			return ((this.evalData?.minDuration + this.evalData?.maxDuration) / 2).toFixed(2);
@@ -214,18 +235,26 @@ export default {
 					`${this.role}?${selectedOption.param}=${selectedOption.value}&selected_view=${this.selectedView}`;
 
 			window.open(url, '_self');
-		}
+		},
+		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id) {
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
+					'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id
+
+			window.open(url, '_blank');
+		},
 	},
 	template: `
 	<div class="evaluation-evaluation container-fluid d-flex flex-column vh-100 p-0">
 		<!-- Fixed Header -->
-		<div class="bg-white py-3 px-3 flex-shrink-0">
-			<div class="d-flex justify-content-between align-items-center flex-wrap">
+		<div class="bg-white px-3 flex-shrink-0">
+			<div class="d-flex justify-content-between align-items-center flex-wrap fhc-page-header">
 				<div>
-					<h2 class="d-none d-lg-inline-block mb-0">
-						LV-Evaluation <small>{{ evalData.bezeichnung }}</small>
-					</h2>
-					<h2 class="d-lg-none mb-0">LV-Evaluation</h2>
+					<h1 class="h2 d-none d-lg-inline-block mb-0">
+						LV-Evaluation {{ evalData.bezeichnung }}
+						<small class="fw-normal" v-if="evaluationView.label"> | Ansicht {{evaluationView.label}}</small>
+					</h1>
+					<h1 class="h2 d-lg-none mb-0">LV-Evaluation</h1>
 				</div>
 				<div class="btn-group btn-group-lg mt-2 mt-lg-0" role="group">
 					<input type="radio" class="btn-check" id="option1" 
@@ -284,10 +313,14 @@ export default {
 						<!-- Left table -->
 						<div class="evaluation-data-table-flex">
 							<table class="table table-bordered align-middle">
-								<tbody>
+								<tbody v-if="lvevaluierung_id || lvevaluierung_lehrveranstaltung_id">
+									<tr>
+										<th class="w-25 text-nowrap">Studiensemester</th>
+										<td class="fw-bold">{{ evalData.studiensemester_kurzbz }}</td>
+									</tr>
 									<tr>
 										<th>Lehrveranstaltung</th>
-										<td>{{ lehrveranstaltung }}</td>
+										<td class="fw-bold">{{ lehrveranstaltung }}</td>
 									</tr>
 									<tr>
 										<th>Verbindlich ausgewählt</th>
@@ -310,6 +343,10 @@ export default {
 										<td>{{ formattedEvalPeriod }}</td>
 									</tr>
 									<tr>
+										<th>Reflexionszeitraum</th>
+										<td>{{ formattedReflexionPeriod }}</td>
+									</tr>
+									<tr>
 										<th>Bearbeitungszeit (in min)</th>
 										<td>
 											<div class="d-flex justify-content-between">
@@ -317,6 +354,29 @@ export default {
 												<span>Min {{ evalData.minDuration }}</span>
 												<span>Max {{ evalData.maxDuration }} </span>
 											</div>
+										</td>
+									</tr>
+								</tbody>
+								<tbody v-if="lehrveranstaltung_template_id">
+									<tr>
+										<th class="w-25 text-nowrap">Studiensemester</th>
+										<td class="fw-bold">{{ evalData.studiensemester_kurzbz }}</td>
+									</tr>
+									<tr>
+										<th>Lehrveranstaltung</th>
+										<td class="fw-bold">{{ evalData.bezeichnung }}</td>
+									</tr>
+									<tr>
+										<th class="align-content-start">Evaluierte Lehrveranstaltungen</th>
+										<td>
+										<div class="mb-2" v-for="(lveLv, index) in evalData.lveLvs" :key="index">
+											<a
+												href="#"
+												@click.prevent="openEvaluationByLveLv(lveLv.lvevaluierung_lehrveranstaltung_id)"
+											>
+												{{ lveLv.kurzbzlang }}-{{ lveLv.semester }}: {{lveLv.bezeichnung}} - {{ lveLv.orgform_kurzbz }}
+											</a>
+										</div>
 										</td>
 									</tr>
 								</tbody>
@@ -332,7 +392,7 @@ export default {
 								<!-- Body -->
 								<div class="card-body d-flex flex-column justify-content-center align-items-center">
 									<!-- Display RL-Quote -->
-									<div class="fw-bold display-5 mb-3">
+									<div class="fw-bold display-6 mb-3">
 										{{ evalData.ruecklaufquote !== null ? evalData.ruecklaufquote + ' %' : '-' }}
 									</div>
 									<!-- abgeschlossen / versandt -->
@@ -375,24 +435,24 @@ export default {
 						:is="selectedComponent" 
 						:lvevaluierung_id="lvevaluierung_id"
 						:lvevaluierung_lehrveranstaltung_id="lvevaluierung_lehrveranstaltung_id"
-						:lvevaluierung_template_id="lvTemplateId"
+						:lehrveranstaltung_template_id="lehrveranstaltung_template_id"
+						:studiensemester="studiensemester"
 						@change-view="changeView"
 						class="d-block mt-5"
 					></component>
 				</keep-alive>				
 			</div>
 		  	<!-- Alert if no existing data or evaluation period still running -->
-		  	<div v-else class="card card-body py-5 d-flex mt-3" role="alert">
-		  		<div class="d-flex align-items-start">
-					<i class="fa fa-triangle-exclamation fa-2x text-warning me-3"></i>
-					<div>
-						<div class="fw-bold">Ansicht nicht verfügbar</div>
-						<div class="mt-3" v-for="(msg, index) in evaluationView.msg" :key="index">
-							{{ msg }}
-						</div>
-					</div>
-				</div>
-			</div><!--.end v-else-->
+			<div v-else class="border rounded p-5 mt-3 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div class="pb-3">{{selectedView.charAt(0).toUpperCase() + selectedView.slice(1)}} nicht verfügbar.</div>
+				<hr>
+				<ul class="mt-3 text-start ps-3 mb-0">
+					<li v-for="(msg, index) in evaluationView.msg" :key="index">
+						{{ msg }}
+					</li>
+				</ul>
+			</div>
 		</main>
 	</div>
 	`

@@ -291,42 +291,31 @@ class EvaluationLib
 		return $data;
 	}
 
-	// TODO iMedian formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
-	 /**
-	  * Calculate interpolated Median from ratings and frequencies
-	  * @param array $werte
-	  * @param array $frequencies
-	  * @return float|null
-	  */
-	public function getInterpolMedian($werte, $frequencies)
+	/**
+	 * Get Lehrveranstaltung Infos.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @param $studiensemester_kurzbz
+	 * @return array|mixed
+	 */
+	public function getLvBezeichnung($lehrveranstaltung_id)
 	{
-		if (!is_array($werte) || !is_array($frequencies)) return null;
-		if (count($werte) !== count($frequencies)) return null;
+		// LV data
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addSelect('
+			tbl_lehrveranstaltung.bezeichnung,
+			tbl_lehrveranstaltung.bezeichnung_english
+		');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$data = hasData($result) ? getData($result)[0] : [];
 
-		$total = array_sum($frequencies);
-		if ($total === 0) return 0;
-
-		$cumFreq = 0;
-		$medianIndex = 0;
-		$medianPos = $total / 2;
-
-		for ($i = 0; $i < count($frequencies); $i++) {
-			$cumFreq += $frequencies[$i];
-			if ($cumFreq >= $medianPos) {
-				$medianIndex = $i;
-				break;
-			}
-		}
-
-		$F = array_sum(array_slice($frequencies, 0, $medianIndex));
-		$f = $frequencies[$medianIndex];
-		$L = $werte[$medianIndex] -0.5; // lower bound
-		$w = 1;
-
-		return round($L + (($medianPos - $F) / $f) * $w, 2);
+		// LV bezeichnung
+		return getUserLanguage() === 'English'
+			? $data->bezeichnung_english
+			: $data->bezeichnung;
 	}
 
-	// TODO iMedian formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
+	// TODO HLM formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
 	/**
 	 * Calculate Hodges-Lehmann estimator (HLE) for a single question
 	 *

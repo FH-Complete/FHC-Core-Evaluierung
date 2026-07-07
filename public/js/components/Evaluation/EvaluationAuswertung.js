@@ -11,6 +11,9 @@ export default {
 		FormInput,
 		FhcChart,
 	},
+	inject: [
+		'evalData'
+	],
 	props:  {
 		lvevaluierung_id: {
 			type: [String, Number],
@@ -18,6 +21,14 @@ export default {
 		},
 		lvevaluierung_lehrveranstaltung_id: {
 			type: [String, Number],
+			default: null
+		},
+		lehrveranstaltung_template_id: {
+			type: [String, Number],
+			default: null
+		},
+		studiensemester: {
+			type: String,
 			default: null
 		},
 		evaluationView: {
@@ -30,33 +41,48 @@ export default {
 		return {
 			auswertungData: [],
 			textantworten: [],
-			auswertungHelpUrl: null
+			textantwortLveLvId: null, // for quellkurs lvs dropdown
+			auswertungHelpUrl: null,
 		}
 	},
 	created() {
+		let apiCallAuswertungData = null;
+		let apiCallTextantworten = null;
+
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
-			const apiCallAuswertungData = this.lvevaluierung_id
+			apiCallAuswertungData = this.lvevaluierung_id
 					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
-			const apiCallTextantworten = this.lvevaluierung_id
+			apiCallTextantworten = this.lvevaluierung_id
 					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+
+		}
+		else if (this.lehrveranstaltung_template_id && this.studiensemester) {
+			apiCallAuswertungData = ApiEvaluation.getAuswertungDataByLvTemplate(
+					this.lehrveranstaltung_template_id,
+					this.studiensemester
+			);
+		}
 
 			this.$api
 				.call(apiCallAuswertungData)
 				.then(result => {
 					this.auswertungData = result.data;
-					return this.$api.call(apiCallTextantworten)
+
+					return apiCallTextantworten
+							? this.$api.call(apiCallTextantworten)
+							: null;
 				})
 				.then(result => {
-					this.textantworten = result.data;
+					this.textantworten = result?.data;
+
 					return this.$api.call(ApiEvaluation.getAuswertungHelpUrl())
 				})
 				.then(result => {
 					this.auswertungHelpUrl = result.data;
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
-		}
 	},
 	computed: {
 		chartOptionsByFrageId() {
@@ -136,7 +162,6 @@ export default {
 						}
 					},
 					plotLines: [
-						//{ value: fbFragen.antworten.iMedian.actYear, color: "orange", width: 2, zIndex: 10, dashStyle: "Dot", label: { text: `Interp. Median ${fbFragen.antworten.iMedian.actYear}` } }
 						{
 							value: fbFragen.antworten.hodgesLehmann.actYear,
 							color: "grey",
@@ -170,11 +195,9 @@ export default {
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
-				//subtitle: { text: 'IM - Interpolierter Median der letzten 3 Jahre' },
 				subtitle: { text: 'Bewertungen der letzten 3 Jahre' },
 				series: yearKeys.map((key, i) => ({
 					name: yearNames[i],
-					//data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.iMedian[key])),
 					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.hodgesLehmann[key])),
 					visible: i === 0 // only current year visible by default
 				})),
@@ -266,7 +289,15 @@ export default {
 		changeView() {
 			this.$emit('changeView', 'reflexion');
 		},
+		loadTextantworten(lvevaluierung_lehrveranstaltung_id) {
+			this.textantwortLveLvId = lvevaluierung_lehrveranstaltung_id;
 
+			// Load Antworten
+			this.$api
+				.call(ApiEvaluation.getTextantwortenByLveLv(lvevaluierung_lehrveranstaltung_id))
+				.then(result => this.textantworten = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		}
 	},
 	template: `
 	<div class="evaluation-evaluation-auswertung">
@@ -302,7 +333,29 @@ export default {
 		</div>
 		<div class="evaluation-evaluation-auswertung-textantworten mb-3">
 			<h4 class="mt-5 mb-4">2. Textantworten</h4>
-			<div v-if="evaluationView.open && textantworten.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
+			<!-- Template view only -->
+			<template class="mb-3" v-if="lehrveranstaltung_template_id && evalData.lveLvs">
+				<div class="row my-3 pt-2">
+					<div class="col-12 col-md-auto">
+						<select
+							class="form-select"
+							v-model="textantwortLveLvId"
+							@change="loadTextantworten(textantwortLveLvId)"
+						>
+							<option :value="null">Lehrveranstaltung auswählen</option>
+							<option
+								v-for="lveLv in evalData.lveLvs"
+								:key="lveLv.lvevaluierung_lehrveranstaltung_id"
+								:value="lveLv.lvevaluierung_lehrveranstaltung_id"
+							>
+								{{ lveLv.kurzbzlang }}-{{ lveLv.semester }}: {{lveLv.bezeichnung}} - {{ lveLv.orgform_kurzbz }}
+							</option>
+						</select>
+					</div>
+				</div>
+			</template>
+			<!-- Textantworten -->
+			<div v-if="evaluationView.open && textantworten?.length > 0" v-for="(frage, index) in textantworten" :key="frage.lvevaluierung_frage_id"
 				class="row-col mb-5">
 			
 				<h5 class="mb-3">{{ frage.bezeichnung }}</h5>
@@ -317,7 +370,14 @@ export default {
 					</div>
 				</div>
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+			
+			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div v-if="lehrveranstaltung_template_id && !textantwortLveLvId">
+					Lehrveranstaltung auswählen, um Daten zu laden.
+				</div>
+				<div v-else>Keine Daten verfügbar.</div>
+			</div>
 		</div>
 		<div class="bg-primary-subtle py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">
@@ -342,7 +402,10 @@ export default {
 					</div>
 				</div>-->
 			</div>
-			<div v-else class="card"><div class="card-body py-5">Keine Daten vorhanden oder nicht zur Ansicht verfügbar.</div></div>
+			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+				<i class="fa fa-chart-column fa-3x mb-3"></i>
+				<div>Keine Daten verfügbar.</div>
+			</div>
 		</div>
 		<div class="bg-primary-subtle mt-5 py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">

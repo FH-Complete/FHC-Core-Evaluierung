@@ -169,4 +169,100 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 
 		return $this->execQuery($qry, [$lvevaluierung_lehrveranstaltung_id]);
 	}
+
+	/**
+	 * Get single-response evaluation data for all Evaluierungen of a given Quellkurs.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getAuswertungDataByLvTemplateId($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$langIndex = $this->evaluierunglib->getLanguageIndex();
+
+		$qry = '
+			WITH
+			selected_lve AS (
+				SELECT
+					lve.lvevaluierung_id,
+					lve.fragebogen_id
+				FROM 
+					lehre.tbl_lehrveranstaltung lv
+					JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id)
+					JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+				WHERE
+					lv.lehrveranstaltung_template_id = ?
+					AND lvelv.studiensemester_kurzbz = ?
+			),
+	
+			frequencies AS (
+				SELECT
+					antwort.lvevaluierung_frage_id,
+					antwort.lvevaluierung_frage_antwort_id,
+					COUNT(*) AS frequency
+				FROM extension.tbl_lvevaluierung_antwort antwort
+				JOIN extension.tbl_lvevaluierung_code code
+					ON code.lvevaluierung_code_id = antwort.lvevaluierung_code_id
+					AND code.endezeit IS NOT NULL
+				WHERE code.lvevaluierung_id IN (
+					SELECT lvevaluierung_id
+					FROM selected_lve
+				)
+				GROUP BY
+					antwort.lvevaluierung_frage_id,
+					antwort.lvevaluierung_frage_antwort_id
+			)
+	
+			SELECT DISTINCT
+				fbgr.lvevaluierung_fragebogen_gruppe_id,
+				fbgr.typ AS "fbGruppenTyp",
+				fbgr.bezeichnung[(' . $langIndex . ')] AS "fbGruppenBezeichnung",
+				fbgr.sort AS "fbGruppenSort",
+	
+				fbfr.lvevaluierung_frage_id,
+				fbfr.typ AS "fbFrageTyp",
+				fbfr.bezeichnung[(' . $langIndex . ')] AS "fbFrageBezeichnung",
+				fbfr.sort AS "fbFrageSort",
+				fbfr.verpflichtend AS "fbFrageVerpflichtend",
+	
+				fbfrantw.lvevaluierung_frage_antwort_id,
+				fbfrantw.bezeichnung[(' . $langIndex . ')] AS "fbFrageAntwortBezeichnung",
+				fbfrantw.sort AS "fbFrageAntwortSort",
+				fbfrantw.wert,
+	
+				COALESCE(freq.frequency, 0) AS frequency
+	
+			FROM extension.tbl_lvevaluierung_fragebogen fb
+			JOIN (
+				SELECT DISTINCT fragebogen_id
+				FROM selected_lve
+			) sel USING (fragebogen_id)
+	
+			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr
+				USING (fragebogen_id)
+	
+			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr
+				USING (lvevaluierung_fragebogen_gruppe_id)
+	
+			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw
+				USING (lvevaluierung_frage_id)
+	
+			LEFT JOIN frequencies freq
+				ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id
+				AND freq.lvevaluierung_frage_antwort_id = fbfrantw.lvevaluierung_frage_antwort_id
+	
+			WHERE fbfr.typ = \'singleresponse\'
+	
+			ORDER BY
+				fbgr.sort,
+				fbfr.sort,
+				fbfrantw.sort
+		';
+
+		return $this->execQuery(
+			$qry,
+			[$lehrveranstaltung_template_id, $studiensemester_kurzbz]
+		);
+	}
 }

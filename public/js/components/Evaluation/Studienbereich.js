@@ -18,7 +18,8 @@ export default {
 			selStudiensemester: null,
 			selOeKurzbz: null,
 			table: null,
-			malve: null
+			malve: null,
+			templateTable: null,
 		}
 	},
 	created() {
@@ -35,7 +36,7 @@ export default {
 				})
 				.then(result => {
 					this.lists.oes = result.data
-					this.selOeKurzbz = result.data[0].oe_kurzbz;
+					this.selOeKurzbz = result.data[0]?.oe_kurzbz;
 
 					// MALVE Status
 					return this.$api.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
@@ -51,8 +52,8 @@ export default {
 		site_url_opLvKvp() {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByLvId/';
 		},
-		site_url_opStgKvp() {
-			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selOeKurzbz;
+		site_url_opLvTemplateKvp() {
+			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByTplId/';
 		},
 		isDisabledSubmitMalveBtn() {
 			return this.malve?.length > 0;
@@ -76,7 +77,7 @@ export default {
 				},
 				ajaxResponse: (url, params, response) => response.data,
 				layout: 'fitColumns',
-				height: "calc(100vh - 350px)", // 350 for header and margin height
+				//height: "calc(100vh - 350px)", // 350 for header and margin height
 				autoResize: true,
 				resizableColumnFit: true,
 				selectable: false,
@@ -85,6 +86,13 @@ export default {
 					headerTooltip: true
 				},
 				columns: [
+					{
+						title: 'LV-ID',
+						field: 'lehrveranstaltung_id',
+						headerFilter: "input",
+						minWidth: 100,
+						visible: false
+					},
 					{
 						title: 'STG-Kurzbz',
 						field: 'kurzbzlang',
@@ -187,6 +195,17 @@ export default {
 						hozAlign: "right",
 						minWidth: 100,
 						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							return submittedTotal + "/" + ausgegebenTotal;
+						}
 					},
 					{
 						title: 'RL-Quote',
@@ -199,14 +218,24 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc: values => {
-							const nums = values.filter(v => typeof v === 'number')
-							if (!nums.length) return null
-							return nums.reduce((a, b) => a + b, 0) / nums.length
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
 						},
 						bottomCalcFormatter: function (cell) {
-							const num = cell.getValue();
-							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+							const value = cell.getValue();
+							return value !== null ? value.toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -283,17 +312,180 @@ export default {
 				]
 			}
 		},
+		tabulatorOptionsTemplateTable() {
+			const self = this;
+			return {
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.selStudiensemester || !this.selOeKurzbz) {
+						return Promise.resolve({data: []});
+					}
+
+					return this.$api.call(ApiEvaluation.getLvTemplateListByKf(
+							this.selStudiensemester,
+							this.selOeKurzbz
+					))
+				},
+				ajaxResponse: (url, params, response) => response.data,
+				layout: 'fitColumns',
+				height: "calc(100vh - 350px)", // 350 for header and margin height
+				autoResize: true,
+				resizableColumnFit: true,
+				selectable: false,
+				index: 'lvevaluierung_lehrveranstaltung_id',
+				columnDefaults: {
+					headerTooltip: true
+				},
+				columns: [
+					{
+						title: 'LV-ID',
+						field: 'lehrveranstaltung_id',
+						headerFilter: "input",
+						minWidth: 100,
+						visible: false
+					},
+					{
+						title: 'LV-Bezeichnung',
+						field: 'bezeichnung',
+						headerFilter: "input",
+						bottomCalc: "count",
+						bottomCalcFormatter: function (cell) {
+							const num = cell.getValue();
+							return isNaN(num) ? "–" : "Anzahl: " + num;
+						},
+						widthGrow: 3
+					},
+					{
+						title: "Rücklauf",
+						field: "ruecklauf",
+						headerFilter: "input",
+						headerFilterFunc: (filterValue, rowValue, rowData) => {
+							if (filterValue === "") return true
+
+							const filter = String(filterValue)
+
+							const submitted = String(rowData.submittedCodes ?? "")
+							const issued = String(rowData.codesAusgegeben ?? "")
+
+							// match:
+							// 8  → 8/26
+							// 2  → 8/26
+							// 26 → 8/26
+							// 0  → 0/0, 13/0, 0/12
+							return (
+									submitted.includes(filter) ||
+									issued.includes(filter)
+							)
+						},
+						formatter: function (cell) {
+							const submittedCodes = cell.getData().submittedCodes;
+							const codesAusgegeben = cell.getData().codesAusgegeben;
+							return `${submittedCodes}/${codesAusgegeben}`;
+						},
+						hozAlign: "right",
+						minWidth: 100,
+						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							return submittedTotal + "/" + ausgegebenTotal;
+						}
+					},
+					{
+						title: 'RL-Quote',
+						field: 'ruecklaufQuote',
+						headerFilter: "input",
+						hozAlign: "right",
+						formatter: cell => {
+							const value = cell.getValue();
+							return value !== null ? `${value}%` : '-'
+						},
+						sorter: "number",
+						width: 200,
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
+						},
+						bottomCalcFormatter: function (cell) {
+							const value = cell.getValue();
+							return value !== null ? value.toFixed(2) + "%" : "–";
+						}
+					},
+					{
+						title: 'LV-Evaluation',
+						formatter: (cell) => {
+							return `<button class="btn btn-outline-secondary">
+									  <i class="fa-solid fa-square-poll-horizontal me-2"></i>
+									  LV-Evaluation
+									</button>`;
+						},
+						cellClick: (e, cell) => {
+							self.openEvaluationByLvTemplate(cell.getData().lehrveranstaltung_id)
+						},
+						hozAlign: "center",
+						headerSort: false,
+						width: 140
+					},
+					{
+						title: 'MALVE-Quellkurs-Weiterentwicklung (OP)',
+						formatter(cell) {
+							const lvTemplateId = cell.getData().lehrveranstaltung_id;
+							const url = `${self.site_url_opLvTemplateKvp}${lvTemplateId}`;
+
+							return `
+                         <a
+                            href="${url}"
+                            target="_blank"
+                            role="button"
+                            class="btn btn-outline-secondary me-2"
+                         >
+                            <span
+                               v-tooltip
+                               title="Schnittstelle zur Maßnahmenableitung für die einzelnen LV-Quellkurse in OP"
+                            >
+                               <i class="fa-solid fa-external-link me-2"></i>Quellkurs-Weiterentwicklung
+                            </span>
+                         </a>`
+
+
+						},
+						hozAlign: "center",
+						headerSort: false,
+						width: 240
+					},
+				]
+			}
+		},
 	},
 	methods: {
 		onStudiensemesterChange() {
-			if (!this.selStudiensemester || !this.table) return;
+			if (!this.selStudiensemester || !this.table || !this.templateTable) return;
 
 			this.table.replaceData();
+			this.templateTable.replaceData();
 		},
 		onOeChange() {
-			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table) return;
+			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table || !this.templateTable) return;
 
 			this.table.replaceData();
+			this.templateTable.replaceData();
 
 			this.$api
 				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
@@ -303,8 +495,16 @@ export default {
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id) {
 			const url = this.$api.getUri() +
-					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/stg/' +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
 					'?lvevaluierung_lehrveranstaltung_id=' + lvevaluierung_lehrveranstaltung_id;
+
+			window.open(url, '_blank');
+		},
+		openEvaluationByLvTemplate(lehrveranstaltung_id) {
+			const url = this.$api.getUri() +
+					'extensions/FHC-Core-Evaluierung/evaluation/Evaluation/kf/' +
+					'?lehrveranstaltung_template_id=' + lehrveranstaltung_id +
+					'&studiensemester=' + this.selStudiensemester;
 
 			window.open(url, '_blank');
 		},
@@ -346,15 +546,20 @@ export default {
 				default:
 					break;
 			}
-		}
+		},
+		onTemplateTableBuilt() {
+			this.templateTable = this.$refs.kfTemplateTable.tabulator;
+		},
 	},
 	template: `
 	<div class="evaluation-studienbereich container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Kompetenzfeldleitung</h1>
-	 	<div class="row align-items-center mb-3">
-	 		<h2>{{selStudiensemester}} - {{ selOeFullName }}</h2>
-			<div class="col-md-12">
-				<div class="d-flex justify-content-end align-items-center">
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht Kompetenzfeld</small></h1>
+	 	<div class="row align-items-start mb-3">
+	 		<div class="col-12 col-md mb-4 mb-lg-0">
+	 			<h2 class="h4">{{selStudiensemester}} - {{ selOeFullName }}</h2>
+			</div>
+			<div class="col-12 col-md-auto ">
+				<div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-end">
 					<div class="me-2">
 						<form-input
 							type="select"
@@ -376,7 +581,7 @@ export default {
 							type="select"
 							v-model="selOeKurzbz"
 							name="oe_kurzbz"
-							:label="$p.t('lehre/kompetenzfeld')"
+							:label="$p.t('lehre/organisationseinheit')"
 							@change="onOeChange"
 						>
 							<option v-for="oe in lists.oes" :key="oe.oe_kurzbz" :value="oe.oe_kurzbz">
@@ -413,6 +618,23 @@ export default {
 					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
 				</template>
 			</core-filter-cmpt>
+		</div>
+		<div class="row-cols align-items-center mt-5 mb-3">
+	 		<h4>Auswertungsdaten über Studiengänge aggregiert</h4>
+	  	
+			<div class="evaluation-studienbereich-template-table">
+			<core-filter-cmpt
+				v-if="selStudiensemester && selOeKurzbz"
+				ref="kfTemplateTable"
+				uniqueId="tabStudienbereichTemplates"
+				table-only
+				:side-menu="false"
+				:tabulator-options="tabulatorOptionsTemplateTable"
+				:tabulator-events="[
+					{event: 'tableBuilt', handler: onTemplateTableBuilt},
+				]">
+			</core-filter-cmpt>
+		</div>
 		</div>
 	</div>
 	`

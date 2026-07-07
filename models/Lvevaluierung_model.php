@@ -92,6 +92,7 @@ class Lvevaluierung_model extends DB_Model
 		$this->addJoin('extension.tbl_lvevaluierung_lehrveranstaltung lvelv', 'lvevaluierung_lehrveranstaltung_id');
 
 		return $this->loadWhere([
+			'lvelv.verpflichtend' => true,
 			'lvelv.studiensemester_kurzbz' => $studiensemester_kurzbz
 		]);
 	}

@@ -183,6 +183,17 @@ export default {
 						hozAlign: "right",
 						minWidth: 100,
 						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							return submittedTotal + "/" + ausgegebenTotal;
+						}
 					},
 					{
 						title:'RL-Quote',
@@ -195,14 +206,24 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc: values => {
-							const nums = values.filter(v => typeof v === 'number')
-							if (!nums.length) return null
-							return nums.reduce((a, b) => a + b, 0) / nums.length
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
 						},
 						bottomCalcFormatter: function(cell) {
-							const num = cell.getValue();
-							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+							const value = cell.getValue();
+							return value !== null ? value.toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -383,12 +404,16 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
-	 	<div class="row align-items-center mb-3">
-	 		<h2>{{selStudiensemester}} - {{ selStgFullName }}</h2>
-			<div class="col-md-12">
-				<div class="d-flex justify-content-end align-items-center">
-					<div class="me-2">
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht Studiengang</small></h1>
+	 	<div class="row align-items-start mb-3">
+	 		<div class="col-12 col-md mb-4 mb-lg-0">
+				<h2 class="h4">
+					{{ selStudiensemester }} - {{ selStgFullName }}
+				</h2>
+			</div>
+			<div class="col-12 col-md-auto">
+				<div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-end">
+					<div class="me-md-2 mb-2 mb-md-0">
 						<form-input
 							type="select"
 							v-model="selStudiensemester"
@@ -435,6 +460,7 @@ export default {
 	  	</div>
 	  	<div class="evaluation-studiengaenge-table">
 			<core-filter-cmpt
+				v-if="selStudiensemester && selStgKz && selOrgform"
 				ref="stgTable"
 				uniqueId="tabStudiengaenge"
 				table-only
