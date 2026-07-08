@@ -141,8 +141,10 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
+		$this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
@@ -598,6 +600,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
@@ -634,24 +637,34 @@ class Evaluation extends FHCAPI_Controller
 			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
-		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		// Auswertung data
+		$auswertungData = [];
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = null;
+		$lvImZeitverlaufMsg = null;
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$hideProfillinineDate = new DateTime($zeitfenster->endedatum);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+		if ($now > $hideProfillinineDate)
+		{
+			$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
+		}
+		else
+		{
+			$lvImZeitverlaufMsg = 'Profillinien ab ' . $hideProfillinineDate->format('d.m.Y') . ' verfügbar.';
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData,
+			'lvImZeitverlaufMsg' => $lvImZeitverlaufMsg
+		]);
 	}
 
 	/**
@@ -663,6 +676,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
@@ -688,23 +702,32 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);          // structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = null;
+		$lvImZeitverlaufMsg = null;
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$hideProfillinineDate = new DateTime($zeitfenster->endedatum);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+		if ($now > $hideProfillinineDate)
+		{
+			$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
+		}
+		else
+		{
+			$lvImZeitverlaufMsg = 'Profillinien ab ' . $hideProfillinineDate->format('d.m.Y') . ' verfügbar.';
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData,
+			'lvImZeitverlaufMsg' => $lvImZeitverlaufMsg
+		]);
 	}
 
 	public function getAuswertungDataByLvTemplate()
@@ -743,25 +766,39 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
-		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId($lehrveranstaltung_template_id, $studiensemester_kurzbz);
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = null;
+		$lvImZeitverlaufMsg = null;
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$hideProfillinineDate = new DateTime($zeitfenster->endedatum);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe)
+		if ($now > $hideProfillinineDate)
 		{
-			foreach ($gruppe['fbFragen'] as &$frage)
-			{
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+			$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
+				$lehrveranstaltung_template_id,
+				$studiensemester_kurzbz
+			);
+		}
+		else
+		{
+			$lvImZeitverlaufMsg = 'Profillinien ab ' . $hideProfillinineDate->format('d.m.Y') . ' verfügbar.';
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData,
+			'lvImZeitverlaufMsg' => $lvImZeitverlaufMsg
+		]);
 	}
 
 	/**
@@ -971,6 +1008,98 @@ class Evaluation extends FHCAPI_Controller
 
 		return $options;
 	}
+
+	private function getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameTypeFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterLveLvId = null;
+
+			// LveLv ID - Aktuelles Studiensemester
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$semesterLveLvId = $lveLv->lvevaluierung_lehrveranstaltung_id;
+			} // LveLv ID - Letzes or vorletztes Studiensemester
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+			}
+
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			if (is_numeric($semesterLveLvId))
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	private function getLvImZeitverlaufDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameTypeFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $index => $studiensemester)
+		{
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+				$lehrveranstaltung_template_id,
+				$studiensemester->studiensemester_kurzbz
+			);
+			$data = $this->getDataOrTerminateWithError($result);
+			$semesterAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	private function calculateHodgesLehmannEstimator(&$auswertungData)
+	{
+		foreach ($auswertungData as &$gruppe)
+		{
+			foreach ($gruppe['fbFragen'] as &$frage)
+			{
+				$frage['antworten']['hodgesLehmann'] =
+					$this->evaluationlib->getHodgesLehmannEstimator(
+						$frage['antworten']['werte'],
+						$frage['antworten']['frequencies']
+					);
+			}
+		}
+	}
+
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// LV-REFLEXION
@@ -2238,6 +2367,26 @@ class Evaluation extends FHCAPI_Controller
 		return ' für ' . $lveLv->kurzbzlang. '-'. $lveLv->semester. ': '. $lveLv->bezeichnung. ' - '. $lveLv->orgform_kurzbz;
 	}
 
+	private function getLvevaluierungZeitfensterOrFail($typ, $studiensemester_kurzbz)
+	{
+		$result = $this->LvevaluierungZeitfensterModel->loadWhere(
+			[
+				'typ' => $typ,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]
+		);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		} elseif (!hasData($result))
+		{
+			$this->terminateWithError('Zeitfenster ' . $typ . ' for '. $studiensemester_kurzbz. ' does not exist');
+		}
+
+		return getData($result)[0];
+	}
+
 	/**
 	 * Calculate all durations in minutes.
 	 *
@@ -2320,11 +2469,7 @@ class Evaluation extends FHCAPI_Controller
 						'werte' => [],
 						'frequencies' => [],
 						'bezeichnungen' => [],
-						'hodgesLehmann' => [
-							'actYear' => 0,
-							'actYearMin1' => 0,
-							'actYearMin2' => 0,
-						]    // default
+						'hodgesLehmann' => null
 					]
 				];
 			}
