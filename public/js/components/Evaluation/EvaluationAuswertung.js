@@ -207,13 +207,19 @@ export default {
 				series: timelineData.map(item => ({
 					name: item.studiensemester_kurzbz,
 					data: item.auswertungData.flatMap(g =>
-						g.fbFragen.map(f => ({
+						g.fbFragen.map((f, index) => ({
 							y: f.antworten.hodgesLehmann,
 							n: f.antworten.frequencies.reduce((a, b) => a + b, 0),
+							gruppe: g.bezeichnung,
+							frageNr: index + 1,
 							frage: f.bezeichnung
 						}))
 					),
-					visible: item.studiensemester_kurzbz === currentSemester
+					// NOTE: connectNulls - Important! Verbindet HLE null values, um eine durchgängige Linie zuhaben
+					// Wichtig, wenn zB im Chart nicht alle Studienjahre die gleiche Anzahl an Fragebogengruppen oder Fragen haben
+					connectNulls: true,
+					// visible: item.studiensemester_kurzbz === currentSemester, // default display aktuelles Studiensemester
+					visible: true // display all
 
 				})),
 				yAxis: {
@@ -281,9 +287,10 @@ export default {
 					crosshairs: true,
 					formatter: function () {
 						return `
-							<b>${this.point.frage}</b><br/>
+							<b>${this.point.gruppe}</b><br/>
+            				<b>Frage ${this.point.frageNr}: ${this.point.frage}</b><br/>
 							Häufigkeit der Bewertungen (N = <b>${this.point.n}</b>)<br/>
-							Hodges-Lehmann Estimator (HLE: <b>${Highcharts.numberFormat(this.y, 2)}</b>)
+							Hodges-Lehmann Estimator (HLE: <b>${Highcharts.numberFormat(this.y, 1)}</b>)
 						`;
 					}
 				},
@@ -414,8 +421,7 @@ export default {
 			</div>
 			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
 				<i class="fa fa-chart-column fa-3x mb-3"></i>
-				<div v-if="lvImZeitverlaufMsg">{{lvImZeitverlaufMsg}}</div>
-				<div v-else>Keine Daten verfügbar.</div>
+					<div>Keine Daten verfügbar.</div>
 			</div>
 		</div>
 		<div class="bg-primary-subtle mt-5 py-5 text-center">
