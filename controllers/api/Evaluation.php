@@ -1024,7 +1024,7 @@ class Evaluation extends FHCAPI_Controller
 		$lvImZeitverlaufData = [];
 
 		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
-		$result = $this->StudiensemesterModel->getPreviousSameTypeFrom($studiensemester_kurzbz, 3);
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
 		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
 
 		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
@@ -1071,7 +1071,7 @@ class Evaluation extends FHCAPI_Controller
 		$lvImZeitverlaufData = [];
 
 		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
-		$result = $this->StudiensemesterModel->getPreviousSameTypeFrom($studiensemester_kurzbz, 3);
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
 		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
 
 		foreach ($lvImZeitverlaufStudiensemester as $index => $studiensemester)
