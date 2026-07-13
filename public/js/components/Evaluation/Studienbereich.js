@@ -1,7 +1,7 @@
 import FormInput from "../../../../../js/components/Form/Input.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-import ApiFhc from "../../api/fhc";
-import ApiEvaluation from "../../api/evaluation";
+import ApiFhc from "../../api/fhc.js";
+import ApiEvaluation from "../../api/evaluation.js";
 
 export default {
 	name: "Studienbereich",
