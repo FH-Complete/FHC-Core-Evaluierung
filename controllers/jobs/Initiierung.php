@@ -57,13 +57,27 @@ class Initiierung extends JOB_Controller
 		if (isError($result))
 		{
 			$this->logError(getError($result));
+			$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for ' . $studiensemester_kurzbz);
+			exit;
 		}
-		else
+
+		if (hasData($result))
 		{
-			$this->logInfo('Lehrveranstaltungen zur Evaluierung übernommen für '. $studiensemester_kurzbz);
+			$this->logInfo('Inserted new LVs for Evaluierung for ' . $studiensemester_kurzbz);
+
+			$insertRecords = getData($result);
+
+			$lvIds = array_column($insertRecords, 'lehrveranstaltung_id');
 
 			// Unique STGs, die in den gerade übertragenen LVs vorkommen
-			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getDistinctStgsByStSem($studiensemester_kurzbz);
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
+			$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
+			$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
+			$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+			$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
+			$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+			$result = $this->_ci->LehrveranstaltungModel->loadWhere();
 			$data = hasData($result) ? getData($result) : [];
 
 			// Endedatum für Abwahl von Evaluierungen
@@ -121,8 +135,12 @@ class Initiierung extends JOB_Controller
 				}
 			}
 		}
+		else
+		{
+			$this->logInfo('No new LVs to add for Evaluierung for ' . $studiensemester_kurzbz);
+		}
 
-		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$this->_ci->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
 	}
 
 	/**
