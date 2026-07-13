@@ -1539,6 +1539,7 @@ class Initiierung extends JOB_Controller
 				$dataByKf[$oe_kurzbz] = [
 					'oe_kurzbz' => $reflexion->oe_kurzbz,
 					'oe_bezeichnung' => $reflexion->oe_bezeichnung,
+					'organisationseinheittyp_kurzbz' => $reflexion->organisationseinheittyp_kurzbz,
 					'stg_kurzbz' => $reflexion->stgKurzbz,
 					'gesamtlv' => [],
 					'gruppe' => [],
@@ -1602,6 +1603,7 @@ class Initiierung extends JOB_Controller
 					'nachname' => $leitung['nachname'],
 					'oe_bezeichnung' =>$row['oe_bezeichnung'],
 					'studiensemester' => $studiensemester_kurzbz,
+					'organisationseinheittyp_kurzbz' => $row['organisationseinheittyp_kurzbz'],
 					'reflexionenData' => $reflexionenData,
 					'link' => $link
 				];
@@ -1610,7 +1612,7 @@ class Initiierung extends JOB_Controller
 					'LVE_KFL_TEXT_2',
 					$data,
 					$leitung['to'],
-					'LV-Evaluation: Neu verfügbare Ergebnisse im Kompetenzfeld ' . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
+					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['organisationseinheittyp_kurzbz'] . ' '  . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
 					'sancho_header_lvevaluierung.jpg',
 					'sancho_footer_lvevaluierung.jpg'
 				);
