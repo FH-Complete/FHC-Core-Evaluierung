@@ -121,8 +121,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$stgl['to'],
 						'Start der LV-Evaluation für  ' . $studiensemester_kurzbz . ' - Abwahl einzelner LVs in ' . $row->stgKurzbz . ' möglich',
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
