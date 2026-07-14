@@ -29,6 +29,8 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * LVs für die Evaluierung anlegen + Mails STGL_TEXT_1: 100% der LVs wurden ausgewählt
+	 *
 	 * Job to insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
 	 * Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
 	 *
@@ -145,6 +147,8 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Evaluierungen erstellen entsprechend der gewählten Evaluierungsebene (Gesamt/Gruppe), aber erst nach Ablauf des Zeitfensters,
+	 * in dem Evaluierungsebene gewechselt werden darf.
 	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
 	 *
 	 * Job will not run before Zeitfenster for switching Evaluierungsebene is closed.
@@ -322,6 +326,8 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mail KFL_TEXT_1: LV-Leitung eintragen lassen
+	 *
 	 * Job to notify KFLs to ensure LV-Leitungen are assigned before the deadline.
 	 * Checks Zeitfenster 'lvleintragen' for upcoming Studiensemester.
 	 * Sends mail if today is Zeitfensterstart.
@@ -415,6 +421,8 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Automatisch Mails mit Codes an Studierende versenden, wenn letzte Unterrichtseinheit (ohne Exam) vorbei ist,
+	 * oder Evaluierungszeitfensterende vorbei ist und keine Codes versendet worden sind.
 	 * Sends evaluation codes for finished Lehrveranstaltungen of given Studiensemester if not already mailed.
 	 *
 	 * Job runs after last Unterrichtseinheit has passed and only processes evaluations without sent codes and if
@@ -592,6 +600,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_3 und LEHR_TEXT_1: Evaluierungszeitfenster einstellen
 	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
 	 *
 	 * @return void
@@ -733,6 +742,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_4 und LEHR_TEXT_2: Evaluierungszeitfenster startet bald
 	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
 	 *
 	 * @return void
@@ -873,6 +883,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_5 und LEHR_TEXT_3: Reflexion durchführen
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one day after Evaluierung ends.
 	 *
 	 * @return void
@@ -1077,6 +1088,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_6 und LEHR_TEXT_4: Reflexion durchführen - Reminder
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one week after first infomail was sent.
 	 *
 	 * @return void
@@ -1313,6 +1325,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails STGL_TEXT_3: Reflexionen liegen vor - Sammelmail 1x/Monat
 	 * Job to send monthly summary Sammelmails to STGLs containing
 	 * newly available LVs with completed verpflichtende LV-Reflexionen
 	 * and LVs whose verpflichtende LV-Reflexion period ended without submission.
@@ -1527,6 +1540,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails KFL_TEXT_2: Reflexionen liegen vor - Sammelmail 1x/Monat
 	 *  Job to send monthly summary Sammelmails to KFLs containing
 	 *  newly available LVs with completed verpflichtende LV-Reflexionen
 	 *  and LVs whose verpflichtende LV-Reflexion period ended without submission.
