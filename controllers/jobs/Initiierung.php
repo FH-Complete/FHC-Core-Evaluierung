@@ -97,7 +97,7 @@ class Initiierung extends JOB_Controller
 			$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
 
 			// Link zu Übersicht im CIS
-			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester=' . $studiensemester_kurzbz;
 
 			foreach ($data as $row)
 			{

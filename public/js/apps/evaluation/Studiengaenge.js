@@ -11,7 +11,12 @@ const router = VueRouter.createRouter({
 		{
 			path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluation/Studiengaenge`,
 			name: 'Studiengaenge',
-			component: Studiengaenge
+			component: Studiengaenge,
+			props: route => ({
+				studiensemester: route.query.studiensemester && route.query.studiensemester !== 'null'
+						? route.query.studiensemester
+						: null,
+			})
 		}
 	]
 });
