@@ -4,7 +4,7 @@ import ApiFhc from "../../api/fhc.js";
 import ApiInitiierung from "../../api/initiierung.js";
 import Switcher from "./Switcher.js";
 import LveItem from "./LveItem.js";
-import DateHelper from "../../helpers/DateHelper";
+import DateHelper from "../../helpers/DateHelper.js";
 
 export default {
 	name: "LveStarten",

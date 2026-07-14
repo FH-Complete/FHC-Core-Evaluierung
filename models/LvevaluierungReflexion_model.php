@@ -133,7 +133,8 @@ class LvevaluierungReflexion_model extends DB_Model
 				UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz",
 				stg.bezeichnung AS "stg_bezeichnung",
 				lv.oe_kurzbz,
-				oe.bezeichnung AS "oe_bezeichnung"
+				oe.bezeichnung AS "oe_bezeichnung",
+				oe.organisationseinheittyp_kurzbz
 			FROM
 				extension.tbl_lvevaluierung_lehrveranstaltung lvelv
 				JOIN newReflexionen_lvelvs nrlvelvs USING (lvevaluierung_lehrveranstaltung_id)
@@ -153,7 +154,8 @@ class LvevaluierungReflexion_model extends DB_Model
 				stg.kurzbz,
 				stg.bezeichnung,
 				lv.oe_kurzbz,
-				oe.bezeichnung
+				oe.bezeichnung,
+				oe.organisationseinheittyp_kurzbz
 			-- nur die LVs, die vollständige LV-Reflexionen haben
 			HAVING 
 				COUNT(DISTINCT lve.lvevaluierung_id) <= COUNT(DISTINCT lver.lvevaluierung_reflexion_id)
@@ -233,7 +235,8 @@ class LvevaluierungReflexion_model extends DB_Model
 				UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz",
 				stg.bezeichnung AS "stg_bezeichnung",
 				lv.oe_kurzbz,
-				oe.bezeichnung AS "oe_bezeichnung"
+				oe.bezeichnung AS "oe_bezeichnung",
+				oe.organisationseinheittyp_kurzbz
 			FROM lvelvs
 				JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
 				JOIN public.tbl_studiengang stg USING (studiengang_kz)

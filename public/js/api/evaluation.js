@@ -29,22 +29,24 @@ export default {
 			}
 		}
 	},
-	getAuswertungDataByLve(lvevaluierung_id, role) {
+	getAuswertungDataByLve(lvevaluierung_id, studiensemester_kurzbz, role) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLve',
 			params: {
 				lvevaluierung_id: lvevaluierung_id,
+				studiensemester_kurzbz: studiensemester_kurzbz,
 				role: role
 			}
 		}
 	},
-	getAuswertungDataByLveLv(lvevaluierung_lehrveranstaltung_id) {
+	getAuswertungDataByLveLv(lvevaluierung_lehrveranstaltung_id, studiensemester_kurzbz) {
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungDataByLveLv',
 			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
 			}
 		}
 	},

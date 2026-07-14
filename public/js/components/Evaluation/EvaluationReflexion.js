@@ -1,6 +1,6 @@
 import EvaluationReflexionForm from "./EvaluationReflexionForm.js";
 import EvaluationReflexionUebersicht from "./EvaluationReflexionUebersicht.js";
-import ApiEvaluation from "../../api/evaluation";
+import ApiEvaluation from "../../api/evaluation.js";
 
 export default {
 	name: "EvaluationReflexion",

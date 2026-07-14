@@ -2,7 +2,7 @@ import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
 import FhcChart from "../../../../../js/components/Chart/FhcChart.js";
 import ChartHelper from "../../helpers/ChartHelper.js";
-import ApiEvaluation from "../../api/evaluation";
+import ApiEvaluation from "../../api/evaluation.js";
 
 export default {
 	name: "EvaluationAuswertung",
@@ -42,6 +42,8 @@ export default {
 			auswertungData: [],
 			textantworten: [],
 			textantwortLveLvId: null, // for quellkurs lvs dropdown
+			lvImZeitverlaufData: null,
+			lvImZeitverlaufMsg: null,
 			auswertungHelpUrl: null,
 		}
 	},
@@ -51,8 +53,8 @@ export default {
 
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			apiCallAuswertungData = this.lvevaluierung_id
-					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id, this.role)
-					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id);
+					? ApiEvaluation.getAuswertungDataByLve(this.lvevaluierung_id, this.evalData.studiensemester_kurzbz, this.role)
+					: ApiEvaluation.getAuswertungDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.evalData.studiensemester_kurzbz);
 			apiCallTextantworten = this.lvevaluierung_id
 					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
@@ -68,7 +70,9 @@ export default {
 			this.$api
 				.call(apiCallAuswertungData)
 				.then(result => {
-					this.auswertungData = result.data;
+					this.auswertungData = result.data.auswertungData;
+					this.lvImZeitverlaufData = result.data.lvImZeitverlaufData;
+					this.lvImZeitverlaufMsg = result.data.lvImZeitverlaufMsg;
 
 					return apiCallTextantworten
 							? this.$api.call(apiCallTextantworten)
@@ -95,7 +99,7 @@ export default {
 			return result;
 		},
 		chartOptionsLvImZeitverlauf() {
-			return this.createTimelineChart(this.auswertungData);
+			return this.createTimelineChart(this.lvImZeitverlaufData);
 		},
 	},
 	methods: {
@@ -132,8 +136,8 @@ export default {
 					},
 					//Dummy-Series ONLY for vertical Hodges-Lehmann Estimator legend
 					{
-						name: fbFragen.antworten.hodgesLehmann.actYear !== null
-								? `Hodges-Lehmann Estimator (HLE: ${fbFragen.antworten.hodgesLehmann.actYear})`
+						name: fbFragen.antworten.hodgesLehmann !== null
+								? `Hodges-Lehmann Estimator (HLE: ${fbFragen.antworten.hodgesLehmann})`
 								: "Hodges-Lehmann Estimator (HLE)",
 						type: "line",
 						data: [],                 // no data -> dummy
@@ -163,13 +167,13 @@ export default {
 					},
 					plotLines: [
 						{
-							value: fbFragen.antworten.hodgesLehmann.actYear,
+							value: fbFragen.antworten.hodgesLehmann,
 							color: "grey",
 							width: 2,
 							zIndex: 10,
 							dashStyle: "Dash",
 							label: {
-								text: `HLE: ${fbFragen.antworten.hodgesLehmann.actYear}`,
+								text: `HLE: ${fbFragen.antworten.hodgesLehmann}`,
 								rotation: 360,
 								style: {
 									fontWeight: "bold",
@@ -189,17 +193,34 @@ export default {
 				credits: { enabled: false } // remove 'Highcharts.com' label
 			}
 		},
-		createTimelineChart(fbGruppen) {
-			const yearKeys = ["actYear", "actYearMin1", "actYearMin2"];
-			const yearNames = ["Aktuelles Jahr", "Letztes Jahr", "Vor 2 Jahren"];
+		createTimelineChart(timelineData) {
+			const currentSemester = this.evalData.studiensemester_kurzbz;
+			const currentData = timelineData.find(
+					item => item.studiensemester_kurzbz === currentSemester
+			);
+			const fbGruppen = currentData.auswertungData;
+
 			return {
 				chart: { type: 'line', height: 600, inverted: true },// Fragen left, Bewertungen below
 				title: { text: 'LV im Zeitverlauf' },
 				subtitle: { text: 'Bewertungen der letzten 3 Jahre' },
-				series: yearKeys.map((key, i) => ({
-					name: yearNames[i],
-					data: fbGruppen.flatMap(g => g.fbFragen.map(f => f.antworten.hodgesLehmann[key])),
-					visible: i === 0 // only current year visible by default
+				series: timelineData.map(item => ({
+					name: item.studiensemester_kurzbz,
+					data: item.auswertungData.flatMap(g =>
+						g.fbFragen.map((f, index) => ({
+							y: f.antworten.hodgesLehmann,
+							n: f.antworten.frequencies.reduce((a, b) => a + b, 0),
+							gruppe: g.bezeichnung,
+							frageNr: index + 1,
+							frage: f.bezeichnung
+						}))
+					),
+					// NOTE: connectNulls - Important! Verbindet HLE null values, um eine durchgängige Linie zuhaben
+					// Wichtig, wenn zB im Chart nicht alle Studienjahre die gleiche Anzahl an Fragebogengruppen oder Fragen haben
+					connectNulls: true,
+					// visible: item.studiensemester_kurzbz === currentSemester, // default display aktuelles Studiensemester
+					visible: true // display all
+
 				})),
 				yAxis: {
 					title: null, // set to null, otherwise it renders the word 'values'
@@ -265,16 +286,12 @@ export default {
 					shared: false, // Nur den Punktwert eines Jahres zeigen
 					crosshairs: true,
 					formatter: function () {
-						// Flatten all questions from fbGruppen
-						const allQuestions = fbGruppen.flatMap(g => g.fbFragen.map(f => f.bezeichnung));
-
-						// Get the text for the current point
-						const questionText = allQuestions[this.point.index] || this.key;
-
 						return `
-						<b>${questionText}</b><br/>
-						${this.series.name}: <b>${Highcharts.numberFormat(this.y, 2)}</b>
-					  `;
+							<b>${this.point.gruppe}</b><br/>
+            				<b>Frage ${this.point.frageNr}: ${this.point.frage}</b><br/>
+							Häufigkeit der Bewertungen (N = <b>${this.point.n}</b>)<br/>
+							Hodges-Lehmann Estimator (HLE: <b>${Highcharts.numberFormat(this.y, 1)}</b>)
+						`;
 					}
 				},
 				legend: {
@@ -386,7 +403,7 @@ export default {
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
-			<div v-if="evaluationView.open && auswertungData.length > 0" class="row align-items-stretch g-3">
+			<div v-if="evaluationView.open && lvImZeitverlaufData" class="row align-items-stretch g-3">
 				<div class="col-lg-6">
 					<div class="card h-100">
 						<div class="card-body">
@@ -404,7 +421,7 @@ export default {
 			</div>
 			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
 				<i class="fa fa-chart-column fa-3x mb-3"></i>
-				<div>Keine Daten verfügbar.</div>
+					<div>Keine Daten verfügbar.</div>
 			</div>
 		</div>
 		<div class="bg-primary-subtle mt-5 py-5 text-center">

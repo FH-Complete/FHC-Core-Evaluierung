@@ -476,7 +476,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		if (empty($insertBatch))
 		{
-			return success('No new Lehrveranstaltungen to add for this Studiensemester');
+			return success([]);
 		}
 
 		return $this->insertBatch($insertBatch);
@@ -492,7 +492,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		if ($insert)
 		{
-			return success('Lehrveranstaltungen inserted successfully');
+			return success($batch);
 		}
 		else
 		{
@@ -523,28 +523,5 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 		';
 
 		return $this->execQuery($qry, array($studiensemester_kurzbz));
-	}
-
-	/**
-	 * Get unique Studiengänge of LveLvs of given Studiensemester.
-	 *
-	 * @param $studiensemester_kurzbz
-	 * @return mixed
-	 */
-	public function getDistinctStgsByStSem($studiensemester_kurzbz)
-	{
-		$this->addDistinct('stg.studiengang_kz');
-		$this->addSelect('stg.studiengang_kz');
-		$this->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
-		$this->addSelect('stg.bezeichnung');
-
-		$this->addJoin('lehre.tbl_lehrveranstaltung', 'lehrveranstaltung_id');
-		$this->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
-
-		return $this->loadWhere(
-			[
-				'studiensemester_kurzbz' => $studiensemester_kurzbz
-			]
-		);
 	}
 }

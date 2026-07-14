@@ -141,8 +141,10 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
+		$this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
@@ -598,6 +600,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
@@ -634,24 +637,37 @@ class Evaluation extends FHCAPI_Controller
 			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
-		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		// Auswertung data
+		$auswertungData = [];
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien
+		// -------------------------------------------------------------------------------------------------------------
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
+		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
+
+		// Profillinien data - LV im LV-Vergleich
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+		$showChartDate->setTime(00, 00, 00);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if ($now > $showChartDate)
+		{
+
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
 	}
 
 	/**
@@ -663,6 +679,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
@@ -688,23 +705,35 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);          // structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien
+		// -------------------------------------------------------------------------------------------------------------
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
+		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
+
+		// Profillinien data - LV im LV-Vergleich
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+		$showChartDate->setTime(00, 00, 00);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if ($now > $showChartDate)
+		{
+
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
 	}
 
 	public function getAuswertungDataByLvTemplate()
@@ -743,25 +772,43 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
-		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId($lehrveranstaltung_template_id, $studiensemester_kurzbz);
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien
+		// -------------------------------------------------------------------------------------------------------------
+		// Profillinien data - LV im Zeitverlauf
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		// $lvImZeitverlaufData = $this->getTESTlvImZeitverlaufData();	// !!!todo delete - nur test
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe)
+		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
+		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
+
+		// Profillinien data - LV im LV-Vergleich
+		$now = new DateTime();
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+		$showChartDate->setTime(00, 00, 00);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if ($now >= $showChartDate)
 		{
-			foreach ($gruppe['fbFragen'] as &$frage)
-			{
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
+
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
 	}
 
 	/**
@@ -971,6 +1018,489 @@ class Evaluation extends FHCAPI_Controller
 
 		return $options;
 	}
+
+	private function getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterLveLvId = null;
+
+			// LveLv ID - Aktuelles Studiensemester
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$semesterLveLvId = $lveLv->lvevaluierung_lehrveranstaltung_id;
+			} // LveLv ID - Letzes or vorletztes Studiensemester
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+			}
+
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			if (is_numeric($semesterLveLvId))
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	private function getLvImZeitverlaufDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $index => $studiensemester)
+		{
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+				$lehrveranstaltung_template_id,
+				$studiensemester->studiensemester_kurzbz
+			);
+			$data = $this->getDataOrTerminateWithError($result);
+			$semesterAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	private function calculateHodgesLehmannEstimator(&$auswertungData)
+	{
+		foreach ($auswertungData as &$gruppe)
+		{
+			foreach ($gruppe['fbFragen'] as &$frage)
+			{
+				$frage['antworten']['hodgesLehmann'] =
+					$this->evaluationlib->getHodgesLehmannEstimator(
+						$frage['antworten']['werte'],
+						$frage['antworten']['frequencies']
+					);
+			}
+		}
+	}
+
+	/**
+	 * Ergänzt fehlende Fragebogengruppen und Fragen in allen Studiensemestern.
+	 * Vorhandene Daten werden niemals entfernt oder überschrieben.
+	 */
+	private function normalizeFragenAcrossStudiensemester(&$lvImZeitverlaufData)
+	{
+		$allFbGruppen = [];
+
+		// Alle Gruppen und Fragen sammeln
+		foreach ($lvImZeitverlaufData as $semesterData)
+		{
+			foreach ($semesterData['auswertungData'] as $gruppe)
+			{
+				$gruppeId = $gruppe['lvevaluierung_fragebogen_gruppe_id'];
+
+				if (!isset($allFbGruppen[$gruppeId]))
+				{
+					$allFbGruppen[$gruppeId] = [
+						'lvevaluierung_fragebogen_gruppe_id' => $gruppeId,
+						'bezeichnung' => $gruppe['bezeichnung'],
+						'sort' => $gruppe['sort'],
+						'fbFragen' => []
+					];
+				}
+
+				foreach ($gruppe['fbFragen'] as $frage)
+				{
+					$frageId = $frage['lvevaluierung_frage_id'];
+
+					$allFbGruppen[$gruppeId]['fbFragen'][$frageId] = $frage;
+				}
+			}
+		}
+
+
+		/*
+		 * Gruppen sortieren
+		 */
+		uasort($allFbGruppen, function ($a, $b)
+		{
+			return $a['sort'] <=> $b['sort'];
+		});
+
+
+		/*
+		 * 2. Semester angleichen
+		 */
+		foreach ($lvImZeitverlaufData as &$semesterData)
+		{
+			$semesterGruppen = [];
+
+			foreach ($semesterData['auswertungData'] as $gruppe)
+			{
+				$semesterGruppen[$gruppe['lvevaluierung_fragebogen_gruppe_id']] = $gruppe;
+			}
+
+
+			$neueGruppen = [];
+
+
+			foreach ($allFbGruppen as $gruppeId => $masterGruppe)
+			{
+				if (isset($semesterGruppen[$gruppeId]))
+				{
+					$aktuelleGruppe = $semesterGruppen[$gruppeId];
+				} else
+				{
+					$aktuelleGruppe = [
+						'lvevaluierung_fragebogen_gruppe_id' => $gruppeId,
+						'bezeichnung' => $masterGruppe['bezeichnung'],
+						'sort' => $masterGruppe['sort'],
+						'fbFragen' => []
+					];
+				}
+
+
+				/*
+				 * Fragen angleichen
+				 */
+				$semesterFragen = [];
+
+				foreach ($aktuelleGruppe['fbFragen'] as $frage)
+				{
+					$semesterFragen[$frage['lvevaluierung_frage_id']] = $frage;
+				}
+
+
+				$neueFragen = [];
+
+
+				foreach ($masterGruppe['fbFragen'] as $frageId => $masterFrage)
+				{
+					if (isset($semesterFragen[$frageId]))
+					{
+						$neueFragen[] = $semesterFragen[$frageId];
+					} else
+					{
+						$fehlendeFrage = $masterFrage;
+
+						$fehlendeFrage['antworten']['frequencies'] = [];
+						$fehlendeFrage['antworten']['hodgesLehmann'] = null;
+
+						$neueFragen[] = $fehlendeFrage;
+					}
+				}
+
+
+				usort($neueFragen, function ($a, $b)
+				{
+					return $a['sort'] <=> $b['sort'];
+				});
+
+
+				$aktuelleGruppe['fbFragen'] = $neueFragen;
+
+				$neueGruppen[] = $aktuelleGruppe;
+			}
+
+
+			$semester['auswertungData'] = $neueGruppen;
+		}
+
+
+		unset($semester);
+	}
+
+	// Test Array: 3 Studiensemester Auswertungsdata für Profillinie LvImZeitverlauf // TODO DELETE later
+	private function getTESTlvImZeitverlaufData()
+	{
+		return [
+			[
+				'studiensemester_kurzbz' => 'SS2026',
+				'auswertungData' => [
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [2, 4, 8, 6],
+									'hodgesLehmann' => 2.4
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 2,
+								'bezeichnung' => 'Verständlichkeit',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [1, 5, 7, 7],
+									'hodgesLehmann' => 2.8
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 3,
+								'bezeichnung' => 'Praxisbezug',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [0, 3, 9, 8],
+									'hodgesLehmann' => 3.1
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 4,
+								'bezeichnung' => 'Vorbereitung',
+								'sort' => 4,
+								'antworten' => [
+									'frequencies' => [3, 6, 5, 2],
+									'hodgesLehmann' => 2.1
+								]
+							]
+						]
+					],
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 2,
+						'bezeichnung' => 'Organisation',
+						'sort' => 2,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 5,
+								'bezeichnung' => 'Terminplanung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [4, 6, 7],
+									'hodgesLehmann' => 2.6
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 6,
+								'bezeichnung' => 'Unterlagen',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [1, 4, 10, 5],
+									'hodgesLehmann' => 3
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 7,
+								'bezeichnung' => 'Kommunikation',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [2, 8, 6],
+									'hodgesLehmann' => 2.7
+								]
+							]
+						]
+					],
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 3,
+						'bezeichnung' => 'Gruppe NICHT-in-2025',
+						'sort' => 3,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 8,
+								'bezeichnung' => 'Empfehlung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [1, 2, 5, 12],
+									'hodgesLehmann' => 3.4
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 10,
+								'bezeichnung' => 'Betreuung',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [3, 3, 9],
+									'hodgesLehmann' => 2.9
+								]
+							]
+						]
+					]
+				]
+			],
+			[
+				'studiensemester_kurzbz' => 'SS2025',
+				'auswertungData' => [
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [5, 7, 5, 3],
+									'hodgesLehmann' => 2
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 2,
+								'bezeichnung' => 'Verständlichkeit',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [2, 4, 8, 4],
+									'hodgesLehmann' => 2.5
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 4,
+								'bezeichnung' => 'Vorbereitung',
+								'sort' => 4,
+								'antworten' => [
+									'frequencies' => [4, 5, 7],
+									'hodgesLehmann' => 2.3
+								]
+							]
+						]
+					],
+
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 2,
+						'bezeichnung' => 'Organisation',
+						'sort' => 2,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 5,
+								'bezeichnung' => 'Terminplanung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [3, 7, 8],
+									'hodgesLehmann' => 2.9
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 6,
+								'bezeichnung' => 'Unterlagen',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [2, 5, 9],
+									'hodgesLehmann' => 3.2
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 9,
+								'bezeichnung' => 'Zusatz Organisation nur SS2025',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [1, 4, 8],
+									'hodgesLehmann' => 2.6
+								]
+							]
+						]
+					]
+				]
+			],
+
+
+			[
+				'studiensemester_kurzbz' => 'SS2024',
+				'auswertungData' => [
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [7, 5, 3],
+									'hodgesLehmann' => 1.8
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 3,
+								'bezeichnung' => 'Praxisbezug',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [2, 5, 6],
+									'hodgesLehmann' => 2.4
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 8,
+								'bezeichnung' => 'Empfehlung',
+								'sort' => 5,
+								'antworten' => [
+									'frequencies' => [4, 6, 4],
+									'hodgesLehmann' => 2.7
+								]
+							]
+						]
+					],
+
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 3,
+						'bezeichnung' => 'Zusatzfragen',
+						'sort' => 3,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 10,
+								'bezeichnung' => 'Betreuung',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [6, 4, 5],
+									'hodgesLehmann' => 2.1
+								]
+							]
+						]
+					]
+				]
+			]
+
+		];
+	}
+
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// LV-REFLEXION
@@ -2238,6 +2768,26 @@ class Evaluation extends FHCAPI_Controller
 		return ' für ' . $lveLv->kurzbzlang. '-'. $lveLv->semester. ': '. $lveLv->bezeichnung. ' - '. $lveLv->orgform_kurzbz;
 	}
 
+	private function getLvevaluierungZeitfensterOrFail($typ, $studiensemester_kurzbz)
+	{
+		$result = $this->LvevaluierungZeitfensterModel->loadWhere(
+			[
+				'typ' => $typ,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]
+		);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		} elseif (!hasData($result))
+		{
+			$this->terminateWithError('Zeitfenster ' . $typ . ' for '. $studiensemester_kurzbz. ' does not exist');
+		}
+
+		return getData($result)[0];
+	}
+
 	/**
 	 * Calculate all durations in minutes.
 	 *
@@ -2320,11 +2870,7 @@ class Evaluation extends FHCAPI_Controller
 						'werte' => [],
 						'frequencies' => [],
 						'bezeichnungen' => [],
-						'hodgesLehmann' => [
-							'actYear' => 0,
-							'actYearMin1' => 0,
-							'actYearMin2' => 0,
-						]    // default
+						'hodgesLehmann' => null
 					]
 				];
 			}

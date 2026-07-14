@@ -57,13 +57,27 @@ class Initiierung extends JOB_Controller
 		if (isError($result))
 		{
 			$this->logError(getError($result));
+			$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for ' . $studiensemester_kurzbz);
+			exit;
 		}
-		else
+
+		if (hasData($result))
 		{
-			$this->logInfo('Lehrveranstaltungen zur Evaluierung übernommen für '. $studiensemester_kurzbz);
+			$this->logInfo('Inserted new LVs for Evaluierung for ' . $studiensemester_kurzbz);
+
+			$insertRecords = getData($result);
+
+			$lvIds = array_column($insertRecords, 'lehrveranstaltung_id');
 
 			// Unique STGs, die in den gerade übertragenen LVs vorkommen
-			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getDistinctStgsByStSem($studiensemester_kurzbz);
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+			$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
+			$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
+			$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
+			$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+			$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
+			$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+			$result = $this->_ci->LehrveranstaltungModel->loadWhere();
 			$data = hasData($result) ? getData($result) : [];
 
 			// Endedatum für Abwahl von Evaluierungen
@@ -107,8 +121,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$stgl['to'],
 						'Start der LV-Evaluation für  ' . $studiensemester_kurzbz . ' - Abwahl einzelner LVs in ' . $row->stgKurzbz . ' möglich',
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
@@ -121,8 +135,12 @@ class Initiierung extends JOB_Controller
 				}
 			}
 		}
+		else
+		{
+			$this->logInfo('No new LVs to add for Evaluierung for ' . $studiensemester_kurzbz);
+		}
 
-		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$this->_ci->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
 	}
 
 	/**
@@ -1539,6 +1557,7 @@ class Initiierung extends JOB_Controller
 				$dataByKf[$oe_kurzbz] = [
 					'oe_kurzbz' => $reflexion->oe_kurzbz,
 					'oe_bezeichnung' => $reflexion->oe_bezeichnung,
+					'organisationseinheittyp_kurzbz' => $reflexion->organisationseinheittyp_kurzbz,
 					'stg_kurzbz' => $reflexion->stgKurzbz,
 					'gesamtlv' => [],
 					'gruppe' => [],
@@ -1602,6 +1621,7 @@ class Initiierung extends JOB_Controller
 					'nachname' => $leitung['nachname'],
 					'oe_bezeichnung' =>$row['oe_bezeichnung'],
 					'studiensemester' => $studiensemester_kurzbz,
+					'organisationseinheittyp_kurzbz' => $row['organisationseinheittyp_kurzbz'],
 					'reflexionenData' => $reflexionenData,
 					'link' => $link
 				];
@@ -1610,7 +1630,7 @@ class Initiierung extends JOB_Controller
 					'LVE_KFL_TEXT_2',
 					$data,
 					$leitung['to'],
-					'LV-Evaluation: Neu verfügbare Ergebnisse im Kompetenzfeld ' . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
+					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['organisationseinheittyp_kurzbz'] . ' '  . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
 					'sancho_header_lvevaluierung.jpg',
 					'sancho_footer_lvevaluierung.jpg'
 				);
