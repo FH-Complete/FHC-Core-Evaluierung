@@ -25,6 +25,7 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 	}
 
 	/**
@@ -318,6 +319,99 @@ class Initiierung extends JOB_Controller
 
 			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
 		}
+	}
+
+	/**
+	 * Job to notify KFLs to ensure LV-Leitungen are assigned before the deadline.
+	 * Checks Zeitfenster 'lvleintragen' for upcoming Studiensemester.
+	 * Sends mail if today is Zeitfensterstart.
+	 * Deadline is Zeitfensterende.
+	 *
+	 * @return void
+	 */
+	public function sendLvLeitungenEintragenInfo()
+	{
+		$this->logInfo('Start Job sendLvLeitungenEintragenInfo');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->_ci->logError('Missing Studiensemester');
+			exit;
+		}
+
+		$studiensemester = getData($result)[0];
+
+		// Zeitfenster LV-Leitungen eintragen
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'lvleintragen',
+			'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz
+		]);
+		if (!hasData($result))
+		{
+			$this->_ci->logError('Missing Zeitfenster');
+			exit;
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// send mail here
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// LV-Leitung eintragen until here
+		$today = new DateTime('today');
+
+		// If today is Startdatum for LV-Leitungen eintragen lassen
+		if ($today == $zeitfensterStart)
+		{
+			// Get all Kompetenzfelder
+			$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+			$result = $this->_ci->OrganisationseinheitModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+			$kfs = hasData($result) ? getData($result) : [];
+
+			// For each Kompetenzfeld
+			foreach ($kfs as $kf)
+			{
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				$subject = 'Start der LV-Evaluation für ' . $studiensemester->studiensemester_kurzbz
+					. ' - Eintrag LV-Leitungen im Kompetenzfeld ' . $kf->bezeichnung
+					. ' bis ' . $zeitfensterEnde->format('d.m.Y') . ' sicherstellen.';
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'datum' => $zeitfensterEnde->format('d.m.Y'),
+						'zielgruppe' => 'Kompetenzfeldleitung'
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_1',
+						$data,
+						$leitung['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					} else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+		else
+		{
+			$this->logInfo('Today is not mailing day');
+		}
+
+		$this->logInfo('End Job sendLvLeitungenEintragenInfo');
 	}
 
 	/**
