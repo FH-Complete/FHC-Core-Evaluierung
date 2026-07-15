@@ -376,6 +376,12 @@ class Initiierung extends JOB_Controller
 			// For each Kompetenzfeld
 			foreach ($kfs as $kf)
 			{
+				$link = CIS_ROOT
+					. 'addons/reports/cis/vorschau.php?statistik_kurzbz=FehlendeLvLeitungen&StudiensemesterShortlist='
+					. urlencode($studiensemester->studiensemester_kurzbz)
+					. '&OERechteRekursivBaumKFMitAlle='
+					. urlencode($kf->oe_kurzbz);
+
 				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
 
 				$subject = 'Start der LV-Evaluation für ' . $studiensemester->studiensemester_kurzbz
@@ -390,6 +396,7 @@ class Initiierung extends JOB_Controller
 						'nachname' => $leitung['nachname'],
 						'oe_bezeichnung' => $kf->bezeichnung,
 						'datum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link,
 						'zielgruppe' => 'Kompetenzfeldleitung'
 					];
 
