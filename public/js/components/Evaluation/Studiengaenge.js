@@ -8,6 +8,9 @@ export default {
 		FormInput,
 		CoreFilterCmpt
 	},
+	props: {
+		studiensemester: null
+	},
 	data() {
 		return {
 			lists: {
@@ -26,7 +29,12 @@ export default {
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.lists.studiensemester = result.data)
-			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
+			.then(() => {
+				// Initialize Studiensemester from query parameter, otherwise fetch via api.
+				return this.studiensemester
+					? Promise.resolve({data: [{studiensemester_kurzbz: this.studiensemester}]})
+					: this.$api.call(ApiFhc.Studiensemester.getAktNext())
+			})
 			.then(result => {
 				this.selStudiensemester = result.data[0].studiensemester_kurzbz;
 				return this.$api.call(ApiEvaluation.getEntitledStgs(this.selStudiensemester))

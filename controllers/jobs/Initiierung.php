@@ -25,9 +25,12 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 	}
 
 	/**
+	 * LVs für die Evaluierung anlegen + Mails STGL_TEXT_1: 100% der LVs wurden ausgewählt
+	 *
 	 * Job to insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
 	 * Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
 	 *
@@ -96,7 +99,7 @@ class Initiierung extends JOB_Controller
 			$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
 
 			// Link zu Übersicht im CIS
-			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester=' . $studiensemester_kurzbz;
 
 			foreach ($data as $row)
 			{
@@ -144,6 +147,8 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Evaluierungen erstellen entsprechend der gewählten Evaluierungsebene (Gesamt/Gruppe), aber erst nach Ablauf des Zeitfensters,
+	 * in dem Evaluierungsebene gewechselt werden darf.
 	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
 	 *
 	 * Job will not run before Zeitfenster for switching Evaluierungsebene is closed.
@@ -321,6 +326,110 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mail KFL_TEXT_1: LV-Leitung eintragen lassen
+	 *
+	 * Job to notify KFLs to ensure LV-Leitungen are assigned before the deadline.
+	 * Checks Zeitfenster 'lvleintragen' for upcoming Studiensemester.
+	 * Sends mail if today is Zeitfensterstart.
+	 * Deadline is Zeitfensterende.
+	 *
+	 * @return void
+	 */
+	public function sendLvLeitungenEintragenInfo()
+	{
+		$this->logInfo('Start Job sendLvLeitungenEintragenInfo');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->_ci->logError('Missing Studiensemester');
+			exit;
+		}
+
+		$studiensemester = getData($result)[0];
+
+		// Zeitfenster LV-Leitungen eintragen
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'lvleintragen',
+			'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz
+		]);
+		if (!hasData($result))
+		{
+			$this->_ci->logError('Missing Zeitfenster');
+			exit;
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// send mail here
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// LV-Leitung eintragen until here
+		$today = new DateTime('today');
+
+		// If today is Startdatum for LV-Leitungen eintragen lassen
+		if ($today == $zeitfensterStart)
+		{
+			// Get all Kompetenzfelder
+			$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+			$result = $this->_ci->OrganisationseinheitModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+			$kfs = hasData($result) ? getData($result) : [];
+
+			// For each Kompetenzfeld
+			foreach ($kfs as $kf)
+			{
+				$link = CIS_ROOT
+					. 'addons/reports/cis/vorschau.php?statistik_kurzbz=FehlendeLvLeitungen&StudiensemesterShortlist='
+					. urlencode($studiensemester->studiensemester_kurzbz)
+					. '&OERechteRekursivBaumKFMitAlle='
+					. urlencode($kf->oe_kurzbz);
+
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				$subject = 'Start der LV-Evaluation für ' . $studiensemester->studiensemester_kurzbz
+					. ' - Eintrag LV-Leitungen im Kompetenzfeld ' . $kf->bezeichnung
+					. ' bis ' . $zeitfensterEnde->format('d.m.Y') . ' sicherstellen.';
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'datum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link,
+						'zielgruppe' => 'Kompetenzfeldleitung'
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_1',
+						$data,
+						$leitung['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					} else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+		else
+		{
+			$this->logInfo('Today is not mailing day');
+		}
+
+		$this->logInfo('End Job sendLvLeitungenEintragenInfo');
+	}
+
+	/**
+	 * Automatisch Mails mit Codes an Studierende versenden, wenn letzte Unterrichtseinheit (ohne Exam) vorbei ist,
+	 * oder Evaluierungszeitfensterende vorbei ist und keine Codes versendet worden sind.
 	 * Sends evaluation codes for finished Lehrveranstaltungen of given Studiensemester if not already mailed.
 	 *
 	 * Job runs after last Unterrichtseinheit has passed and only processes evaluations without sent codes and if
@@ -498,6 +607,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_3 und LEHR_TEXT_1: Evaluierungszeitfenster einstellen
 	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
 	 *
 	 * @return void
@@ -639,6 +749,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_4 und LEHR_TEXT_2: Evaluierungszeitfenster startet bald
 	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
 	 *
 	 * @return void
@@ -779,6 +890,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_5 und LEHR_TEXT_3: Reflexion durchführen
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one day after Evaluierung ends.
 	 *
 	 * @return void
@@ -983,6 +1095,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_6 und LEHR_TEXT_4: Reflexion durchführen - Reminder
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one week after first infomail was sent.
 	 *
 	 * @return void
@@ -1219,6 +1332,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails STGL_TEXT_3: Reflexionen liegen vor - Sammelmail 1x/Monat
 	 * Job to send monthly summary Sammelmails to STGLs containing
 	 * newly available LVs with completed verpflichtende LV-Reflexionen
 	 * and LVs whose verpflichtende LV-Reflexion period ended without submission.
@@ -1433,6 +1547,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails KFL_TEXT_2: Reflexionen liegen vor - Sammelmail 1x/Monat
 	 *  Job to send monthly summary Sammelmails to KFLs containing
 	 *  newly available LVs with completed verpflichtende LV-Reflexionen
 	 *  and LVs whose verpflichtende LV-Reflexion period ended without submission.
