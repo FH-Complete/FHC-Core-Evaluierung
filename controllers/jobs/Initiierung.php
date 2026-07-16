@@ -31,7 +31,7 @@ class Initiierung extends JOB_Controller
 	/**
 	 * LVs für die Evaluierung anlegen + Mails STGL_TEXT_1: 100% der LVs wurden ausgewählt
 	 *
-	 * Job to insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
+	 * Job to insert Lehrveranstaltungen for upcoming Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
 	 * Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
 	 *
 	 * @return void
@@ -46,12 +46,19 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
 
-		// Only for pilotphase
+		/**
+		 * LVs für Evaluierung eintragen
+		 * Eintrag erfolgt nur, wenn LV nicht bereits in der Lvevaluierung Lehrveranstaltung Tabelle ist
+		 * */
+	 	// -------------------------------------------------------------------------------------------------------------
+
+		// Ausgewählte LVs: Only for pilotphase
 		if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG') && CIS_EVALUIERUNG_ANZEIGEN_STG )
 		{
 			$stgs = unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG);
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs);
 		}
+		// Alle LVs
 		else
 		{
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz);
@@ -60,13 +67,14 @@ class Initiierung extends JOB_Controller
 		if (isError($result))
 		{
 			$this->logError(getError($result));
-			$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for ' . $studiensemester_kurzbz);
-			exit;
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
 		}
 
+		// Mail an betroffene STGLs versenden
+		// -------------------------------------------------------------------------------------------------------------
 		if (hasData($result))
 		{
-			$this->logInfo('Inserted new LVs for Evaluierung for ' . $studiensemester_kurzbz);
+			$this->logInfo('Inserted new LVs into LvevaluierungLehrveranstaltung table for ' . $studiensemester_kurzbz);
 
 			$insertRecords = getData($result);
 
@@ -131,7 +139,8 @@ class Initiierung extends JOB_Controller
 					if ($mailSent)
 					{
 						$this->logInfo('LVE_STGL_TEXT_1 to ' . $stgl['to']);
-					} else
+					}
+					else
 					{
 						$this->logError('Failed to send LVE_STGL_TEXT_1 to ' . $stgl['to']);
 					}
@@ -140,10 +149,10 @@ class Initiierung extends JOB_Controller
 		}
 		else
 		{
-			$this->logInfo('No new LVs to add for Evaluierung for ' . $studiensemester_kurzbz);
+			$this->logInfo('No new LVs to add');
 		}
 
-		$this->_ci->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
 	}
 
 	/**
@@ -176,16 +185,16 @@ class Initiierung extends JOB_Controller
 
 		if (!hasData($result))
 		{
-			$this->logError('Missing Lvevaluierung Zeitfenster for '. $studiensemester_kurzbz);
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job createEvaluierungen');
 		}
 
-		$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
-		$now   = new DateTime();
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+		$today = new DateTime('today');
 
 		// Go on only if Zeitfenster is closed
-		if ($now > $zeitfensterEnde)
+		if ($today > $zeitfensterEnde)
 		{
 			// Get LveLvs by Studiensemester
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
@@ -193,6 +202,7 @@ class Initiierung extends JOB_Controller
 			if (isError($result))
 			{
 				$this->logError(getError($result));
+				return $this->logInfo('End Job createEvaluierungen');
 			}
 
 			$lveLvs = getData($result);
@@ -208,7 +218,8 @@ class Initiierung extends JOB_Controller
 
 				if (!hasData($result))
 				{
-					$this->logError('job createEvaluierungen: No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
+					$this->logError('No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
+					return $this->logInfo('End Job createEvaluierungen');
 				}
 
 				$fragebogenId = getData($result)[0]->fragebogen_id;
@@ -309,7 +320,7 @@ class Initiierung extends JOB_Controller
 				if (isError($result))
 				{
 					$this->logError(getError($result));
-					$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+					return $this->logInfo('End Job createEvaluierungen');
 				}
 				else
 				{
@@ -318,10 +329,10 @@ class Initiierung extends JOB_Controller
 			}
 			else
 			{
-				$this->logInfo('No new Evaluierungen needed - all already present.');
+				$this->logInfo('No new Evaluierungen created - all are present.');
 			}
 
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+			$this->logInfo('End Job createEvaluierungen');
 		}
 	}
 
@@ -343,8 +354,8 @@ class Initiierung extends JOB_Controller
 		$result = $this->_ci->StudiensemesterModel->getNext();
 		if (!hasData($result))
 		{
-			$this->_ci->logError('Missing Studiensemester');
-			exit;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
 		}
 
 		$studiensemester = getData($result)[0];
@@ -356,8 +367,8 @@ class Initiierung extends JOB_Controller
 		]);
 		if (!hasData($result))
 		{
-			$this->_ci->logError('Missing Zeitfenster');
-			exit;
+			$this->logError('Missing Zeitfenster');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
 		}
 
 		$zeitfenster = getData($result)[0];
@@ -448,7 +459,7 @@ class Initiierung extends JOB_Controller
 		}
 
 		// Get Evaluierungen by Studiensemester
-		$result =  $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
+		$result = $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
 
 		// If Evaluierungen exist
 		if (hasData($result))
@@ -476,8 +487,7 @@ class Initiierung extends JOB_Controller
 				if (isError($result))
 				{
 					$this->logError(getError($result));
-					$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-					return;
+					continue;
 				}
 
 				// Stundenplantermine
@@ -532,8 +542,7 @@ class Initiierung extends JOB_Controller
 					if (isError($result))
 					{
 						$this->logError(getError($result));
-						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-						return;
+						continue;
 					}
 
 					// Studenten
@@ -548,8 +557,7 @@ class Initiierung extends JOB_Controller
 					if (isError($result))
 					{
 						$this->logError(getError($result));
-						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-						return;
+						continue;
 					}
 
 					$unmailedStudenten = hasData($result) ? getData($result) : [];
@@ -557,7 +565,7 @@ class Initiierung extends JOB_Controller
 
 					// Set new Start- and Endezeit
 					$newStartzeit = clone $now;	// Startdatum heute, Zeit jetzt (da mails auch gleich gesendet werden)
-					$newEndezeit  =(clone $now)
+					$newEndezeit = (clone $now)
 						->modify('+7 days')
 						->setTime(23, 59, 59);	// Endedatum in 7 Tagen, 23:59:59
 
@@ -578,7 +586,7 @@ class Initiierung extends JOB_Controller
 						}
 						else
 						{
-							$this->logInfo('Failed sending mail for LVE-ID '. $item->lvevaluierung_id. ' / student'. $student->uid);
+							$this->logError('Failed sending mail for LVE-ID '. $item->lvevaluierung_id. ' / student'. $student->uid);
 						}
 					}
 
@@ -603,7 +611,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendUnsentEvaluierung for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job sendUnsentEvaluierung');
 	}
 
 	/**
@@ -624,7 +632,6 @@ class Initiierung extends JOB_Controller
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
-		
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 
 		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
@@ -745,7 +752,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job sendEvaluationStartInfo');
 	}
 
 	/**
@@ -878,8 +885,7 @@ class Initiierung extends JOB_Controller
 								{
 									$this->logError('Failed to send LVE_LVL_TEXT_4 to '. $uid);
 								}
-
-						}
+							}
 						}
 					}
 				}
@@ -1359,9 +1365,9 @@ class Initiierung extends JOB_Controller
 
 		if (!hasData($result))
 		{
-			$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
+
 		}
 
 		$mailZeitfenster = getData($result)[0];
@@ -1393,7 +1399,7 @@ class Initiierung extends JOB_Controller
 		if ($mailtagIndex === false)
 		{
 			$this->logInfo('No mails sent. Today is not report day.');
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
 			return;
 		}
 
@@ -1543,7 +1549,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+		$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
 	}
 
 	/**
@@ -1574,9 +1580,9 @@ class Initiierung extends JOB_Controller
 
 		if (!hasData($result))
 		{
-			$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl for ' . $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendReflexionReadyInfoToKfl');
+
 		}
 
 		$mailZeitfenster = getData($result)[0];
@@ -1608,7 +1614,7 @@ class Initiierung extends JOB_Controller
 		if ($mailtagIndex === false)
 		{
 			$this->logInfo('No mails sent. Today is not report day.');
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl for ' . $studiensemester_kurzbz);
+			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
 			return;
 		}
 
@@ -1760,8 +1766,12 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl for ' . $studiensemester_kurzbz);
+		$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl');
 	}
+
+
+	// Private methods
+	// -----------------------------------------------------------------------------------------------------------------
 
 	/**
 	 * Build mail text for
