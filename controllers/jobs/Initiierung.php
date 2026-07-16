@@ -36,15 +36,35 @@ class Initiierung extends JOB_Controller
 	 *
 	 * @return void
 	 */
-	public function initEvaluierungForLehrveranstaltungen($studiensemester_kurzbz = null)
+	public function initEvaluierungForLehrveranstaltungen()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			exit;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
 		}
 
-		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'stgauswahl',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// Letzter Tag, an dem STGLs abwählen können
 
 		/**
 		 * LVs für Evaluierung eintragen
@@ -90,21 +110,6 @@ class Initiierung extends JOB_Controller
 			$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
 			$result = $this->_ci->LehrveranstaltungModel->loadWhere();
 			$data = hasData($result) ? getData($result) : [];
-
-			// Endedatum für Abwahl von Evaluierungen
-			$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
-				'typ' => 'stgauswahl',
-				'studiensemester_kurzbz' => $studiensemester_kurzbz
-			]);
-
-			if (!hasData($result))
-			{
-				$this->logError('Missing Lvevaluierung Zeitfenster for ' . $studiensemester_kurzbz);
-				$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for ' . $studiensemester_kurzbz);
-				return;
-			}
-
-			$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
 
 			// Link zu Übersicht im CIS
 			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester=' . $studiensemester_kurzbz;
@@ -166,18 +171,22 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function createEvaluierungen($studiensemester_kurzbz)
+	public function createEvaluierungen()
 	{
-		$this->logInfo('Start Job createEvaluierungen for ' . $studiensemester_kurzbz);
+		$this->logInfo('Start Job createEvaluierungen');
 
-		if (isEmptyString($studiensemester_kurzbz))
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job createEvaluierungen');
 		}
 
-		// Get Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'typswitch',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -450,13 +459,17 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function sendUnsentEvaluierungen($studiensemester_kurzbz)
+	public function sendUnsentEvaluierungen()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			return;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendUnsentEvaluierungen');
 		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
 		// Get Evaluierungen by Studiensemester
 		$result = $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
@@ -620,15 +633,19 @@ class Initiierung extends JOB_Controller
 	 *
 	 * @return void
 	 */
-	public function sendEvaluationStartInfo($studiensemester_kurzbz = null)
+	public function sendEvaluationStartInfo()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$this->logInfo('Start Job sendEvaluationStartInfo');
+
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			exit;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendEvaluationStartInfo');
 		}
 
-		$this->logInfo('Start Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
@@ -1347,15 +1364,29 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function sendReflexionReadyInfoToStgl($studiensemester_kurzbz)
+	public function sendReflexionReadyInfoToStgl()
 	{
 		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToStgl');
 
-		if (isEmptyString($studiensemester_kurzbz))
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			return;
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
 		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
 		// Reflexion mail period of Studiensemester
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
@@ -1562,15 +1593,29 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function sendReflexionReadyInfoToKfl($studiensemester_kurzbz)
+	public function sendReflexionReadyInfoToKfl()
 	{
 		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToKfl');
 
-		if (isEmptyString($studiensemester_kurzbz))
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			return;
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
 		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendReflexionReadyInfoToKfl');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
 		// Reflexion mail period of Studiensemester
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
@@ -1804,7 +1849,6 @@ class Initiierung extends JOB_Controller
 
 		return $reflexionenData;
 	}
-
 	// Get STGL mail address
 	private function _getSTGLMailAddress($studiengang_kz)
 	{
