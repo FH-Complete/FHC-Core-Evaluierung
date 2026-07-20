@@ -1814,6 +1814,195 @@ class Initiierung extends JOB_Controller
 		$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl');
 	}
 
+	/**
+	 * Mails LVL_TEXT_7 und LEHR_TEXT_5: Profillinien verfügbar
+	 *
+	 * Für LVs mit Evaluierung auf Gesamt-LV Evaluierungsebene: Mail an LV-Leitung UND an Lehrende.
+	 * Für LVs mit Evaluierung auf Gruppen Evaluierungsebene: Mail an Lehrende.
+	 *
+	 *
+	 * @return void
+	 */
+	public function sendProfillinienAvailable()
+	{
+		$this->logInfo('Start Job sendProfillinienAvailable');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+		}
+
+		// Alle LVE Lehrveranstaltungen
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = hasData($result) ? getData($result) : [];
+
+			$gruppe_sent_users = [];
+			$gesamt_sent_users = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+
+			foreach ($lveLvs as $lveLv)
+			{
+				// TEST Mails only
+//				if ($lveLv->lvevaluierung_lehrveranstaltung_id != 2 && $lveLv->lvevaluierung_lehrveranstaltung_id != 19) continue;
+
+				// Gruppen
+				if ($lveLv->lv_aufgeteilt)
+				{
+					// Bei Gruppen Evaluierung ergeht Info an die jeweiligen LektorInnen
+					$resultLES = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById(
+						$lveLv->lvevaluierung_lehrveranstaltung_id
+					);
+
+					if (hasData($resultLES))
+					{
+						$dataLES = getData($resultLES);
+
+						// Group data by LE and add data
+						$groupedByLe = $this->initiierunglib->groupByLeAndAddData(
+							$dataLES,
+							$lveLv->lvevaluierung_lehrveranstaltung_id
+						);
+
+						foreach ($groupedByLe as $rowle)
+						{
+							foreach ($rowle->lektoren as $rowlkt)
+							{
+								if (!in_array($rowlkt['mitarbeiter_uid'], $gruppe_sent_users))
+								{
+									$gruppe_sent_users[] = $rowlkt['mitarbeiter_uid'];
+									$uid = $rowlkt['mitarbeiter_uid'];
+									//echo "\nGruppe Mail to ".$rowlkt['mitarbeiter_uid'];
+
+									$data = [
+										'vorname' => $rowlkt['vorname'],
+										'nachname' => $rowlkt['nachname'],
+										'studiensemester' => $studiensemester_kurzbz,
+										'link' => $link,
+										'zielgruppe' => 'Lehrende'
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LEHR_TEXT_5',
+										$data,
+										$uid . '@' . DOMAIN,
+										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LEHR_TEXT_5 to ' . $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LEHR_TEXT_5 to ' . $uid);
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+						$this->logError('Laden der Personen einer Evaluierung fehlgeschlagen');
+					}
+				}
+				// Gesamt-LV
+				else
+				{
+					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung UND auch an die Lehrenden
+					$result_lkt = $this->_ci->LehrveranstaltungModel->getLecturersByLv(
+						$studiensemester_kurzbz,
+						$lveLv->lehrveranstaltung_id
+					);
+
+					if (hasData($result_lkt))
+					{
+						$dataLektor = getData($result_lkt);
+
+						foreach ($dataLektor as $rowLektor)
+						{
+							if (!in_array($rowLektor->uid, $gesamt_sent_users))
+							{
+								$gesamt_sent_users[] = $rowLektor->uid;
+								//echo "\nGesamt Mail to ".$rowLektor->uid;
+
+								$uid = $rowLektor->uid;
+
+								$data = [
+									'vorname' => $rowLektor->vorname,
+									'nachname' => $rowLektor->nachname,
+									'studiensemester' => $studiensemester_kurzbz,
+									'link' => $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LVL_TEXT_7',
+									$data,
+									$uid . '@' . DOMAIN,
+									'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LVL_TEXT_7 to ' . $uid);
+
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LVL_TEXT_7 to ' . $uid);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendProfillinienAvailable');
+	}
+
 
 	// Private methods
 	// -----------------------------------------------------------------------------------------------------------------
