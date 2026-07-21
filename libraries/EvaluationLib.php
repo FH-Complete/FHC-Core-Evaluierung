@@ -237,6 +237,7 @@ class EvaluationLib
 		$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
 		$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
 		$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.oe_kurzbz');
 		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
 		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
 		$result = $this->_ci->LehrveranstaltungModel->loadWhere();
