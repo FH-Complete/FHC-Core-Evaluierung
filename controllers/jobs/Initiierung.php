@@ -156,6 +156,116 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mail STGL_TEXT_2: LVs von Evaluierung abwählen - Reminder
+	 *
+	 * @return void
+	 */
+	public function sendLvsAbwaehlenReminder()
+	{
+		$this->logInfo('Start Job sendLvsAbwaehlenReminder');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendLvsAbwaehlenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'stgauswahl',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);    // Letzter Tag, an dem STGLs abwählen können
+
+		$remindDatum = clone $zeitfensterEnde;
+		$remindDatum = $remindDatum->sub(new DateInterval('P1W'));
+
+		// Exit wenn nicht Mailtag ist	// todo check ob hier datum einschränken
+//		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+//		{
+//			$this->logInfo('No mails sent. Today is not mailing date.');
+//			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
+//		}
+
+		// Mail an Studiengangsleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT
+				. 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester='
+				. $studiensemester_kurzbz;
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				$subject = 'Reminder: Start der LV-Evaluation für  ' . $studiensemester_kurzbz
+					. ' - Abwahl einzelner LVs in ' . $stg->stgKurzbz . ' möglich';
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'abwahl_enddatum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_2',
+						$data,
+						$stgl['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_2 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_2 to ' . $stgl['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendLvsAbwaehlenReminder');
+	}
+
+	/**
 	 * Evaluierungen erstellen entsprechend der gewählten Evaluierungsebene (Gesamt/Gruppe), aber erst nach Ablauf des Zeitfensters,
 	 * in dem Evaluierungsebene gewechselt werden darf.
 	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
