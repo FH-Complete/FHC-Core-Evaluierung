@@ -18,6 +18,7 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->helper('hlp_sancho_helper');
 
 		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 		$this->_ci->load->config('extensions/FHC-Core-Evaluierung/initiierung');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
@@ -97,27 +98,21 @@ class Initiierung extends JOB_Controller
 			$this->logInfo('Inserted new LVs into LvevaluierungLehrveranstaltung table for ' . $studiensemester_kurzbz);
 
 			$insertRecords = getData($result);
-
 			$lvIds = array_column($insertRecords, 'lehrveranstaltung_id');
-
-			// Unique STGs, die in den gerade übertragenen LVs vorkommen
-			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-			$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
-			$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
-			$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
-			$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
-			$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
-			$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
-			$result = $this->_ci->LehrveranstaltungModel->loadWhere();
-			$data = hasData($result) ? getData($result) : [];
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
 
 			// Link zu Übersicht im CIS
-			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester=' . $studiensemester_kurzbz;
+			$link = CIS_ROOT
+				. 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester='
+				. $studiensemester_kurzbz;
 
-			foreach ($data as $row)
+			foreach ($distinctStgs as $stg)
 			{
 				// Get STGL mail address
-				$stglMailReceiver_arr = $this->_getSTGLMailAddress($row->studiengang_kz);
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				$subject = 'Start der LV-Evaluation für  ' . $studiensemester_kurzbz
+					. ' - Abwahl einzelner LVs in ' . $stg->stgKurzbz . ' möglich';
 
 				// Send mail
 				foreach ($stglMailReceiver_arr as $stgl)
@@ -125,8 +120,8 @@ class Initiierung extends JOB_Controller
 					$data = [
 						'vorname' => $stgl['vorname'],
 						'nachname' => $stgl['nachname'],
-						'stg_kurzbz' => $row->stgKurzbz,
-						'stg_bezeichnung' => $row->bezeichnung,
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
 						'studiensemester' => $studiensemester_kurzbz,
 						'abwahl_enddatum' => $zeitfensterEnde->format('d.m.Y'),
 						'link' => $link
@@ -136,7 +131,7 @@ class Initiierung extends JOB_Controller
 						'LVE_STGL_TEXT_1',
 						$data,
 						$stgl['to'],
-						'Start der LV-Evaluation für  ' . $studiensemester_kurzbz . ' - Abwahl einzelner LVs in ' . $row->stgKurzbz . ' möglich',
+						$subject,
 						'sancho_header_lvevaluierung_rollout.jpg',
 						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
@@ -925,8 +920,6 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
-
 		// Get all Evaluierungen that ended yesterday
 		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-1 day', true);
 
@@ -1129,8 +1122,6 @@ class Initiierung extends JOB_Controller
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended one day before one week
 		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-8 day', true);
@@ -2001,6 +1992,234 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('End Job sendProfillinienAvailable');
+	}
+
+	/**
+	 * Mails STGL_TEXT_4: MALVE STGL abschließen
+	 *
+	 * @return void
+	 */
+	public function sendMalveStglAbschliessen()
+	{
+		$this->logInfo('Start Job sendMalveStgAbschliessen');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+//		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+//		{
+//			$this->logInfo('No mails sent. Today is not mailing date.');
+//			return $this->logInfo('End Job sendProfillinienAvailable');
+//		}
+
+		// Mail an Studiengangsleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Alle LVE Lehrveranstaltungen
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+			$result = $this->_ci->StudiensemesterModel->getNext();
+			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+			// Malve Stgl Abschluss Enddatum
+			$malve_enddatum = clone $zeitfensterEnde;
+			$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Studiengangsleitung',
+						'link' => $link
+
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_4',
+						$data,
+						$stgl['to'],
+						'Maßnahmenableitung der LV-Evaluation (MALVE-STGL) bis '. $malve_enddatum->format('d.m.Y'),
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_4 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_4 to ' . $stgl['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveStgAbschliessen');
+	}
+
+	/**
+	 * Mails KFL_TEXT_3: MALVE KFL abschließen
+	 *
+	 * @return void
+	 */
+	public function sendMalveKflAbschliessen()
+	{
+		$this->logInfo('Start Job sendMalveKflAbschliessen');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+//		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+//		{
+//			$this->logInfo('No mails sent. Today is not mailing date.');
+//			return $this->logInfo('End Job sendProfillinienAvailable');
+//		}
+
+		// Mail an Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+		// Malve Stgl Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		// Link zu Übersicht im CIS
+		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+		// Get Kompetenzfelder
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctKfs = $this->_ci->evaluationlib->getDistinctKfs($lvIds);
+
+			// For each Kompetenzfeld
+			foreach ($distinctKfs as $kf)
+			{
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Kompetenzfeldleitung',
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_3',
+						$data,
+						$leitung['to'],
+						'Maßnahmenableitung der LV-Evaluation (MALVE-KFL) bis ' . $malve_enddatum->format('d.m.Y'),
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_3 to ' . $leitung['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_3 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveKflAbschliessen');
 	}
 
 

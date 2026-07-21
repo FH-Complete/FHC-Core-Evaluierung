@@ -223,6 +223,47 @@ class EvaluationLib
 
 	}
 
+
+	/**
+	 * Get unique STG data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctStgs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere();
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+	/**
+	 * Get unique KFL data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctKfs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.organisationseinheittyp_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_organisationseinheit oe', 'oe.oe_kurzbz = tbl_lehrveranstaltung.oe_kurzbz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+
+		return hasData($result) ? getData($result) : [];
+	}
+
 	public function isZeitfensterOffen($startDate, $endDate)
 	{
 		// Start ab Mitternacht
