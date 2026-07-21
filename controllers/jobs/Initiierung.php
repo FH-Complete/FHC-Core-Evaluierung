@@ -193,12 +193,12 @@ class Initiierung extends JOB_Controller
 		$remindDatum = clone $zeitfensterEnde;
 		$remindDatum = $remindDatum->sub(new DateInterval('P1W'));
 
-		// Exit wenn nicht Mailtag ist	// todo check ob hier datum einschränken
-//		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
-//		{
-//			$this->logInfo('No mails sent. Today is not mailing date.');
-//			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
-//		}
+		// Exit wenn nicht Mailtag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
+		}
 
 		// Mail an Studiengangsleitungen
 		// -------------------------------------------------------------------------------------------------------------
@@ -488,18 +488,24 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// send mail here
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// LV-Leitung eintragen until here
-		$today = new DateTime('today');
 
-		// If today is Startdatum for LV-Leitungen eintragen lassen
-		if ($today == $zeitfensterStart)
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
 		{
-			// Get all Kompetenzfelder
-			$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
-			$result = $this->_ci->OrganisationseinheitModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
-			$kfs = hasData($result) ? getData($result) : [];
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
 
-			// For each Kompetenzfeld
-			foreach ($kfs as $kf)
+		// Send Mail to Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Get all Kompetenzfelder
+		$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->_ci->OrganisationseinheitModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+		$kfs = hasData($result) ? getData($result) : [];
+
+		// For each Kompetenzfeld
+		foreach ($kfs as $kf)
 			{
 				$link = CIS_ROOT
 					. 'addons/reports/cis/vorschau.php?statistik_kurzbz=FehlendeLvLeitungen&StudiensemesterShortlist='
@@ -543,11 +549,6 @@ class Initiierung extends JOB_Controller
 					}
 				}
 			}
-		}
-		else
-		{
-			$this->logInfo('Today is not mailing day');
-		}
 
 		$this->logInfo('End Job sendLvLeitungenEintragenInfo');
 	}
@@ -1467,7 +1468,7 @@ class Initiierung extends JOB_Controller
 	 */
 	public function sendReflexionReadyInfoToStgl()
 	{
-		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToStgl');
+		$this->logInfo('Start Job sendReflexionReadyInfoToStgl');
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
@@ -1531,7 +1532,7 @@ class Initiierung extends JOB_Controller
 		if ($mailtagIndex === false)
 		{
 			$this->logInfo('No mails sent. Today is not report day.');
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
+			$this->logInfo('End Job sendReflexionReadyInfoToStgl');
 			return;
 		}
 
@@ -1681,7 +1682,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
+		$this->logInfo('End Job sendReflexionReadyInfoToStgl');
 	}
 
 	/**
@@ -1696,7 +1697,7 @@ class Initiierung extends JOB_Controller
 	 */
 	public function sendReflexionReadyInfoToKfl()
 	{
-		$this->logInfo('Start Job sendReflexionReadyMonthlyMailToKfl');
+		$this->logInfo('Start Job sendReflexionReadyInfoToKfl');
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
@@ -1760,7 +1761,7 @@ class Initiierung extends JOB_Controller
 		if ($mailtagIndex === false)
 		{
 			$this->logInfo('No mails sent. Today is not report day.');
-			$this->logInfo('End Job sendReflexionReadyMonthlyMailToStgl');
+			$this->logInfo('End Job sendReflexionReadyInfoToKfl');
 			return;
 		}
 
@@ -1912,7 +1913,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendReflexionReadyMonthlyMailToKfl');
+		$this->logInfo('End Job sendReflexionReadyInfoToKfl');
 	}
 
 	/**
@@ -2141,11 +2142,11 @@ class Initiierung extends JOB_Controller
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
 		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
-//		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
-//		{
-//			$this->logInfo('No mails sent. Today is not mailing date.');
-//			return $this->logInfo('End Job sendProfillinienAvailable');
-//		}
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+		}
 
 		// Mail an Studiengangsleitungen
 		// -------------------------------------------------------------------------------------------------------------
@@ -2256,11 +2257,11 @@ class Initiierung extends JOB_Controller
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
 		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
-//		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
-//		{
-//			$this->logInfo('No mails sent. Today is not mailing date.');
-//			return $this->logInfo('End Job sendProfillinienAvailable');
-//		}
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+		}
 
 		// Mail an Kompetenzfeldleitungen
 		// -------------------------------------------------------------------------------------------------------------
