@@ -2476,6 +2476,150 @@ class Initiierung extends JOB_Controller
 		$this->logInfo('End Job sendMalveStglAbschliessenReminder');
 	}
 
+	/**
+	 * Mails KFL_TEXT_4: MALVE KFL abschließen - Reminder
+	 *
+	 * Ergeht nur an KFLs, die MALVE noch nicht abgeschlossen haben.
+	 *
+	 * @return void
+	 */
+	public function sendMalveKflAbschliessenReminder()
+	{
+		$this->logInfo('Start Job sendMalveKflAbschliessenReminder');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Malve KFL Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		$remindDatum = clone $malve_enddatum;
+		$remindDatum->sub(new DateInterval('P1W'));    // todo check: macht jetzt 2026-09-10, da von 2026-09-17, nicht von 2026-09-16
+
+//		var_dump($zeitfensterEnde->format('d.m.Y'));
+//		var_dump($malve_enddatum->format('d.m.Y'));
+//		var_dump($remindDatum->format('d.m.Y'));
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		// Mail an Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+		// Malve Stgl Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		// Link zu Übersicht im CIS
+		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+		$subject = 'Reminder: Maßnahmenableitung der LV-Evaluation (MALVE-KFL) bis '
+			. $malve_enddatum->format('d.m.Y');
+
+		// Get Kompetenzfelder
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctKfs = $this->_ci->evaluationlib->getDistinctKfs($lvIds);
+
+			// Abgeschlossene MALVE
+			$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$result = $this->_ci->LvevaluierungMalveModel->loadWhere([
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+			$abgeschlosseneMalve = hasData($result) ? getData($result) : [];
+			$abgeschlosseneMalveOes = array_column($abgeschlosseneMalve, 'oe_kurzbz');
+
+			// For each Kompetenzfeld
+			foreach ($distinctKfs as $kf)
+			{
+				// Continue, wenn STGL die MALVE bereits abgeschlossen hat
+				if (in_array($kf->oe_kurzbz, $abgeschlosseneMalveOes))
+				{
+//					var_dump('continue for: ' . $kf->oe_kurzbz);
+					continue;
+				}
+//				var_dump('mail to '. $kf->oe_kurzbz);
+
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Kompetenzfeldleitung',
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_4',
+						$data,
+						$leitung['to'],
+						$subject,
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_4 to ' . $leitung['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_4 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveKflAbschliessenReminder');
+	}
+
 
 	// Private methods
 	// -----------------------------------------------------------------------------------------------------------------
