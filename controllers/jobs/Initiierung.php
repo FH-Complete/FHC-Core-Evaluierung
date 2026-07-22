@@ -1931,6 +1931,15 @@ class Initiierung extends JOB_Controller
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
@@ -2116,6 +2125,15 @@ class Initiierung extends JOB_Controller
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
@@ -2231,6 +2249,15 @@ class Initiierung extends JOB_Controller
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
@@ -2346,6 +2373,15 @@ class Initiierung extends JOB_Controller
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
@@ -2489,6 +2525,15 @@ class Initiierung extends JOB_Controller
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
