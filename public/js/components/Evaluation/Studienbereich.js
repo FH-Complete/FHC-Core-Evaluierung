@@ -620,7 +620,7 @@ export default {
 			</core-filter-cmpt>
 		</div>
 		<div class="row-cols align-items-center mt-5 mb-3">
-	 		<h4>Auswertungsdaten über Studiengänge aggregiert</h4>
+	 		<h4>Studienübergreifende LVs</h4>
 	  	
 			<div class="evaluation-studienbereich-template-table">
 			<core-filter-cmpt

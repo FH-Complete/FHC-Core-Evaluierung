@@ -178,6 +178,12 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				WHERE
 				  stplsem.studiensemester_kurzbz = ?
 				  AND lv.oe_kurzbz IN ?
+				  -- NUR studienübergreifende LVs (also in mind 2 STGs vorkommend)
+				  AND lv.lehrveranstaltung_template_id IS NOT NULL
+					GROUP BY
+						lv.lehrveranstaltung_template_id
+					HAVING
+						COUNT(DISTINCT lv.studiengang_kz) >= 2
 			  )
 			  ORDER BY
 			  	lv.bezeichnung
