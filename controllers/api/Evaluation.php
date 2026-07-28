@@ -861,7 +861,6 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinie - LV im LV-Vergleich
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImVergleichData = null;
 		$lvImVergleichMsg = null;
 		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
 		$showChartDate = new DateTime($zeitfenster->endedatum);
@@ -873,8 +872,8 @@ class Evaluation extends FHCAPI_Controller
 		}
 		else
 		{
-			$lvImVergleichMsg = 'Profillinie "LV im Vergleich zu anderen LVs" ab '
-				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
 		}
 
 		$this->terminateWithSuccess([
@@ -911,7 +910,6 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinie - LV im LV-Vergleich
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImVergleichData = null;
 		$lvImVergleichMsg = null;
 		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
 		$showChartDate = new DateTime($zeitfenster->endedatum);
@@ -923,13 +921,13 @@ class Evaluation extends FHCAPI_Controller
 		}
 		else
 		{
-			$lvImVergleichMsg = 'Profillinie "LV im Vergleich zu anderen LVs" ab '
-				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
 		}
 
 		$this->terminateWithSuccess([
 			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
-			'lvImVergleichSubtitle' => 'Vergleich zu Bewertungen aller LVs im gleichen STG und Ausbildungssemester im ' . $studiensemester_kurzbz,
+			'lvImVergleichSubtitle' => 'Bewertungen im gleichen STG und Ausbildungssemester',
 			'lvImVergleichData' => $lvImVergleichData,
 			'lvImVergleichMsg' => $lvImVergleichMsg,
 		]);
@@ -952,7 +950,6 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinie - LV im LV-Vergleich
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImVergleichData = null;
 		$lvImVergleichMsg = '';
 		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
 		$showChartDate = new DateTime($zeitfenster->endedatum);
@@ -967,13 +964,13 @@ class Evaluation extends FHCAPI_Controller
 		}
 		else
 		{
-			$lvImVergleichMsg = 'Profillinie "LV im Vergleich nach STGs" ab '
-				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
 		}
 
 		$this->terminateWithSuccess([
 			'lvImVergleichTitle' => 'LV im Vergleich nach STGs',
-			'lvImVergleichSubtitle' => 'Vergleich der Bewertungen in den einzelnen Studiengängen im '. $studiensemester_kurzbz,
+			'lvImVergleichSubtitle' => 'Bewertungen der LV in verschiedenen Studiengängen',
 			'lvImVergleichData' => $lvImVergleichData,
 			'lvImVergleichMsg' => $lvImVergleichMsg,
 		]);

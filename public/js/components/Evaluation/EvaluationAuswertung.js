@@ -326,13 +326,54 @@ export default {
 			};
 		},
 		createVergleichChart(vergleichData) {
-			const fbGruppen = vergleichData[0].auswertungData;
+			const data = vergleichData || [];
+			const fbGruppen = data[0]?.auswertungData || [];
 
 			return {
-				chart: {type: 'line', height: 600, inverted: true},// Fragen left, Bewertungen below
+				chart: {
+					type: 'line',
+					height: 600,
+					inverted: true,
+					events: {
+						load() {
+							if (!this.series.some(series => series.data.length)) {
+								const label = this.renderer
+										.label(
+											`<div class="text-center text-secondary">
+												<i class="fa fa-chart-column fa-4x mb-3"></i><br>
+												${this.options.custom.noDataText}
+											</div>`,
+											0,
+											0,
+											null,
+											null,
+											null,
+											true
+										)
+										.attr({
+											align: 'center'
+										})
+										.css({
+											fontSize: '0.875rem'
+										})
+										.add();
+								label
+									.align({
+										align: 'center',
+										verticalAlign: 'middle',
+										x: 0,
+										y: 0
+									}, null, 'plotBox')
+							}
+						}
+					}
+				},// Fragen left, Bewertungen below
+				custom: {
+					noDataText: this.lvImVergleichMsg
+				},
 				title: {text: this.lvImVergleichTitle},
 				subtitle: {text: this.lvImVergleichSubtitle},
-				series: vergleichData.map(item => ({
+				series: data.map(item => ({
 					name: item.vergleichZu,
 					data: item.auswertungData.flatMap(g =>
 							g.fbFragen.map((f, index) => ({
