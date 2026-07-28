@@ -647,7 +647,7 @@ class Evaluation extends FHCAPI_Controller
 		// Profillinien
 		// -------------------------------------------------------------------------------------------------------------
 		// Profillinien data - LV im Zeitverlauf
-		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz);
 
 		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
 		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
@@ -1019,6 +1019,81 @@ class Evaluation extends FHCAPI_Controller
 		return $options;
 	}
 
+	/**
+	 * Gibt Hodges Lehmann Estimator zu LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 * Bsp:
+	 * SS2026 - HLE nach LVE (kann Gruppen oder Gesamt-LV Ergebnis sein)
+	 * SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 * SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lve
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
+	private function getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterAuswertungData = [];
+			$semesterLveLvId = null;
+
+			// Aktuelles Studiensemester - nach LVE, kann also Gruppe oder Gesamt-LV sein
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+			// LveLv ID - Letzes or vorletztes Studiensemester - immer Gesamt-LV betrachten
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+
+				if (is_numeric($semesterLveLvId))
+				{
+					$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+					$data = $this->getDataOrTerminateWithError($result);
+					$semesterAuswertungData = $this->mapAuswertungData($data);
+					$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+				}
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	/**
+	 *  Gibt Hodges Lehmann Estimator zur LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 *  Bsp:
+	 *  SS2026 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
 	private function getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz)
 	{
 		$lvImZeitverlaufData = [];
@@ -1066,6 +1141,13 @@ class Evaluation extends FHCAPI_Controller
 		return $lvImZeitverlaufData;
 	}
 
+	/**
+	 *   Gibt Hodges Lehmann Estimator aggregiert über alle LV-Evaluierungen eines Quellkurses über 3 Studiensemester zurück.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
 	private function getLvImZeitverlaufDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
 	{
 		$lvImZeitverlaufData = [];
