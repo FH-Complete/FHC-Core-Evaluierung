@@ -163,7 +163,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
@@ -316,7 +316,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
 		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);

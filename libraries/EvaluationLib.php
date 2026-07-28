@@ -263,7 +263,7 @@ class EvaluationLib
 	 * @param $studiensemester_kurzbz
 	 * @return array|mixed
 	 */
-	public function getLvData($lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function getLvData($lehrveranstaltung_id)
 	{
 		// LV data
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
