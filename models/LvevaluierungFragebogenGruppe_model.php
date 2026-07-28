@@ -266,6 +266,12 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 		);
 	}
 
+	/**
+	 *  Get single-response comparison data for the same Studiensemester, STG and Semester of the given LVE-LV ID.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed
+	 */
 	public function getLvImVergleichDataByLveLv($lvevaluierung_lehrveranstaltung_id)
 	{
 		$langIndex = $this->evaluierunglib->getLanguageIndex();

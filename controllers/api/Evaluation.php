@@ -2910,8 +2910,6 @@ class Evaluation extends FHCAPI_Controller
 			$oe_kurzbz
 		);
 		$lvTemplates = $this->getDataOrTerminateWithError($result);
-		
-		$this->addMeta('debug', $lvTemplates);
 
 		// LV Template IDs
 		$lvTemplateIds = array_column($lvTemplates, 'lehrveranstaltung_id');
