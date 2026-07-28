@@ -79,6 +79,37 @@ export default {
 			}
 		}
 	},
+	getLvsImVergleichDataByLve(lvevaluierung_id, studiensemester_kurzbz, role) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvsImVergleichDataByLve',
+			params: {
+				lvevaluierung_id: lvevaluierung_id,
+				studiensemester_kurzbz: studiensemester_kurzbz,
+				role: role
+			}
+		}
+	},
+	getLvsImVergleichDataByLveLv(lvevaluierung_lehrveranstaltung_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvsImVergleichDataByLveLv',
+			params: {
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
+	getLvsImVergleichDataByLvTemplate(lehrveranstaltung_template_id, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getLvsImVergleichDataByLvTemplate',
+			params: {
+				lehrveranstaltung_template_id: lehrveranstaltung_template_id,
+				studiensemester_kurzbz: studiensemester_kurzbz
+			}
+		}
+	},
 	getReflexionDataByLve(lvevaluierung_id, role) {
 		return {
 			method: 'get',

@@ -42,6 +42,22 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getLvsImVergleichDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'getAuswertungHelpUrl' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
@@ -816,6 +832,153 @@ class Evaluation extends FHCAPI_Controller
 	 *
 	 * @return string|null URL if configured, otherwise null
 	 */
+
+	public function getLvsImVergleichDataByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$role = $this->input->get('role');
+
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichData = null;
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Profillinie "LV im Vergleich zu anderen LVs" ab '
+				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Vergleich zu Bewertungen aller LVs im gleichen STG und Ausbildungssemester im ' . $studiensemester_kurzbz,
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg
+		]);
+	}
+
+	public function getLvsImVergleichDataByLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichData = null;
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Profillinie "LV im Vergleich zu anderen LVs" ab '
+				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Vergleich zu Bewertungen aller LVs im gleichen STG und Ausbildungssemester im ' . $studiensemester_kurzbz,
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
+	public function getLvsImVergleichDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		// KFL, Admin
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichData = null;
+		$lvImVergleichMsg = '';
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByTemplate(
+				$lehrveranstaltung_template_id,
+				$studiensemester_kurzbz
+			);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Profillinie "LV im Vergleich nach STGs" ab '
+				. $showChartDate->format('d.m.Y') . ' verfügbar.';
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich nach STGs',
+			'lvImVergleichSubtitle' => 'Vergleich der Bewertungen in den einzelnen Studiengängen im '. $studiensemester_kurzbz,
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
 	public function getAuswertungHelpUrl()
 	{
 		$url = $this->config->item('auswertungHelpUrl');
@@ -1175,6 +1338,101 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		return $lvImZeitverlaufData;
+	}
+
+	private function getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LVE
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs im gleichen STG ' . $lv->stgKurzbz . ' und Ausbildungssemester ' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LV
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs in ' . $lv->stgKurzbz . '-' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImVergleichData = [];
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		$lveLvs = hasData($result) ? getData($result) : [];
+
+		foreach ($lveLvs as $lveLv)
+		{
+			// Get LV Auswertung by LveLv ID
+			$vergleichAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+			$data = $this->getDataOrTerminateWithError($result);
+			$vergleichAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+
+			// LV Info
+			$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+			$lvImVergleichData[] = [
+				'vergleichZu' => $lv->stgKurzbz. ' - '. $lv->orgform_kurzbz,
+				'auswertungData' => $vergleichAuswertungData
+			];
+		}
+
+		return $lvImVergleichData;
 	}
 
 	private function calculateHodgesLehmannEstimator(&$auswertungData)
