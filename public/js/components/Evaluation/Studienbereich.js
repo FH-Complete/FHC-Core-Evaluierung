@@ -480,6 +480,11 @@ export default {
 
 			this.table.replaceData();
 			this.templateTable.replaceData();
+
+			this.$api
+				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onOeChange() {
 			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table || !this.templateTable) return;

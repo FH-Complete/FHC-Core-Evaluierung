@@ -2709,6 +2709,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getMalveByStg()
 	{
 		$studiengang_kz = $this->input->get('studiengang_kz');
+		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -2721,6 +2722,7 @@ class Evaluation extends FHCAPI_Controller
 			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -2744,6 +2746,7 @@ class Evaluation extends FHCAPI_Controller
 	public function saveMalveByStg()
 	{
 		$studiengang_kz = $this->input->post('studiengang_kz');
+		$orgform_kurzbz = $this->input->post('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -2758,6 +2761,7 @@ class Evaluation extends FHCAPI_Controller
 			// Check if already exist
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -2767,6 +2771,7 @@ class Evaluation extends FHCAPI_Controller
 				// Insert
 				$result = $this->LvevaluierungMalveModel->insert([
 					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'orgform_kurzbz' => $orgform_kurzbz,
 					'studiensemester_kurzbz' => $studiensemester_kurzbz,
 					'insertvon' => $this->_uid
 				]);
