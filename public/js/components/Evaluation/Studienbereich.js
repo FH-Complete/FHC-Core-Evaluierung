@@ -610,17 +610,19 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button 
-						v-if="malve !== null"
-						class="btn"
-						:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
-						@click="submitMalve" 
-						:disabled="isDisabledSubmitMalveBtn"
-						>
-						<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-						{{ malve.length > 0 ? 'MALVE-KFL abgeschlossen' : 'MALVE-KFL abschließen' }}
-					</button>
-					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+				 	<div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+						<button 
+							v-if="malve !== null"
+							class="btn"
+							:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
+							@click="submitMalve" 
+							:disabled="isDisabledSubmitMalveBtn"
+							>
+							<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+							{{ malve.length > 0 ? 'MALVE-KFL abgeschlossen' : 'MALVE-KFL abschließen' }}
+						</button>
+						<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+					</div>
 				</template>
 			</core-filter-cmpt>
 		</div>
