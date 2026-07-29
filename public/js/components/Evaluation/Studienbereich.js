@@ -235,7 +235,7 @@ export default {
 						},
 						bottomCalcFormatter: function (cell) {
 							const value = cell.getValue();
-							return value !== null ? value.toFixed(2) + "%" : "–";
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -425,7 +425,7 @@ export default {
 						},
 						bottomCalcFormatter: function (cell) {
 							const value = cell.getValue();
-							return value !== null ? value.toFixed(2) + "%" : "–";
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
