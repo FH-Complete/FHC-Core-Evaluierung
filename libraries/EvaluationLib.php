@@ -374,7 +374,7 @@ class EvaluationLib
 			}
 		}
 
-		return round(($lowerVal + $upperVal) / 2, 1);;
+		return round(($lowerVal + $upperVal) / 2, 1);
 	}
 
 

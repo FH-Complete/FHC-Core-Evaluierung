@@ -81,7 +81,8 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				extension.tbl_lvevaluierung lve
 				JOIN extension.tbl_lvevaluierung_fragebogen fb USING (fragebogen_id)
 				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
-				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
 				LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
 				LEFT JOIN frequencies freq ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id AND freq.lvevaluierung_frage_antwort_id = fbfrantw.lvevaluierung_frage_antwort_id
 		  	WHERE
@@ -153,7 +154,8 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 			FROM extension.tbl_lvevaluierung_fragebogen fb
 			JOIN selected_lve sel USING (fragebogen_id)
 			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
-			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_fragebogen_gruppe_id)
+			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
 			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
 			LEFT JOIN frequencies freq
 				   ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id
@@ -241,9 +243,12 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 	
 			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr
 				USING (fragebogen_id)
+				
+			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr
+				USING (lvevaluierung_fragebogen_gruppe_id)
 	
 			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr
-				USING (lvevaluierung_fragebogen_gruppe_id)
+				USING (lvevaluierung_frage_id)
 	
 			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw
 				USING (lvevaluierung_frage_id)
@@ -347,7 +352,8 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				extension.tbl_lvevaluierung_fragebogen fb
 				JOIN selected_lve sel USING (fragebogen_id)
 				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
-				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
 				LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
 				LEFT JOIN frequencies freq
 			   		ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id
