@@ -1,14 +1,26 @@
 import Evaluation from "../../components/Evaluation/Evaluation.js";
 import Phrasen from "../../../../../js/plugins/Phrasen.js";
-import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js"
+import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js";
 import tooltip from "../../../../../js/directives/tooltip.js";
-import DateHelper from "../../helpers/DateHelper";
+import DateHelper from "../../helpers/DateHelper.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 
 const router = VueRouter.createRouter({
 	history: VueRouter.createWebHistory(`/${ciPath}/extensions/FHC-Core-Evaluierung/evaluation/Evaluation`),
 	routes: [
+		{
+			name: 'index',
+			path: '/',
+			component: Evaluation,
+			props: route => ({
+				role: 'lehre',
+				lvevaluierung_id: route.query.lvevaluierung_id && route.query.lvevaluierung_id !== 'null'
+						? Number(route.query.lvevaluierung_id)
+						: null,
+				selected_view: route.query.selected_view || null
+			})
+		},
 		{
 			name: 'lehre',
 			path: '/lehre',
@@ -50,6 +62,9 @@ const router = VueRouter.createRouter({
 						: null,
 				lehrveranstaltung_template_id: route.query.lehrveranstaltung_template_id && route.query.lehrveranstaltung_template_id !== 'null'
 						? Number(route.query.lehrveranstaltung_template_id)
+						: null,
+				studiensemester: route.query.studiensemester && route.query.studiensemester !== 'null'
+						? route.query.studiensemester
 						: null,
 				selected_view: route.query.selected_view || null
 			})

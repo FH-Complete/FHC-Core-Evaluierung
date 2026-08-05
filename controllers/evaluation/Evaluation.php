@@ -10,6 +10,12 @@ class Evaluation extends Auth_Controller
 	{
 		parent::__construct(
 			[
+				'index'=> [
+					'extension/lvevaluierung_init:rw',
+					'extension/lvevaluierung_stg:rw',
+					'extension/lvevaluierung_kf:rw',
+					'extension/lvevaluierung_admin:rw',
+				],
 				'lehre'=> [
 					'extension/lvevaluierung_init:rw',
 					'extension/lvevaluierung_stg:rw',
@@ -28,6 +34,11 @@ class Evaluation extends Auth_Controller
 			]
 		);
 	}
+	public function index()
+	{
+		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');
+	}
+
 	public function lehre()
 	{
 		$this->load->view('extensions/FHC-Core-Evaluierung/evaluation/Evaluation');

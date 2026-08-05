@@ -1,7 +1,7 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
-import FragebogenFrage from "./FragebogenFrage";
-import Countdown from "./Countdown";
-import DateHelper from "../../helpers/DateHelper";
+import FragebogenFrage from "./FragebogenFrage.js";
+import Countdown from "./Countdown.js";
+import DateHelper from "../../helpers/DateHelper.js";
 import ApiEvaluierung from "../../api/evaluierung.js";
 import ApiFragebogen from "../../api/fragebogen.js";
 

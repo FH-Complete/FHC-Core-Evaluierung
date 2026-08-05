@@ -1,7 +1,7 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
-import DateHelper from "../../helpers/DateHelper";
-import ApiInitiierung from "../../api/initiierung";
+import DateHelper from "../../helpers/DateHelper.js";
+import ApiInitiierung from "../../api/initiierung.js";
 
 export default {
 	components: {

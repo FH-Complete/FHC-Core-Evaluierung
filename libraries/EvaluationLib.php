@@ -223,6 +223,48 @@ class EvaluationLib
 
 	}
 
+
+	/**
+	 * Get unique STG data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctStgs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere();
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+	/**
+	 * Get unique KFL data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctKfs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.organisationseinheittyp_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_organisationseinheit oe', 'oe.oe_kurzbz = tbl_lehrveranstaltung.oe_kurzbz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+
+		return hasData($result) ? getData($result) : [];
+	}
+
 	public function isZeitfensterOffen($startDate, $endDate)
 	{
 		// Start ab Mitternacht
@@ -263,7 +305,7 @@ class EvaluationLib
 	 * @param $studiensemester_kurzbz
 	 * @return array|mixed
 	 */
-	public function getLvData($lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function getLvData($lehrveranstaltung_id)
 	{
 		// LV data
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
@@ -291,42 +333,31 @@ class EvaluationLib
 		return $data;
 	}
 
-	// TODO iMedian formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
-	 /**
-	  * Calculate interpolated Median from ratings and frequencies
-	  * @param array $werte
-	  * @param array $frequencies
-	  * @return float|null
-	  */
-	public function getInterpolMedian($werte, $frequencies)
+	/**
+	 * Get Lehrveranstaltung Infos.
+	 *
+	 * @param $lehrveranstaltung_id
+	 * @param $studiensemester_kurzbz
+	 * @return array|mixed
+	 */
+	public function getLvBezeichnung($lehrveranstaltung_id)
 	{
-		if (!is_array($werte) || !is_array($frequencies)) return null;
-		if (count($werte) !== count($frequencies)) return null;
+		// LV data
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addSelect('
+			tbl_lehrveranstaltung.bezeichnung,
+			tbl_lehrveranstaltung.bezeichnung_english
+		');
+		$result = $this->_ci->LehrveranstaltungModel->load($lehrveranstaltung_id);
+		$data = hasData($result) ? getData($result)[0] : [];
 
-		$total = array_sum($frequencies);
-		if ($total === 0) return 0;
-
-		$cumFreq = 0;
-		$medianIndex = 0;
-		$medianPos = $total / 2;
-
-		for ($i = 0; $i < count($frequencies); $i++) {
-			$cumFreq += $frequencies[$i];
-			if ($cumFreq >= $medianPos) {
-				$medianIndex = $i;
-				break;
-			}
-		}
-
-		$F = array_sum(array_slice($frequencies, 0, $medianIndex));
-		$f = $frequencies[$medianIndex];
-		$L = $werte[$medianIndex] -0.5; // lower bound
-		$w = 1;
-
-		return round($L + (($medianPos - $F) / $f) * $w, 2);
+		// LV bezeichnung
+		return getUserLanguage() === 'English'
+			? $data->bezeichnung_english
+			: $data->bezeichnung;
 	}
 
-	// TODO iMedian formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
+	// TODO HLM formula only for testing. NEEDS TO BE DESCRIBED AND VERIFIED BY QM!!!
 	/**
 	 * Calculate Hodges-Lehmann estimator (HLE) for a single question
 	 *
@@ -367,17 +398,25 @@ class EvaluationLib
 
 		// Weighted median
 		$totalWeight = array_sum(array_column($pairs, 'weight'));
-		$medianPos   = $totalWeight / 2;
+
+		// beide mittleren Positionen ermitteln
+		$lowerPos = ceil($totalWeight / 2);
+		$upperPos = ceil(($totalWeight + 1) / 2);
 
 		$cumWeight = 0;
+		$lowerVal = null;
+		$upperVal = null;
 		foreach ($pairs as $pair) {
 			$cumWeight += $pair['weight'];
-			if ($cumWeight >= $medianPos) {
-				return round($pair['value'], 2);
+			if ($lowerVal === null && $cumWeight >= $lowerPos) $lowerVal = $pair['value'];
+			if ($cumWeight >= $upperPos)
+			{
+				$upperVal = $pair['value'];
+				break;
 			}
 		}
 
-		return null;
+		return round(($lowerVal + $upperVal) / 2, 1);
 	}
 
 

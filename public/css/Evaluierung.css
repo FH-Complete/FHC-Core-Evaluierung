@@ -11,6 +11,12 @@
     --fhc-evaluierung-antwort-checked-wert-5: #BE2525;
 }
 
+.fhc-page-header {
+    padding-bottom: 9px;
+    margin: 40px 0 20px;
+    border-bottom: 1px solid #eee;
+}
+
 .fhc-bgc-blue {
     background-color: var(--fhc-evaluierung-blue);
 }
@@ -92,7 +98,7 @@
 
 .evaluation-card-flex {
     flex: 1 1 300px; /* wächst, bricht bei ~300px */
-    max-width: 420px; /* verhindert zu breite Cards */
+    max-width: 410px; /* verhindert zu breite Cards */
 }
 
 .evaluation-data-table-flex {

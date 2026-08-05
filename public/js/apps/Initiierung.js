@@ -1,7 +1,7 @@
 import LveStarten from '../components/Initiierung/LveStarten.js';
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 import tooltip from "../../../../js/directives/tooltip.js";
-import DateHelper from "../helpers/DateHelper";
+import DateHelper from "../helpers/DateHelper.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 const router = VueRouter.createRouter({

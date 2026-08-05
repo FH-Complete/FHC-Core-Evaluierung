@@ -23,6 +23,10 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getEvaluationDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'getAuswertungDataByLve' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
@@ -32,6 +36,26 @@ class Evaluation extends FHCAPI_Controller
 				'getAuswertungDataByLveLv' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getAuswertungDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getAuswertungHelpUrl' => [
@@ -62,6 +86,10 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getReflexionDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'getEntitledKfs' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
@@ -78,6 +106,10 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getLvTemplateListByKf' => [
+				self::BERECHTIGUNG_KF . ':r',
+				self::BERECHTIGUNG_ADMIN . ':r',
+			],
 				'getLvListByStg' => [
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
@@ -92,21 +124,27 @@ class Evaluation extends FHCAPI_Controller
 				],
 				'updateVerpflichtend' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'updateReviewedLvInKf' => [
 					self::BERECHTIGUNG_KF . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'updateReviewedLvInStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveOrUpdateReflexion' => [
 					self::BERECHTIGUNG_INIT . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveMalveByKf' => [
 					self::BERECHTIGUNG_KF . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 				'saveMalveByStg' => [
 					self::BERECHTIGUNG_STG . ':rw',
+					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
 			]
 		);
@@ -119,8 +157,10 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungCode_model', 'LvevaluierungCodeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
+		$this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 
 		$this->_uid = getAuthUid();
 		$this->_lvLeitungRequired = $this->config->item('lvLeitungRequired');
@@ -139,26 +179,34 @@ class Evaluation extends FHCAPI_Controller
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
 		$isLektorOfLv = in_array($this->_uid, array_column($lehrende, 'uid'));
 
+		// Ansicht label
+		if ($role === 'stg')
+			$viewLabel = 'Studiengang';
+		elseif ($role === 'kf')
+			$viewLabel = 'Kompetenzfeld';
+		else
+			$viewLabel = '';
+
 		// Permission Check
 		if (
 			$isLektorOfLv ||
 			$isLvLeitung ||
-			$isKfl ||
-			$isStgl ||
-			$isAdmin
+			$isBerechtigt_KF ||
+			$isBerechtigt_STG ||
+			$isBerechtigt_ADMIN
 		) {
 
 			// Abgeschickte Frageboegen, Ruecklaufquote
@@ -169,6 +217,9 @@ class Evaluation extends FHCAPI_Controller
 			if ($lve->codes_ausgegeben !== null && $lve->codes_ausgegeben > 0) {
 				$ruecklaufquote = round(($countSubmitted / $lve->codes_ausgegeben) * 100, 2);
 			}
+
+			// Reflexion Start- und Endezeit
+			$reflexionZeitfenster = $this->evaluationlib->calculateReflexionZeitfenster($lve->endezeit);
 
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
@@ -193,14 +244,23 @@ class Evaluation extends FHCAPI_Controller
 			elseif (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
 			{
 				$isEvaluationViewOpen = false;
-				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+				$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context
+					. '. Zeitfenster: '
+					. (new DateTime($lve->startzeit))->format('d.m.Y')
+					. ' - '
+					. (new DateTime($lve->endezeit))->format('d.m.Y');
+
 			}
 			elseif ($role === 'stg' || $role === 'kf')
 			{
 				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context
+						. '. Zeitfenster: '
+						. $reflexionZeitfenster['von']->format('d.m.Y')
+						. ' - '
+						. $reflexionZeitfenster['bis']->format('d.m.Y');
 				}
 			}
 
@@ -224,6 +284,8 @@ class Evaluation extends FHCAPI_Controller
 				['ruecklaufquote' => $ruecklaufquote],
 				['startzeit' => $lve->startzeit],
 				['endezeit' => $lve->endezeit],
+				['startzeitReflexion' => $reflexionZeitfenster['von']->format('d.m.Y') ?? null],
+				['endezeitReflexion' => $reflexionZeitfenster['bis']->format('d.m.Y') ?? null],
 				['minDuration' => $durations ? min($durations) : 0],
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
@@ -233,6 +295,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
 					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
 					'canAggregate' => $canAggregate,
 					'aggregationOptions' => $aggregationOptions
 				],
@@ -247,6 +310,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => false,
 					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -264,23 +328,27 @@ class Evaluation extends FHCAPI_Controller
 	public function getEvaluationDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$role = $this->input->get('role');
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 		$lvLeitungen = $this->evaluationlib->getLvLeitung($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$result = $this->LehrveranstaltungModel->getLecturersByLv($lveLv->studiensemester_kurzbz, $lveLv->lehrveranstaltung_id);
 		$lehrende = hasData($result) ? getData($result) : [];
 
+		// Ansicht label
+		$viewLabel = $role === 'stg' ? 'Studiengang' : 'Kompetenzfeld';
+
 		// Permission Check
-		if ($isKfl || $isStgl || $isAdmin)
+		if ($isBerechtigt_KF || $isBerechtigt_STG || $isBerechtigt_ADMIN)
 		{
 			// Abgeschickte Frageboegen, Ruecklaufquote
 			$submittedLveCodes = $this->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);
@@ -294,7 +362,7 @@ class Evaluation extends FHCAPI_Controller
 			// For min/max duration
 			$durations = $this->getDurations($submittedLveCodes);
 
-			// Min startzeit / max endezeit overall Evaluierungen
+			// Evaluierungs- und Reflexionszeitraum: Min startzeit / max endezeit overall Evaluierungen
 			$periodTimes = $this->getPeriodTimes($lves);
 
 			// Check if Evaluation view is open
@@ -306,13 +374,14 @@ class Evaluation extends FHCAPI_Controller
 			if (empty($lves))
 			{
 				$isEvaluationViewOpen = false;
-				$isEvaluationViewOpenMsg[]= 'Evaluierung noch nicht gestartet';
+				$isEvaluationViewOpenMsg[]= 'Noch keine Evaluierung gestartet';
 			}
 
 			// Check each Evaluierung
 			foreach ($lves as $lve)
 			{
 				$context = $this->getEvaluationViewOpenMsgContextText($lve, $lveLv->lv_aufgeteilt);
+				$reflexionZeitfenster = $this->evaluationlib->calculateReflexionZeitfenster($lve->endezeit);
 
 				if (!$this->hasSetEvaluierungszeitraum($lve))
 				{
@@ -331,20 +400,29 @@ class Evaluation extends FHCAPI_Controller
 				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context;
+					$isEvaluationViewOpenMsg[]= 'Evaluierungszeitfenster noch nicht abgeschlossen'. $context
+						.'. Zeitfenster: '
+						. (new DateTime($lve->startzeit))->format('d.m.Y')
+						. ' - '
+						. (new DateTime($lve->endezeit))->format('d.m.Y');
+
 					continue;
 				}
 
 				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
 				{
 					$isEvaluationViewOpen = false;
-					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context;
+					$isEvaluationViewOpenMsg[]= 'LV-Reflexionszeitraum noch nicht abgeschlossen'. $context
+						. '. Zeitfenster: '
+						. $reflexionZeitfenster['von']->format('d.m.Y')
+						. ' - '
+						. $reflexionZeitfenster['bis']->format('d.m.Y');
 				}
 			}
 
 			// Check dropdown rendering (Gesamt-/Gruppen-Ansicht)
 			// ---------------------------------------------------------------------------------------------------------
-			$canAggregate = $isKfl || $isStgl || $isAdmin;
+			$canAggregate = $isBerechtigt_KF || $isBerechtigt_STG || $isBerechtigt_ADMIN;
 			$aggregationOptions = null;
 
 			if ($canAggregate)
@@ -362,6 +440,8 @@ class Evaluation extends FHCAPI_Controller
 				['ruecklaufquote' => $ruecklaufquote],
 				['startzeit' => $periodTimes['minStartzeit']],
 				['endezeit' => $periodTimes['maxEndezeit']],
+				['startzeitReflexion' => $periodTimes['minStartzeitReflexion']],
+				['endezeitReflexion' => $periodTimes['maxEndezeitReflexion']],
 				['minDuration' => $durations ? min($durations) : 0],
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
@@ -371,6 +451,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => $isEvaluationViewOpen,
 					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
 					'canAggregate' => $canAggregate,
 					'aggregationOptions' => $aggregationOptions
 				],
@@ -385,6 +466,7 @@ class Evaluation extends FHCAPI_Controller
 				'evaluationView' => [
 					'open' => false,
 					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
 					'canAggregate' => false,
 					'aggregationOptions' => []
 				],
@@ -393,6 +475,137 @@ class Evaluation extends FHCAPI_Controller
 			$this->terminateWithSuccess($response);
 		}
 	}
+
+	public function getEvaluationDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		// KFL, Admin
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Ansicht label
+		$viewLabel = 'Kompetenzfeld';
+
+		// Permission Check
+		if ($isBerechtigt_KF || $isBerechtigt_ADMIN)
+		{
+			// Quellkurs header info
+			$lvData['lehrveranstaltung_template_id'] = $lehrveranstaltung_template_id;
+			$lvData['studiensemester_kurzbz'] = $studiensemester_kurzbz;
+			$lvData['bezeichnung'] = $this->evaluationlib->getLvBezeichnung($lehrveranstaltung_template_id);
+
+			$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+				$lehrveranstaltung_template_id,
+				$studiensemester_kurzbz
+			);
+			$lveLvs = hasData($result) ? getData($result) : [];
+			$lvData['lveLvs'] = $lveLvs;
+
+			// Abgeschickte Frageboegen, Ruecklaufquote
+			$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLvTemplateIds(
+				[$lehrveranstaltung_template_id],
+				$studiensemester_kurzbz
+			);
+
+			$rlData = hasData($result) ? current(getData($result)) : null;
+
+			$codesAusgegeben = $rlData ? (int)$rlData->sum_codes_ausgegeben : 0;
+			$countSubmitted = $rlData ? (int)$rlData->count_submitted_codes : 0;
+			$ruecklaufquote = $rlData ? (float)$rlData->ruecklaufquote : null;
+
+			// Check if Evaluation view is open
+			// ---------------------------------------------------------------------------------------------------------
+			$isEvaluationViewOpen = true;
+			$isEvaluationViewOpenMsg = [];
+
+			foreach ($lveLvs as $lveLv)
+			{
+				$lves = $this->getLvevaluierungByLveLvOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
+
+				// No Evaluierung at all
+				if (empty($lves))
+				{
+					$isEvaluationViewOpen = false;
+					$isEvaluationViewOpenMsg[] = 'Evaluierung noch nicht gestartet'
+						. $this->getEvaluationViewOpenMsgContextTextByLveLv($lveLv);
+				}
+
+				// Check each Evaluierung
+				foreach ($lves as $lve)
+				{
+					$context = $this->getEvaluationViewOpenMsgContextTextByLveLv($lveLv);
+
+					if (!$this->hasSetEvaluierungszeitraum($lve))
+					{
+						$isEvaluationViewOpen = false;
+						$isEvaluationViewOpenMsg[] = 'Evaluierung noch nicht gestartet' . $context;
+						break;
+					}
+
+					if (!$this->hasSentEvaluierungscodes($lve))
+					{
+						$isEvaluationViewOpen = false;
+						$isEvaluationViewOpenMsg[] = 'Evaluierungcodes noch nicht versendet' . $context;
+						break;
+					}
+
+					if (!$this->isEvaluierungszeitraumAbgeschlossen($lve))
+					{
+						$isEvaluationViewOpen = false;
+						$isEvaluationViewOpenMsg[] =
+							'Evaluierungszeitfenster noch nicht abgeschlossen' . $context;
+
+						break;
+					}
+
+					if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+					{
+						$isEvaluationViewOpen = false;
+						$isEvaluationViewOpenMsg[] =
+							'LV-Reflexionszeitraum noch nicht abgeschlossen' . $context;
+						break;
+					}
+				}
+			}
+
+			$data = array_merge(
+				$lvData,
+				['codes_ausgegeben' => $codesAusgegeben],
+				['countSubmitted' => $countSubmitted],
+				['ruecklaufquote' => $ruecklaufquote]
+			);
+
+			$response = [
+				'data' => $data,
+				'evaluationView' => [
+					'open' => $isEvaluationViewOpen,
+					'msg' => $isEvaluationViewOpenMsg,
+					'label' => $viewLabel,
+					'canAggregate' => false,    // No dropdown for Evaluation view auf Quellkursebene (Gesamt-/Gruppen-Ansicht)
+					'aggregationOptions' => false    // No dropdown for Evaluation view auf Quellkursebene (Gesamt-/Gruppen-Ansicht)
+				],
+			];
+
+			$this->terminateWithSuccess($response);
+		} else
+		{
+			$response = [
+				'data' => null,
+				'evaluationView' => [
+					'open' => false,
+					'msg' => ['Keine Berechtigung zur Ansicht dieser Evaluation'],
+					'label' => $viewLabel,
+					'canAggregate' => false,
+					'aggregationOptions' => []
+				],
+			];
+
+			$this->terminateWithSuccess($response);
+		}
+	}
+
 
 	/**
 	 * Fetch evaluation data for a given LVE ID.
@@ -403,16 +616,17 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLve()
 	{
 		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 		$role = $this->input->get('role');
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -422,9 +636,9 @@ class Evaluation extends FHCAPI_Controller
 		if (
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
-			!$isKfl &&
-			!$isStgl &&
-			!$isAdmin
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_ADMIN
 		)
 		{
 			$this->terminateWithError('Permission denied');
@@ -439,25 +653,23 @@ class Evaluation extends FHCAPI_Controller
 			if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 		}
 
-		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		// Auswertung data
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien data - LV im Zeitverlauf
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
-			}
-		}
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
-		$this->terminateWithSuccess($auswertungData);
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
 	}
 
 	/**
@@ -469,17 +681,18 @@ class Evaluation extends FHCAPI_Controller
 	public function getAuswertungDataByLveLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
 		// KFL, STGL
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Permission check
-		if (!$isKfl && !$isStgl && !$isAdmin)
+		if (!$isBerechtigt_KF && !$isBerechtigt_STG && !$isBerechtigt_ADMIN)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -494,24 +707,84 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Get Auswertungen
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lvevaluierung_lehrveranstaltung_id);
 		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);          // structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Re-structure data
-		$auswertungData = $this->mapAuswertungData($data);
+		// Profillinien data - LV im Zeitverlauf
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
 
-		// Calculate interpolierten Median for each Antwort
-		foreach ($auswertungData as &$gruppe) {
-			foreach ($gruppe['fbFragen'] as &$frage) {
-				$werte = $frage['antworten']['werte'];
-				$frequencies = $frage['antworten']['frequencies'];
-				$frage['antworten']['iMedian']['actYear'] = $this->evaluationlib->getInterpolMedian($werte, $frequencies);
-				$frage['antworten']['hodgesLehmann']['actYear'] = $this->evaluationlib->getHodgesLehmannEstimator($werte, $frequencies);
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
+
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
+	}
+
+	public function getAuswertungDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		$lveLvs = hasData($result) ? getData($result) : [];
+
+		// KFL, Admin
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Exit Auswertung view
+		foreach ($lveLvs as $lveLv)
+		{
+			$lves = $this->getLvevaluierungByLveLvOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
+
+			foreach ($lves as $lve)
+			{
+				if (!$this->hasSetEvaluierungszeitraum($lve)) $this->terminateWithSuccess([]);
+				if (!$this->hasSentEvaluierungscodes($lve)) $this->terminateWithSuccess([]);
+				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve)) $this->terminateWithSuccess([]);
 			}
 		}
 
-		$this->terminateWithSuccess($auswertungData);
+		// Get Auswertungen
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+
+		$data = $this->getDataOrTerminateWithError($result);
+		$auswertungData = $this->mapAuswertungData($data);			// structure data
+		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
+
+		// Profillinien data - LV im Zeitverlauf
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		// $lvImZeitverlaufData = $this->getTESTlvImZeitverlaufData();	// !!!todo delete - nur test
+
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
+
+		$this->terminateWithSuccess([
+			'auswertungData' => $auswertungData,
+			'lvImZeitverlaufData' => $lvImZeitverlaufData
+		]);
 	}
 
 	/**
@@ -519,6 +792,159 @@ class Evaluation extends FHCAPI_Controller
 	 *
 	 * @return string|null URL if configured, otherwise null
 	 */
+
+	public function getLvsImVergleichDataByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$role = $this->input->get('role');
+
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Vergleich zu Bewertungen aller LVs im gleichen STG und Ausbildungssemester',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg
+		]);
+	}
+
+	public function getLvsImVergleichDataByLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Bewertungen im gleichen STG und Ausbildungssemester',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
+	public function getLvsImVergleichDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		// KFL, Admin
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = '';
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByTemplate(
+				$lehrveranstaltung_template_id,
+				$studiensemester_kurzbz
+			);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich nach STGs',
+			'lvImVergleichSubtitle' => 'Bewertungen der LV in verschiedenen Studiengängen',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
 	public function getAuswertungHelpUrl()
 	{
 		$url = $this->config->item('auswertungHelpUrl');
@@ -545,10 +971,10 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -558,9 +984,9 @@ class Evaluation extends FHCAPI_Controller
 		if (
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
-			!$isKfl &&
-			!$isStgl &&
-			!$isAdmin
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_ADMIN
 		)
 		{
 			$this->terminateWithError('Permission denied');
@@ -597,12 +1023,12 @@ class Evaluation extends FHCAPI_Controller
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Permission check
-		if (!$isKfl && !$isStgl && !$isAdmin)
+		if (!$isBerechtigt_KF && !$isBerechtigt_STG && !$isBerechtigt_ADMIN)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -722,6 +1148,645 @@ class Evaluation extends FHCAPI_Controller
 		return $options;
 	}
 
+	/**
+	 * Gibt Hodges Lehmann Estimator zu LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 * Bsp:
+	 * SS2026 - HLE nach LVE (kann Gruppen oder Gesamt-LV Ergebnis sein)
+	 * SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 * SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lve
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
+	private function getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterAuswertungData = [];
+			$semesterLveLvId = null;
+
+			// Aktuelles Studiensemester - nach LVE, kann also Gruppe oder Gesamt-LV sein
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+			// LveLv ID - Letzes or vorletztes Studiensemester - immer Gesamt-LV betrachten
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+
+				if (is_numeric($semesterLveLvId))
+				{
+					$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+					$data = $this->getDataOrTerminateWithError($result);
+					$semesterAuswertungData = $this->mapAuswertungData($data);
+					$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+				}
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	/**
+	 *  Gibt Hodges Lehmann Estimator zur LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 *  Bsp:
+	 *  SS2026 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
+	private function getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterLveLvId = null;
+
+			// LveLv ID - Aktuelles Studiensemester
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$semesterLveLvId = $lveLv->lvevaluierung_lehrveranstaltung_id;
+			} // LveLv ID - Letzes or vorletztes Studiensemester
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+			}
+
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			if (is_numeric($semesterLveLvId))
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	/**
+	 *   Gibt Hodges Lehmann Estimator aggregiert über alle LV-Evaluierungen eines Quellkurses über 3 Studiensemester zurück.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
+	private function getLvImZeitverlaufDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $index => $studiensemester)
+		{
+			// Get LV Auswertung by LveLv ID
+			$semesterAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLvTemplateId(
+				$lehrveranstaltung_template_id,
+				$studiensemester->studiensemester_kurzbz
+			);
+			$data = $this->getDataOrTerminateWithError($result);
+			$semesterAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	private function getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LVE
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs im gleichen STG ' . $lv->stgKurzbz . ' und Ausbildungssemester ' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LV
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs in ' . $lv->stgKurzbz . '-' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImVergleichData = [];
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		$lveLvs = hasData($result) ? getData($result) : [];
+
+		foreach ($lveLvs as $lveLv)
+		{
+			// Get LV Auswertung by LveLv ID
+			$vergleichAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+			$data = $this->getDataOrTerminateWithError($result);
+			$vergleichAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+
+			// LV Info
+			$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+			$lvImVergleichData[] = [
+				'vergleichZu' => $lv->stgKurzbz. ' - '. $lv->orgform_kurzbz,
+				'auswertungData' => $vergleichAuswertungData
+			];
+		}
+
+		// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImVergleichData);
+
+		return $lvImVergleichData;
+	}
+
+	private function calculateHodgesLehmannEstimator(&$auswertungData)
+	{
+		foreach ($auswertungData as &$gruppe)
+		{
+			foreach ($gruppe['fbFragen'] as &$frage)
+			{
+				$frage['antworten']['hodgesLehmann'] =
+					$this->evaluationlib->getHodgesLehmannEstimator(
+						$frage['antworten']['werte'],
+						$frage['antworten']['frequencies']
+					);
+			}
+		}
+	}
+
+	/**
+	 * Ergänzt fehlende Fragebogengruppen und Fragen in allen Vergleichsdatensätzen (Studienemester, LVs oder STGs).
+	 * Führt Gruppen anhand ihrer Bezeichnung zusammen, damit geteilte Fragen (n:m Gruppe<->Frage)
+	 * unabhängig vom Fragebogen/der Fragebogengruppen-IDs nur einmal dargestellt werden.
+	 * Vorhandene Daten werden niemals entfernt oder überschrieben.
+	 *
+	 * Bsp: Dual STG hat, im Vergleich zu anderen STGs, eine extra Fragebogengruppe mit eigenen Fragen.
+	 * Damit die Gruppen und Fragen nun richtig im Chart angezeigt werden, muss die Datenstruktur normalisiert werden.
+	 */
+	private function normalizeFragenbogenStruktur(&$data)
+	{
+		// Masterstruktur
+		$allFbGruppen = [];
+
+		// Gruppen/Fragen für Masterstruktur unique sammeln
+		foreach ($data as $item)
+		{
+			foreach ($item['auswertungData'] as $gruppe)
+			{
+				// Gruppenbezeichnung als Merge-Kriterium
+				$bezeichnung = $gruppe['bezeichnung'];
+
+				if (!isset($allFbGruppen[$bezeichnung])) // erst gefundene neue Bezeichnung
+				{
+					// Gruppe anlegen
+					$allFbGruppen[$bezeichnung] = [
+						'lvevaluierung_fragebogen_gruppe_id' => $gruppe['lvevaluierung_fragebogen_gruppe_id'],
+						'bezeichnung' => $gruppe['bezeichnung'],
+						'sort' => $gruppe['sort'],
+						'fbFragen' => []
+					];
+				}
+
+				// Fragen der Gruppe zusammenführen
+				foreach ($gruppe['fbFragen'] as $frage)
+				{
+					$allFbGruppen[$bezeichnung]['fbFragen'][$frage['lvevaluierung_frage_id']] = $frage;
+				}
+			}
+		}
+
+		// Gruppen in Masterstruktur sortieren
+		uasort($allFbGruppen, function($a, $b) {
+			return $a['sort'] <=> $b['sort'];
+		});
+
+		// Jeden Eintrag an die Masterstruktur angleichen
+		foreach ($data as &$item)
+		{
+			// Alle Fragen dieses Eintrags flach sammeln, um sie per frage_id finden zu können
+			$itemFragenFlat = [];
+			foreach ($item['auswertungData'] as $gruppe)
+			{
+				foreach ($gruppe['fbFragen'] as $frage)
+				{
+					$itemFragenFlat[$frage['lvevaluierung_frage_id']] = $frage;
+				}
+			}
+
+			$neueGruppen = [];
+
+			// Jede bekannte Gruppe im Ergebnis abbilden, auch wenn sie hier fehlt
+			foreach ($allFbGruppen as $masterGruppe)
+			{
+				$neueFragen = [];
+
+				foreach ($masterGruppe['fbFragen'] as $frageId => $masterFrage)
+				{
+					if (isset($itemFragenFlat[$frageId]))
+					{
+						// Frage in diesem Eintrag vorhanden -> Wert übernehmen
+						$neueFragen[] = $itemFragenFlat[$frageId];
+					}
+					else
+					{
+						// Frage in diesem Eintrag nicht vorhanden -> Platzhalter ohne Werte
+						$fehlendeFrage = $masterFrage;
+						$fehlendeFrage['antworten']['frequencies'] = [];
+						$fehlendeFrage['antworten']['hodgesLehmann'] = null;
+						$neueFragen[] = $fehlendeFrage;
+					}
+				}
+
+				// Fragen innerhalb der Gruppe sortieren
+				usort($neueFragen, function($a, $b) {
+					return $a['sort'] <=> $b['sort'];
+				});
+
+				$neueGruppen[] = [
+					'lvevaluierung_fragebogen_gruppe_id' => $masterGruppe['lvevaluierung_fragebogen_gruppe_id'],
+					'bezeichnung' => $masterGruppe['bezeichnung'],
+					'sort' => $masterGruppe['sort'],
+					'fbFragen' => $neueFragen
+				];
+			}
+
+			$item['auswertungData'] = $neueGruppen;
+		}
+
+		unset($item);
+	}
+
+	// Test Array: 3 Studiensemester Auswertungsdata für Profillinie LvImZeitverlauf // TODO DELETE later
+	private function getTESTlvImZeitverlaufData()
+	{
+		return [
+			[
+				'studiensemester_kurzbz' => 'SS2026',
+				'auswertungData' => [
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [2, 4, 8, 6],
+									'hodgesLehmann' => 2.4
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 2,
+								'bezeichnung' => 'Verständlichkeit',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [1, 5, 7, 7],
+									'hodgesLehmann' => 2.8
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 3,
+								'bezeichnung' => 'Praxisbezug',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [0, 3, 9, 8],
+									'hodgesLehmann' => 3.1
+								]
+							],
+							[
+								'lvevaluierung_frage_id' => 4,
+								'bezeichnung' => 'Vorbereitung',
+								'sort' => 4,
+								'antworten' => [
+									'frequencies' => [3, 6, 5, 2],
+									'hodgesLehmann' => 2.1
+								]
+							]
+						]
+					],
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 2,
+						'bezeichnung' => 'Organisation',
+						'sort' => 2,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 5,
+								'bezeichnung' => 'Terminplanung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [4, 6, 7],
+									'hodgesLehmann' => 2.6
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 6,
+								'bezeichnung' => 'Unterlagen',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [1, 4, 10, 5],
+									'hodgesLehmann' => 3
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 7,
+								'bezeichnung' => 'Kommunikation',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [2, 8, 6],
+									'hodgesLehmann' => 2.7
+								]
+							]
+						]
+					],
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 3,
+						'bezeichnung' => 'Gruppe NICHT-in-2025',
+						'sort' => 3,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 8,
+								'bezeichnung' => 'Empfehlung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [1, 2, 5, 12],
+									'hodgesLehmann' => 3.4
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 10,
+								'bezeichnung' => 'Betreuung',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [3, 3, 9],
+									'hodgesLehmann' => 2.9
+								]
+							]
+						]
+					]
+				]
+			],
+			[
+				'studiensemester_kurzbz' => 'SS2025',
+				'auswertungData' => [
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [5, 7, 5, 3],
+									'hodgesLehmann' => 2
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 2,
+								'bezeichnung' => 'Verständlichkeit',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [2, 4, 8, 4],
+									'hodgesLehmann' => 2.5
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 4,
+								'bezeichnung' => 'Vorbereitung',
+								'sort' => 4,
+								'antworten' => [
+									'frequencies' => [4, 5, 7],
+									'hodgesLehmann' => 2.3
+								]
+							]
+						]
+					],
+
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 2,
+						'bezeichnung' => 'Organisation',
+						'sort' => 2,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 5,
+								'bezeichnung' => 'Terminplanung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [3, 7, 8],
+									'hodgesLehmann' => 2.9
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 6,
+								'bezeichnung' => 'Unterlagen',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [2, 5, 9],
+									'hodgesLehmann' => 3.2
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 9,
+								'bezeichnung' => 'Zusatz Organisation nur SS2025',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [1, 4, 8],
+									'hodgesLehmann' => 2.6
+								]
+							]
+						]
+					]
+				]
+			],
+
+
+			[
+				'studiensemester_kurzbz' => 'SS2024',
+				'auswertungData' => [
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 1,
+						'bezeichnung' => 'Pflichtfragen',
+						'sort' => 1,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 1,
+								'bezeichnung' => 'Qualität der Lehrveranstaltung',
+								'sort' => 1,
+								'antworten' => [
+									'frequencies' => [7, 5, 3],
+									'hodgesLehmann' => 1.8
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 3,
+								'bezeichnung' => 'Praxisbezug',
+								'sort' => 3,
+								'antworten' => [
+									'frequencies' => [2, 5, 6],
+									'hodgesLehmann' => 2.4
+								]
+							],
+
+							[
+								'lvevaluierung_frage_id' => 8,
+								'bezeichnung' => 'Empfehlung',
+								'sort' => 5,
+								'antworten' => [
+									'frequencies' => [4, 6, 4],
+									'hodgesLehmann' => 2.7
+								]
+							]
+						]
+					],
+
+
+					[
+						'lvevaluierung_fragebogen_gruppe_id' => 3,
+						'bezeichnung' => 'Zusatzfragen',
+						'sort' => 3,
+						'fbFragen' => [
+
+							[
+								'lvevaluierung_frage_id' => 10,
+								'bezeichnung' => 'Betreuung',
+								'sort' => 2,
+								'antworten' => [
+									'frequencies' => [6, 4, 5],
+									'hodgesLehmann' => 2.1
+								]
+							]
+						]
+					]
+				]
+			]
+
+		];
+	}
+
+
 	// -----------------------------------------------------------------------------------------------------------------
 	// LV-REFLEXION
 	// -----------------------------------------------------------------------------------------------------------------
@@ -734,10 +1799,10 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 		$isLvLeitung = $this->evaluationlib->isLvLeitung($this->_uid, $lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
 		// Lehrende
 		$lehrende = $this->evaluationlib->getLehrendeByLve($lve, $lveLv, true);
@@ -747,9 +1812,9 @@ class Evaluation extends FHCAPI_Controller
 		if (
 			!$isLektorOfLv &&
 			!$isLvLeitung &&
-			!$isKfl &&
-			!$isStgl &&
-			!$isAdmin
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_ADMIN
 		)
 		{
 			$this->terminateWithError('Permission denied');
@@ -774,6 +1839,7 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionenUebersichtData = [];
 		$isReflexionszeitRaumAbgeschlossen = $this->isReflexionszeitraumAbgeschlossen($lve);
 		$showReflexionenUebersicht =
+			$isBerechtigt_ADMIN ||
 			$role === 'stg' ||
 			$role === 'kf' ||
 			($isLvLeitung && !$lveLv->lv_aufgeteilt);    // LV-Leitung darf Übersicht nur sehen, wenn Gesamt-LV
@@ -799,8 +1865,8 @@ class Evaluation extends FHCAPI_Controller
 			$reflexionen,
 			$lve,
 			$lveLv,
-			$isKfl,
-			$isStgl
+			$isBerechtigt_KF,
+			$isBerechtigt_STG
 		);
 
 		$resultData = [
@@ -820,11 +1886,11 @@ class Evaluation extends FHCAPI_Controller
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
 
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isStgl = $this->evaluationlib->isSTGL($this->_uid, $lveLv->lehrveranstaltung_id);
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
 
-		if (!$isKfl && !$isStgl && !$isAdmin)
+		if (!$isBerechtigt_KF && !$isBerechtigt_STG && !$isBerechtigt_ADMIN)
 		{
 			$this->terminateWithError('Permission denied');
 		}
@@ -852,8 +1918,8 @@ class Evaluation extends FHCAPI_Controller
 				$reflexionen,
 				$lve,
 				$lveLv,
-				$isKfl,
-				$isStgl
+				$isBerechtigt_KF,
+				$isBerechtigt_STG
 			);
 
 			$reflexionenByLveLv = array_merge(
@@ -864,7 +1930,7 @@ class Evaluation extends FHCAPI_Controller
 
 		// Übersicht Reflexionen
 		// -------------------------------------------------------------------------------------------------------------
-		$showReflexionenUebersicht = $isKfl || $isStgl;
+		$showReflexionenUebersicht = $isBerechtigt_KF || $isBerechtigt_STG || $isBerechtigt_ADMIN;
 		$reflexionenUebersichtData = [];
 
 		if ($showReflexionenUebersicht && $allReflexionszeitraumAbgeschlossen)
@@ -874,6 +1940,86 @@ class Evaluation extends FHCAPI_Controller
 
 		$resultData = [
 			'reflexionen' => $reflexionenByLveLv,
+			'reflexionenUebersicht' => [
+				'show' => $showReflexionenUebersicht,
+				'data' => $reflexionenUebersichtData,
+			]
+		];
+
+		$this->terminateWithSuccess($resultData);
+	}
+
+	public function getReflexionDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		$lveLvs = hasData($result) ? getData($result) : [];
+
+		// Permission check
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
+		$reflexionenByLveLv = [];
+		$allReflexionszeitraumAbgeschlossen = true;
+
+		foreach ($lveLvs as $lveLv)
+		{
+			$lves = $this->getLvevaluierungByLveLvOrFail($lveLv->lvevaluierung_lehrveranstaltung_id);
+
+			foreach ($lves as $lve)
+			{
+				// Skip if Evaluation period is still running or students did not get codes yet
+				if (!$this->hasSetEvaluierungszeitraum($lve)) continue;
+				if (!$this->hasSentEvaluierungscodes($lve)) continue;
+				if (!$this->isEvaluierungszeitraumAbgeschlossen($lve)) continue;
+				if (!$this->isReflexionszeitraumAbgeschlossen($lve))
+				{
+					$allReflexionszeitraumAbgeschlossen = false;
+					continue;
+				}
+
+				// Build Reflexionen
+				$reflexionen = $this->buildReflexionenByLve($lve, $lveLv);
+
+				$checkedReflexionen = $this->addZeitfensterAndBearbeitungsChecks(
+					$reflexionen,
+					$lve,
+					$lveLv,
+					$isBerechtigt_KF,
+					false
+				);
+
+				$reflexionenByLveLv = array_merge(
+					$reflexionenByLveLv,
+					$checkedReflexionen
+				);
+			}
+		}
+
+		// Übersicht Reflexionen
+		// -------------------------------------------------------------------------------------------------------------
+		$showReflexionenUebersicht = $isBerechtigt_KF || $isBerechtigt_ADMIN;
+		$reflexionenUebersichtData = [];
+
+		if ($showReflexionenUebersicht && $allReflexionszeitraumAbgeschlossen)
+		{
+			$reflexionenUebersichtData = $this->buildReflexionenUebersichtData($reflexionenByLveLv);
+		}
+
+		$resultData = [
+			'reflexionen' => [], // NOTE: leeres array statt $reflexionenByLveLv, da im frontend pro LV nachgeladen wird
 			'reflexionenUebersicht' => [
 				'show' => $showReflexionenUebersicht,
 				'data' => $reflexionenUebersichtData,
@@ -1326,8 +2472,8 @@ class Evaluation extends FHCAPI_Controller
 		$reflexionen,
 		$lve,
 		$lveLv,
-		$isKfl,
-		$isStgl
+		$isBerechtigt_KF,
+		$isBerechtigt_STG
 	)
 	{
 		$data = [];
@@ -1349,12 +2495,11 @@ class Evaluation extends FHCAPI_Controller
 			];
 
 			$isReadOnly =
-				($isKfl || $isStgl) && $reflexion['mitarbeiter_uid'] !== $this->_uid
-
+				($isBerechtigt_KF || $isBerechtigt_STG) && $reflexion['mitarbeiter_uid'] !== $this->_uid
 				|| (
 					!$lveLv->lv_aufgeteilt
-					&& !$isKfl
-					&& !$isStgl
+					&& !$isBerechtigt_KF
+					&& !$isBerechtigt_STG
 					&& $reflexion['mitarbeiter_uid'] === $lvLeitung[0]->mitarbeiter_uid
 					&& $this->_uid !== $lvLeitung[0]->mitarbeiter_uid
 				);
@@ -1482,7 +2627,7 @@ class Evaluation extends FHCAPI_Controller
 	 */
 	private function isAllowedToSwitchVerpflichtung($lvevaluierung_lehrveranstaltung_id)
 	{
-		return $this->LvevaluierungZeitfensterModel->isBearbeitungOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
+		return $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('stgauswahl', $lvevaluierung_lehrveranstaltung_id);
 	}
 
 	/**
@@ -1512,6 +2657,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getMalveByStg()
 	{
 		$studiengang_kz = $this->input->get('studiengang_kz');
+		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -1524,6 +2670,7 @@ class Evaluation extends FHCAPI_Controller
 			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -1547,6 +2694,7 @@ class Evaluation extends FHCAPI_Controller
 	public function saveMalveByStg()
 	{
 		$studiengang_kz = $this->input->post('studiengang_kz');
+		$orgform_kurzbz = $this->input->post('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -1561,6 +2709,7 @@ class Evaluation extends FHCAPI_Controller
 			// Check if already exist
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -1570,6 +2719,7 @@ class Evaluation extends FHCAPI_Controller
 				// Insert
 				$result = $this->LvevaluierungMalveModel->insert([
 					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'orgform_kurzbz' => $orgform_kurzbz,
 					'studiensemester_kurzbz' => $studiensemester_kurzbz,
 					'insertvon' => $this->_uid
 				]);
@@ -1611,13 +2761,27 @@ class Evaluation extends FHCAPI_Controller
 	public function getEntitledKfs()
 	{
 		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+
+		// Kompetenzfelder for KF
 		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+
+		// Kompetenzfelder for Admins
+		if ($this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN))
+		{
+			$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_ADMIN) ?: [];
+		}
 
 		$condition = '
                 oe_kurzbz IN (\'' . implode('\',\'', $entitledOes) . '\') AND
                 aktiv = TRUE AND
-                organisationseinheittyp_kurzbz = \'Kompetenzfeld\'
+                ( 
+                	organisationseinheittyp_kurzbz = \'Kompetenzfeld\' OR 
+			 		organisationseinheittyp_kurzbz = \'Fachgebiet\' 
+				)
             ';
+
+		$this->OrganisationseinheitModel->addSelect('*');
+		$this->OrganisationseinheitModel->addSelect('organisationseinheittyp_kurzbz || \' \' || bezeichnung AS bezeichnung');
 
 		$result = $this->OrganisationseinheitModel->loadWhere($condition);
 
@@ -1639,12 +2803,9 @@ class Evaluation extends FHCAPI_Controller
 
 		// Permission check
 		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
-		$isAdmin = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
-	$this->addMeta('uid', $this->_uid);
-	$this->addMeta('$isAdmin', $isAdmin);
-		if (!in_array($oe_kurzbz, $entitledOes) && !$isAdmin) $this->terminateWithError('Permission denied');
-	$this->addMeta('$entitledOes', $entitledOes);
-	$this->addMeta('$oe_kurzbz', $oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!in_array($oe_kurzbz, $entitledOes) && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
 
 		// Get LV List
 		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByKf(
@@ -1677,6 +2838,62 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
+	 * Get list of all Quellkurse that shall be evaluated in given Studiensemester and Kompetenzfeld.
+	 * (from Lvevaluierung-Lehrveranstaltung table)
+	 *
+	 * @return void
+	 */
+	public function getLvTemplateListByKf()
+	{
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$oe_kurzbz = $this->input->get('oe_kurzbz');
+
+		// Permission check
+		$entitledOes = $this->permissionlib->getOE_isEntitledFor(self::BERECHTIGUNG_KF) ?: [];
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!in_array($oe_kurzbz, $entitledOes) && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
+
+		// Get LV Templates
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvTemplatesByKf(
+			$studiensemester_kurzbz,
+			$oe_kurzbz
+		);
+		$lvTemplates = $this->getDataOrTerminateWithError($result);
+
+		// LV Template IDs
+		$lvTemplateIds = array_column($lvTemplates, 'lehrveranstaltung_id');
+
+		// Exit if no LV Templates found
+		if (count($lvTemplateIds) === 0) $this->terminateWithSuccess([]);
+
+		// Aggregated Rücklaufdata
+		$result = $this->LvevaluierungCodeModel->getAggregatedRuecklaufDataByLvTemplateIds($lvTemplateIds, $studiensemester_kurzbz);
+		$rlData = hasData($result) ? getData($result) : [];
+
+		// Helper: set key to identify by ID
+		$rlDataByTemplate = [];
+		foreach ($rlData as $item)
+		{
+			$rlDataByTemplate[$item->lehrveranstaltung_template_id] = $item;
+		}
+
+		// Add Rücklaufvalues to Lv Templates
+		foreach ($lvTemplates as $lvTemplate)
+		{
+			$agg = $rlDataByTemplate[$lvTemplate->lehrveranstaltung_id] ?? null;
+
+			$lvTemplate->codesAusgegeben = $agg ? $agg->sum_codes_ausgegeben : 0;
+			$lvTemplate->submittedCodes = $agg ? $agg->count_submitted_codes : 0;
+			$lvTemplate->ruecklaufQuote = ($agg && $agg->ruecklaufquote !== null)
+				? (float)$agg->ruecklaufquote
+				: null;
+		}
+
+		$this->terminateWithSuccess($lvTemplates);
+	}
+
+	/**
 	 * Get MALVE by Kompetenzfeld and Studiensemester.
 	 *
 	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
@@ -1686,6 +2903,13 @@ class Evaluation extends FHCAPI_Controller
 	{
 		$oe_kurzbz = $this->input->get('oe_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		// Show Malve only for KFL users. Use Benutzerfunktion instead of Berechtigung_KF,
+		// because Berechtigung_KF is also assigned to Fachkoordinatoren.
+		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isKFL && !$isBerechtigt_ADMIN) $this->terminateWithSuccess(null);
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 		$result = $this->LvevaluierungMalveModel->loadWhere([
@@ -1710,8 +2934,10 @@ class Evaluation extends FHCAPI_Controller
 		$oe_kurzbz = $this->input->post('oe_kurzbz');
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
-		$isKfl = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
-		if (!$isKfl) $this->terminateWithError('Permission denied. Only KFL can save.');
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
 
 		// Check if OE is Kompetenzfeld
 		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
@@ -1826,6 +3052,32 @@ class Evaluation extends FHCAPI_Controller
 
 		return ' für Gesamt-LV';
 	}
+
+	private function getEvaluationViewOpenMsgContextTextByLveLv($lveLv)
+	{
+		return ' für ' . $lveLv->kurzbzlang. '-'. $lveLv->semester. ': '. $lveLv->bezeichnung. ' - '. $lveLv->orgform_kurzbz;
+	}
+
+	private function getLvevaluierungZeitfensterOrFail($typ, $studiensemester_kurzbz)
+	{
+		$result = $this->LvevaluierungZeitfensterModel->loadWhere(
+			[
+				'typ' => $typ,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]
+		);
+
+		if (isError($result))
+		{
+			$this->terminateWithError($result);
+		} elseif (!hasData($result))
+		{
+			$this->terminateWithError('Zeitfenster ' . $typ . ' for '. $studiensemester_kurzbz. ' does not exist');
+		}
+
+		return getData($result)[0];
+	}
+
 	/**
 	 * Calculate all durations in minutes.
 	 *
@@ -1849,9 +3101,23 @@ class Evaluation extends FHCAPI_Controller
 		$startTimes = array_column($lves, 'startzeit');
 		$endTimes = array_column($lves, 'endezeit');
 
+		// Reflexions min Start / max Ende
+		$minStartzeitReflexionszeit = null;
+		$maxEndezeitReflexionszeit = null;
+		if ($startTimes)
+		{
+			$minStartzeitReflexionszeit = clone new DateTime(min($endTimes));
+			$minStartzeitReflexionszeit->modify('+1 day');
+
+			$maxEndezeitReflexionszeit = clone new DateTime(max($endTimes));
+			$maxEndezeitReflexionszeit->modify($this->config->item('reflexionZeitfensterDauer'));
+		}
+
 		return [
 			'minStartzeit' => $startTimes ? min($startTimes) : null,
 			'maxEndezeit'   => $endTimes ? max($endTimes) : null,
+			'minStartzeitReflexion'   => $startTimes ? $minStartzeitReflexionszeit->format('d.m.Y') : null,
+			'maxEndezeitReflexion'   => $endTimes ? $maxEndezeitReflexionszeit->format('d.m.Y') : null,
 		];
 	}
 
@@ -1865,15 +3131,25 @@ class Evaluation extends FHCAPI_Controller
 	public function mapAuswertungData($data)
 	{
 		$fbGruppen = [];
+		$seenFrageGruppeIds = []; // merkt sich die erste gruppe_id pro Frage
 
 		foreach ($data as $item)
 		{
+			$gruppenKey = $item->fbGruppenBezeichnung; // Merge-Key: Gruppen-Bezeichnung statt gruppe_id
 			$fbGruppeId = $item->lvevaluierung_fragebogen_gruppe_id;
 			$frageId = $item->lvevaluierung_frage_id;
 
+			// Frage wurde bereits unter einer anderen Gruppe erfasst -> Zeile überspringen
+			if (isset($seenFrageGruppeIds[$frageId]) && $seenFrageGruppeIds[$frageId] !== $fbGruppeId)
+			{
+				continue;
+			}
+
+			$seenFrageGruppeIds[$frageId] = $fbGruppeId;
+
 			// Create group if not exists
-			if (!isset($fbGruppen[$fbGruppeId])) {
-				$fbGruppen[$fbGruppeId] = [
+			if (!isset($fbGruppen[$gruppenKey])) {
+				$fbGruppen[$gruppenKey] = [
 					'lvevaluierung_fragebogen_gruppe_id' => $fbGruppeId,
 					'bezeichnung' => $item->fbGruppenBezeichnung,
 					'typ' => $item->fbGruppenTyp,
@@ -1883,8 +3159,8 @@ class Evaluation extends FHCAPI_Controller
 			}
 
 			// Create question if not exists
-			if (!isset($fbGruppen[$fbGruppeId]['fbFragen'][$frageId])) {
-				$fbGruppen[$fbGruppeId]['fbFragen'][$frageId] = [
+			if (!isset($fbGruppen[$gruppenKey]['fbFragen'][$frageId])) {
+				$fbGruppen[$gruppenKey]['fbFragen'][$frageId] = [
 					'lvevaluierung_frage_id' => $frageId,
 					'bezeichnung' => $item->fbFrageBezeichnung,
 					'typ' => $item->fbFrageTyp,
@@ -1894,31 +3170,32 @@ class Evaluation extends FHCAPI_Controller
 						'werte' => [],
 						'frequencies' => [],
 						'bezeichnungen' => [],
-						'iMedian' => [
-							'actYear' => 0,
-							'actYearMin1' => 0,
-							'actYearMin2' => 0,
-						],    // default
-						'hodgesLehmann' => [
-							'actYear' => 0,
-							'actYearMin1' => 0,
-							'actYearMin2' => 0,
-						]    // default
+						'hodgesLehmann' => null
 					]
 				];
 			}
 
 			// Push antworten values
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['werte'][] = $item->wert;
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['frequencies'][] = $item->frequency;
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['bezeichnungen'][] = $item->fbFrageAntwortBezeichnung;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['werte'][] = $item->wert;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['frequencies'][] = $item->frequency;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['bezeichnungen'][] = $item->fbFrageAntwortBezeichnung;
 		}
 
 		// Re-index arrays
 		$fbGruppen = array_map(function($gruppe) {
+			usort($gruppe['fbFragen'], function ($a, $b)
+			{
+				return $a['sort'] <=> $b['sort'];
+			});
 			$gruppe['fbFragen'] = array_values($gruppe['fbFragen']);
 			return $gruppe;
 		}, array_values($fbGruppen));
+
+		// Gruppen nach sort ordnen
+		usort($fbGruppen, function ($a, $b)
+		{
+			return $a['sort'] <=> $b['sort'];
+		});
 
 		return $fbGruppen;
 	}

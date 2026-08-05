@@ -18,35 +18,68 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->helper('hlp_sancho_helper');
 
 		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
+		$this->_ci->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 		$this->_ci->load->config('extensions/FHC-Core-Evaluierung/initiierung');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
 	}
 
 	/**
-	 * Job to insert Lehrveranstaltungen for a particular Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
+	 * LVs für die Evaluierung anlegen + Mails STGL_TEXT_1: 100% der LVs wurden ausgewählt
+	 *
+	 * Job to insert Lehrveranstaltungen for upcoming Studiensemester into the tbl_lvevaluierung_lehrveranstaltung.
 	 * Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
 	 *
 	 * @return void
 	 */
-	public function initEvaluierungForLehrveranstaltungen($studiensemester_kurzbz = null)
+	public function initEvaluierungForLehrveranstaltungen()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			exit;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
 		}
 
-		$this->logInfo('Start Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Only for pilotphase
+		// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'stgauswahl',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// Letzter Tag, an dem STGLs abwählen können
+
+		/**
+		 * LVs für Evaluierung eintragen
+		 * Eintrag erfolgt nur, wenn LV nicht bereits in der Lvevaluierung Lehrveranstaltung Tabelle ist
+		 * */
+	 	// -------------------------------------------------------------------------------------------------------------
+
+		// Ausgewählte LVs: Only for pilotphase
 		if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG') && CIS_EVALUIERUNG_ANZEIGEN_STG )
 		{
 			$stgs = unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG);
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs);
 		}
+		// Alle LVs
 		else
 		{
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz);
@@ -55,16 +88,186 @@ class Initiierung extends JOB_Controller
 		if (isError($result))
 		{
 			$this->logError(getError($result));
+			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
+		}
+
+		// Mail an betroffene STGLs versenden
+		// -------------------------------------------------------------------------------------------------------------
+		if (hasData($result))
+		{
+			$this->logInfo('Inserted new LVs into LvevaluierungLehrveranstaltung table for ' . $studiensemester_kurzbz);
+
+			$insertRecords = getData($result);
+			$lvIds = array_column($insertRecords, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT
+				. 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester='
+				. $studiensemester_kurzbz;
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				$subject = 'Start der LV-Evaluation für  ' . $studiensemester_kurzbz
+					. ' - Abwahl einzelner LVs in ' . $stg->stgKurzbz . ' möglich';
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'abwahl_enddatum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_1',
+						$data,
+						$stgl['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_1 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_1 to ' . $stgl['to']);
+					}
+				}
+			}
 		}
 		else
 		{
-			$this->logInfo(getData($result));
+			$this->logInfo('No new LVs to add');
 		}
 
-		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
 	}
 
 	/**
+	 * Mail STGL_TEXT_2: LVs von Evaluierung abwählen - Reminder
+	 *
+	 * @return void
+	 */
+	public function sendLvsAbwaehlenReminder()
+	{
+		$this->logInfo('Start Job sendLvsAbwaehlenReminder');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendLvsAbwaehlenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'stgauswahl',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);    // Letzter Tag, an dem STGLs abwählen können
+
+		$remindDatum = clone $zeitfensterEnde;
+		$remindDatum = $remindDatum->sub(new DateInterval('P1W'));
+
+		// Exit wenn nicht Mailtag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
+		}
+
+		// Mail an Studiengangsleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT
+				. 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester='
+				. $studiensemester_kurzbz;
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				$subject = 'Reminder: Start der LV-Evaluation für  ' . $studiensemester_kurzbz
+					. ' - Abwahl einzelner LVs in ' . $stg->stgKurzbz . ' möglich';
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'abwahl_enddatum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_2',
+						$data,
+						$stgl['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_2 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_2 to ' . $stgl['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendLvsAbwaehlenReminder');
+	}
+
+	/**
+	 * Evaluierungen erstellen entsprechend der gewählten Evaluierungsebene (Gesamt/Gruppe), aber erst nach Ablauf des Zeitfensters,
+	 * in dem Evaluierungsebene gewechselt werden darf.
 	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
 	 *
 	 * Job will not run before Zeitfenster for switching Evaluierungsebene is closed.
@@ -73,16 +276,22 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function createEvaluierungen($studiensemester_kurzbz)
+	public function createEvaluierungen()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$this->logInfo('Start Job createEvaluierungen');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job createEvaluierungen');
 		}
 
-		// Get Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'typswitch',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -90,16 +299,16 @@ class Initiierung extends JOB_Controller
 
 		if (!hasData($result))
 		{
-			$this->logError('Missing Lvevaluierung Zeitfenster for '. $studiensemester_kurzbz);
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
-			return;
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job createEvaluierungen');
 		}
 
-		$zeitfensterEnde = new DateTime(getData($result)[0]->endedatum);
-		$now   = new DateTime();
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+		$today = new DateTime('today');
 
 		// Go on only if Zeitfenster is closed
-		if ($now > $zeitfensterEnde)
+		if ($today > $zeitfensterEnde)
 		{
 			// Get LveLvs by Studiensemester
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
@@ -107,6 +316,7 @@ class Initiierung extends JOB_Controller
 			if (isError($result))
 			{
 				$this->logError(getError($result));
+				return $this->logInfo('End Job createEvaluierungen');
 			}
 
 			$lveLvs = getData($result);
@@ -122,7 +332,8 @@ class Initiierung extends JOB_Controller
 
 				if (!hasData($result))
 				{
-					$this->logError('job createEvaluierungen: No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
+					$this->logError('No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
+					return $this->logInfo('End Job createEvaluierungen');
 				}
 
 				$fragebogenId = getData($result)[0]->fragebogen_id;
@@ -144,6 +355,7 @@ class Initiierung extends JOB_Controller
 							$this->_ci->initiierunglib->hasHierarchicalDuplicateGruppen($data))
 						{
 							$groupedByLe = [];
+							$this->logInfo('Evaluierung not created for LveLv ID ' . $lveLv->lvevaluierung_lehrveranstaltung_id. ': Gruppenevaluierung - but no unique assignment.');
 						}
 					}
 
@@ -222,7 +434,7 @@ class Initiierung extends JOB_Controller
 				if (isError($result))
 				{
 					$this->logError(getError($result));
-					$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+					return $this->logInfo('End Job createEvaluierungen');
 				}
 				else
 				{
@@ -231,14 +443,119 @@ class Initiierung extends JOB_Controller
 			}
 			else
 			{
-				$this->logInfo('No new Evaluierungen needed - all already present.');
+				$this->logInfo('No new Evaluierungen created - all are present.');
 			}
 
-			$this->logInfo('End Job createEvaluierungen for '. $studiensemester_kurzbz);
+			$this->logInfo('End Job createEvaluierungen');
 		}
 	}
 
 	/**
+	 * Mail KFL_TEXT_1: LV-Leitung eintragen lassen
+	 *
+	 * Job to notify KFLs to ensure LV-Leitungen are assigned before the deadline.
+	 * Checks Zeitfenster 'lvleintragen' for upcoming Studiensemester.
+	 * Sends mail if today is Zeitfensterstart.
+	 * Deadline is Zeitfensterende.
+	 *
+	 * @return void
+	 */
+	public function sendLvLeitungenEintragenInfo()
+	{
+		$this->logInfo('Start Job sendLvLeitungenEintragenInfo');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
+
+		$studiensemester = getData($result)[0];
+
+		// Zeitfenster LV-Leitungen eintragen
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'lvleintragen',
+			'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz
+		]);
+		if (!hasData($result))
+		{
+			$this->logError('Missing Zeitfenster');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// send mail here
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// LV-Leitung eintragen until here
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
+
+		// Send Mail to Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Get all Kompetenzfelder
+		$this->_ci->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->_ci->OrganisationseinheitModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+		$kfs = hasData($result) ? getData($result) : [];
+
+		// For each Kompetenzfeld
+		foreach ($kfs as $kf)
+			{
+				$link = CIS_ROOT
+					. 'addons/reports/cis/vorschau.php?statistik_kurzbz=FehlendeLvLeitungen&StudiensemesterShortlist='
+					. urlencode($studiensemester->studiensemester_kurzbz)
+					. '&OERechteRekursivBaumKFMitAlle='
+					. urlencode($kf->oe_kurzbz);
+
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				$subject = 'Start der LV-Evaluation für ' . $studiensemester->studiensemester_kurzbz
+					. ' - Eintrag LV-Leitungen im Kompetenzfeld ' . $kf->bezeichnung
+					. ' bis ' . $zeitfensterEnde->format('d.m.Y') . ' sicherstellen.';
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'datum' => $zeitfensterEnde->format('d.m.Y'),
+						'link' => $link,
+						'zielgruppe' => 'Kompetenzfeldleitung'
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_1',
+						$data,
+						$leitung['to'],
+						$subject,
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					} else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_1 to ' . $leitung['to']);
+					}
+				}
+			}
+
+		$this->logInfo('End Job sendLvLeitungenEintragenInfo');
+	}
+
+	/**
+	 * Automatisch Mails mit Codes an Studierende versenden, wenn letzte Unterrichtseinheit (ohne Exam) vorbei ist,
+	 * oder Evaluierungszeitfensterende vorbei ist und keine Codes versendet worden sind.
 	 * Sends evaluation codes for finished Lehrveranstaltungen of given Studiensemester if not already mailed.
 	 *
 	 * Job runs after last Unterrichtseinheit has passed and only processes evaluations without sent codes and if
@@ -248,23 +565,27 @@ class Initiierung extends JOB_Controller
 	 * @param $studiensemester_kurzbz
 	 * @return void
 	 */
-	public function sendUnsentEvaluierungen($studiensemester_kurzbz)
+	public function sendUnsentEvaluierungen()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			return;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendUnsentEvaluierungen');
 		}
 
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
 		// Get Evaluierungen by Studiensemester
-		$result =  $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
+		$result = $this->_ci->LvevaluierungModel->getLvesByStSem($studiensemester_kurzbz);
 
 		// If Evaluierungen exist
 		if (hasData($result))
 		{
 			$data = getData($result);
 			$now = new DateTime();
-			$this->_ci->load->model('ressource/Stundenplan_model', 'StundenplanModel');
+			$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungStundenplan_model', 'LvevaluierungStundenplanModel');
 
 			// Foreach Evaluierung
 			foreach ($data as $item)
@@ -272,11 +593,11 @@ class Initiierung extends JOB_Controller
 				// Get Stundenplantermine
 				if ($item->lv_aufgeteilt)	// Gruppe
 				{
-					$result = $this->_ci->StundenplanModel->getTermineByLe($item->lehreinheit_id);
+					$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLe($item->lehreinheit_id);
 				}
 				else	// Gesamt-LV
 				{
-					$result = $this->_ci->StundenplanModel->getTermineByLv(
+					$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLv(
 						$item->lehrveranstaltung_id,
 						$item->studiensemester_kurzbz
 					);
@@ -285,8 +606,7 @@ class Initiierung extends JOB_Controller
 				if (isError($result))
 				{
 					$this->logError(getError($result));
-					$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-					return;
+					continue;
 				}
 
 				// Stundenplantermine
@@ -341,8 +661,7 @@ class Initiierung extends JOB_Controller
 					if (isError($result))
 					{
 						$this->logError(getError($result));
-						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-						return;
+						continue;
 					}
 
 					// Studenten
@@ -357,8 +676,7 @@ class Initiierung extends JOB_Controller
 					if (isError($result))
 					{
 						$this->logError(getError($result));
-						$this->logInfo('End Job sendUnsentEvaluations for '. $studiensemester_kurzbz);
-						return;
+						continue;
 					}
 
 					$unmailedStudenten = hasData($result) ? getData($result) : [];
@@ -366,9 +684,9 @@ class Initiierung extends JOB_Controller
 
 					// Set new Start- and Endezeit
 					$newStartzeit = clone $now;	// Startdatum heute, Zeit jetzt (da mails auch gleich gesendet werden)
-					$newEndezeit  =(clone $now)
-						->modify('+3 days')
-						->setTime(23, 59, 59);	// Endedatum in 3 Tagen, 23:59:59
+					$newEndezeit = (clone $now)
+						->modify('+7 days')
+						->setTime(23, 59, 59);	// Endedatum in 7 Tagen, 23:59:59
 
 					$item->startzeit = $newStartzeit->format('Y-m-d H:i:s');
 					$item->endezeit  = $newEndezeit->format('Y-m-d H:i:s');
@@ -380,14 +698,14 @@ class Initiierung extends JOB_Controller
 					foreach ($unmailedStudenten as $student)
 					{
 						// Generate Code and send Mail
-						if ($this->initiierunglib->generateAndSendCodeForStudent($item, $student, $item->lehrveranstaltung_id, 'system'))
+						if ($this->initiierunglib->generateAndSendCodeForStudent($item, $student, $item->lehrveranstaltung_id, 'rescueEval'))
 						{
 							// Count up
 							$mailCounter++;
 						}
 						else
 						{
-							$this->logInfo('Failed sending mail for LVE-ID '. $item->lvevaluierung_id. ' / student'. $student->uid);
+							$this->logError('Failed sending mail for LVE-ID '. $item->lvevaluierung_id. ' / student'. $student->uid);
 						}
 					}
 
@@ -412,27 +730,31 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendUnsentEvaluierung for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job sendUnsentEvaluierung');
 	}
 
 	/**
+	 * Mails LVL_TEXT_3 und LEHR_TEXT_1: Evaluierungszeitfenster einstellen
 	 * Job to inform Lecturers or LV-Leitung to set Evaluation Time Range
 	 *
 	 * @return void
 	 */
-	public function sendEvaluationStartInfo($studiensemester_kurzbz = null)
+	public function sendEvaluationStartInfo()
 	{
-		if (isEmptyString($studiensemester_kurzbz))
+		$this->logInfo('Start Job sendEvaluationStartInfo');
+
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($result))
 		{
-			$this->logError('Missing param Studiensemester');
-			exit;
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendEvaluationStartInfo');
 		}
 
-		$this->logInfo('Start Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
-		
 		$this->load->library('extensions/FHC-Core-Evaluierung/InitiierungLib');
 
 		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
@@ -553,10 +875,11 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendEvaluationStartInfo for '. $studiensemester_kurzbz);
+		$this->logInfo('End Job sendEvaluationStartInfo');
 	}
 
 	/**
+	 * Mails LVL_TEXT_4 und LEHR_TEXT_2: Evaluierungszeitfenster startet bald
 	 * Job to remind Lecturers or LV-Leitung one day before Evaluierung starts.
 	 *
 	 * @return void
@@ -685,8 +1008,7 @@ class Initiierung extends JOB_Controller
 								{
 									$this->logError('Failed to send LVE_LVL_TEXT_4 to '. $uid);
 								}
-
-						}
+							}
 						}
 					}
 				}
@@ -697,6 +1019,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_5 und LEHR_TEXT_3: Reflexion durchführen
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one day after Evaluierung ends.
 	 *
 	 * @return void
@@ -707,8 +1030,6 @@ class Initiierung extends JOB_Controller
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended yesterday
 		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-1 day', true);
@@ -901,6 +1222,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mails LVL_TEXT_6 und LEHR_TEXT_4: Reflexion durchführen - Reminder
 	 * Job to remind Lecturers or LV-Leitung to start LV-Reflexion one week after first infomail was sent.
 	 *
 	 * @return void
@@ -909,11 +1231,8 @@ class Initiierung extends JOB_Controller
 
 		$this->logInfo('Start Job sendReflexionStartReminder');
 
-		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
-
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluationLib');
 
 		// Get all Evaluierungen that ended one day before one week
 		$result = $this->_ci->LvevaluierungModel->getLvesEndingIn('-8 day', true);
@@ -1135,5 +1454,1306 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('End Job sendReflexionStartReminder');
+	}
+
+	/**
+	 * Mails STGL_TEXT_3: Reflexionen liegen vor - Sammelmail 1x/Monat
+	 * Job to send monthly summary Sammelmails to STGLs containing
+	 * newly available LVs with completed verpflichtende LV-Reflexionen
+	 * and LVs whose verpflichtende LV-Reflexion period ended without submission.
+	 * Monthly report days are determined by the configured Zeitfenster by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function sendReflexionReadyInfoToStgl()
+	{
+		$this->logInfo('Start Job sendReflexionReadyInfoToStgl');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Reflexion mail period of Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
+
+		}
+
+		$mailZeitfenster = getData($result)[0];
+
+		// Monthly report dates within reporting period
+		$mailtage = [];
+		$startdatum = new DateTime($mailZeitfenster->startdatum);
+		$endedatum = new DateTime($mailZeitfenster->endedatum);
+
+		while ($startdatum <= $endedatum)
+		{
+			$mailtage[] = clone $startdatum;
+			$startdatum->modify('+1 month');
+		}
+
+		// Define index to check if today is report day and to get the previous report day
+		$today = new DateTime('today');
+ // $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
+		$mailtagIndex = array_search(
+			$today->format('Y-m-d H:i:s'),
+			array_map(function ($date)
+			{
+				return $date->format('Y-m-d H:i:s');
+			}, $mailtage),
+			true
+		);
+
+		// Return if today is not Berichtstag (do not send Sammelmail)
+		if ($mailtagIndex === false)
+		{
+			$this->logInfo('No mails sent. Today is not report day.');
+			$this->logInfo('End Job sendReflexionReadyInfoToStgl');
+			return;
+		}
+
+		// Berichtszeitraum ermitteln
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Berichtsperiode Startdatum
+		// ab 2. Mail im Studiensemester
+		if ($mailtagIndex > 0)
+		{
+			// Daten seit letzt gesendeten Mails abfragen
+			$berichtszeitraumVon = $mailtage[$mailtagIndex - 1];
+		}
+		// wenn 1. Mail im Studiensemester
+		else
+		{
+			$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+			$result = $this->_ci->StudiensemesterModel->getStartEndeFromStudiensemester($studiensemester_kurzbz);
+
+			// Daten von Studiensemesterbeginn abfragen
+			$berichtszeitraumVon = new DateTime(getData($result)[0]->start);
+		}
+
+		// Berichtsperiode Endedatum
+		$berichtszeitraumBis = $today;
+
+		/**
+		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
+		 * var_dump($berichtszeitraumVon->format('Y-m-d H:i:s'));
+		 * var_dump($berichtszeitraumBis->format('Y-m-d H:i:s'));
+		 * var_dump('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
+		 * */
+
+		// Reflexionsdaten ermitteln und für mail strukturieren
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Verpflichtende Reflexionen inserted in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenInsertedVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s')
+		);
+		$reflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		// Missing Reflexionen in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenMissedAbgabeVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s'),
+			$studiensemester_kurzbz
+		);
+		$missingReflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		$dataByStg = [];
+
+		// Reflexionen und Missing mergen vorkommenden STGs initialisieren
+		foreach (array_merge($reflexionenByLveLv, $missingReflexionenByLveLv) as $reflexion)
+		{
+			$studiengang_kz = $reflexion->studiengang_kz;
+
+			if (!isset($dataByStg[$studiengang_kz]))
+			{
+				$dataByStg[$studiengang_kz] = [
+					'stg_bezeichnung' => $reflexion->stg_bezeichnung,
+					'stg_kurzbz' => $reflexion->stgKurzbz,
+					'gesamtlv' => [],
+					'gruppe' => [],
+					'missing' => []
+				];
+			}
+		}
+
+		/**
+		 * Loop LVs mit verpflichtenden Reflexionen, die im Berichtszeitraum erstellt wurden
+		 * bei Gruppen: mindestens eine Reflexion im Berichtszeitraum erstellt
+		 * bei Gesamt-LV: Reflexion im Berichtszeitraum erstellt
+		 **/
+		foreach ($reflexionenByLveLv as $reflexion)
+		{
+			if ($reflexion->lv_aufgeteilt)
+			{
+				$dataByStg[$reflexion->studiengang_kz]['gruppe'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+				// var_dump( 'Fertig alle Gruppen  ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+			else
+			{
+
+				$dataByStg[$reflexion->studiengang_kz]['gesamtlv'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+				// var_dump( 'Fertig Gesamt-LV ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+		}
+
+		/**
+		 * Loop LVs mit fehlenden verpflichtende Reflexionen, wo die Reflexionszeit im Berichtszeitraums geendet hat und:
+		 * bei Gesamt-LV: keine Reflexion der LV-Leitung ( optionale werden nicht berücksichtigt)
+		 * bei Gruppen: Reflexionszeit sind - für alle - beendet und mind eine davon hat keine Reflexion
+		 * */
+		foreach ($missingReflexionenByLveLv as $reflexion)
+		{
+			$dataByStg[$reflexion->studiengang_kz]['missing'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+			// var_dump( 'Missing ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung. ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+		}
+
+		// Sammelmails an STGL senden
+		//--------------------------------------------------------------------------------------------------------------
+		foreach ($dataByStg as $studiengang_kz => $row)
+		{
+			// Get STGL mail address
+			$stglMailReceiver_arr = $this->_getSTGLMailAddress($studiengang_kz);
+
+			// Mail text
+			$reflexionenData = $this->_buildReflexionenMailText($row);
+
+			// Continue if no mail text
+			if (isEmptyString($reflexionenData)) continue;
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			// Send mail
+			foreach ($stglMailReceiver_arr as $stgl)
+			{
+				$data = [
+					'vorname' => $stgl['vorname'],
+					'nachname' => $stgl['nachname'],
+					'stg_bezeichnung' => $row['stg_bezeichnung'],
+					'studiensemester' => $studiensemester_kurzbz,
+					'reflexionenData' => $reflexionenData,
+					'link' => $link
+				];
+
+				$mailSent = sendSanchoMail(
+					'LVE_STGL_TEXT_3',
+					$data,
+					$stgl['to'],
+					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['stg_kurzbz']. ' ' . $studiensemester_kurzbz,
+					'sancho_header_lvevaluierung.jpg',
+					'sancho_footer_lvevaluierung.jpg'
+				);
+
+				if ($mailSent)
+				{
+					$this->logInfo('LVE_STGL_TEXT_3 to ' . $stgl['to']);
+				}
+				else
+				{
+					$this->logError('Failed to send LVE_STGL_TEXT_3 to ' . $stgl['to']);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendReflexionReadyInfoToStgl');
+	}
+
+	/**
+	 * Mails KFL_TEXT_2: Reflexionen liegen vor - Sammelmail 1x/Monat
+	 *  Job to send monthly summary Sammelmails to KFLs containing
+	 *  newly available LVs with completed verpflichtende LV-Reflexionen
+	 *  and LVs whose verpflichtende LV-Reflexion period ended without submission.
+	 *  Monthly report days are determined by the configured Zeitfenster by given Studiensemester.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return void
+	 */
+	public function sendReflexionReadyInfoToKfl()
+	{
+		$this->logInfo('Start Job sendReflexionReadyInfoToKfl');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendReflexionReadyInfoToKfl');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Reflexion mail period of Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendReflexionReadyInfoToKfl');
+
+		}
+
+		$mailZeitfenster = getData($result)[0];
+
+		// Monthly report dates within reporting period
+		$mailtage = [];
+		$startdatum = new DateTime($mailZeitfenster->startdatum);
+		$endedatum = new DateTime($mailZeitfenster->endedatum);
+
+		while ($startdatum <= $endedatum)
+		{
+			$mailtage[] = clone $startdatum;
+			$startdatum->modify('+1 month');
+		}
+
+		// Define index to check if today is report day and to get the previous report day
+		$today = new DateTime('today');
+	// $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
+		$mailtagIndex = array_search(
+			$today->format('Y-m-d H:i:s'),
+			array_map(function ($date)
+			{
+				return $date->format('Y-m-d H:i:s');
+			}, $mailtage),
+			true
+		);
+
+		// Return if today is not Berichtstag (do not send Sammelmail)
+		if ($mailtagIndex === false)
+		{
+			$this->logInfo('No mails sent. Today is not report day.');
+			$this->logInfo('End Job sendReflexionReadyInfoToKfl');
+			return;
+		}
+
+		// Berichtszeitraum ermitteln
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Berichtsperiode Startdatum
+		// ab 2. Mail im Studiensemester
+		if ($mailtagIndex > 0)
+		{
+			// Daten seit letzt gesendeten Mails abfragen
+			$berichtszeitraumVon = $mailtage[$mailtagIndex - 1];
+		}
+		// wenn 1. Mail im Studiensemester
+		else
+		{
+			$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+			$result = $this->_ci->StudiensemesterModel->getStartEndeFromStudiensemester($studiensemester_kurzbz);
+
+			// Daten von Studiensemesterbeginn abfragen
+			$berichtszeitraumVon = new DateTime(getData($result)[0]->start);
+		}
+
+		// Berichtsperiode Endedatum
+		$berichtszeitraumBis = $today;
+
+		/**
+		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
+		 * var_dump($berichtszeitraumVon->format('Y-m-d H:i:s'));
+		 * var_dump($berichtszeitraumBis->format('Y-m-d H:i:s'));
+		 * var_dump('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++');
+		 * */
+
+		// Reflexionsdaten ermitteln und für mail strukturieren
+		//--------------------------------------------------------------------------------------------------------------
+
+		// Verpflichtende Reflexionen inserted in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenInsertedVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s')
+		);
+		$reflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		// Missing Reflexionen in Berichtszeitraum - by LV
+		$result = $this->_ci->LvevaluierungReflexionModel->getPflichtReflexionenMissedAbgabeVonBis(
+			$berichtszeitraumVon->format('Y-m-d H:i:s'),
+			$berichtszeitraumBis->format('Y-m-d H:i:s'),
+			$studiensemester_kurzbz
+		);
+		$missingReflexionenByLveLv = hasData($result) ? getData($result) : [];
+
+		$dataByKf = [];
+
+		// Reflexionen und Missing mergen vorkommenden STGs initialisieren
+		foreach (array_merge($reflexionenByLveLv, $missingReflexionenByLveLv) as $reflexion)
+		{
+			$oe_kurzbz = $reflexion->oe_kurzbz;
+
+			if (!isset($dataByKf[$oe_kurzbz]))
+			{
+				$dataByKf[$oe_kurzbz] = [
+					'oe_kurzbz' => $reflexion->oe_kurzbz,
+					'oe_bezeichnung' => $reflexion->oe_bezeichnung,
+					'organisationseinheittyp_kurzbz' => $reflexion->organisationseinheittyp_kurzbz,
+					'stg_kurzbz' => $reflexion->stgKurzbz,
+					'gesamtlv' => [],
+					'gruppe' => [],
+					'missing' => []
+				];
+			}
+		}
+
+		/**
+		 * Loop LVs mit verpflichtenden Reflexionen, die im Berichtszeitraum erstellt wurden
+		  * bei Gruppen: mindestens eine Reflexion im Berichtszeitraum erstellt
+		  * bei Gesamt-LV: Reflexion im Berichtszeitraum erstellt
+		 **/
+		foreach ($reflexionenByLveLv as $reflexion)
+		{
+			if ($reflexion->lv_aufgeteilt)
+			{
+				$dataByKf[$reflexion->oe_kurzbz]['gruppe'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//				var_dump('Fertig alle Gruppen  ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+
+			}
+			else
+			{
+				$dataByKf[$reflexion->oe_kurzbz]['gesamtlv'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//				var_dump('Fertig Gesamt-LV ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+			}
+		}
+
+		/**
+		 * Loop LVs mit fehlenden verpflichtende Reflexionen, wo die Reflexionszeit im Berichtszeitraums geendet hat und:
+		 * bei Gesamt-LV: keine Reflexion der LV-Leitung ( optionale werden nicht berücksichtigt)
+		 * bei Gruppen: Reflexionszeit sind - für alle - beendet und mind eine davon hat keine Reflexion
+		 * */
+		foreach ($missingReflexionenByLveLv as $reflexion)
+		{
+			$dataByKf[$reflexion->oe_kurzbz]['missing'][] = $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung;
+//			var_dump('Missing ' . $reflexion->stgKurzbz . ' ' . $reflexion->lv_bezeichnung . ' - LveLvId ' . $reflexion->lvevaluierung_lehrveranstaltung_id);
+		}
+
+		// Sammelmails für KFL senden
+		//--------------------------------------------------------------------------------------------------------------
+		foreach ($dataByKf as $oe_kurzbz => $row)
+		{
+			// Get KFL mail address
+			$leitungMailReceiver_arr = $this->_getLeitungMailAddress($oe_kurzbz);
+
+			// Mail text
+			$reflexionenData = $this->_buildReflexionenMailText($row);
+
+			// Continue if no mail text
+			if (isEmptyString($reflexionenData)) continue;
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+			// Send mail
+			foreach ($leitungMailReceiver_arr as $leitung)
+			{
+				$data = [
+					'vorname' => $leitung['vorname'],
+					'nachname' => $leitung['nachname'],
+					'oe_bezeichnung' =>$row['oe_bezeichnung'],
+					'studiensemester' => $studiensemester_kurzbz,
+					'organisationseinheittyp_kurzbz' => $row['organisationseinheittyp_kurzbz'],
+					'reflexionenData' => $reflexionenData,
+					'link' => $link
+				];
+
+				$mailSent = sendSanchoMail(
+					'LVE_KFL_TEXT_2',
+					$data,
+					$leitung['to'],
+					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['organisationseinheittyp_kurzbz'] . ' '  . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
+					'sancho_header_lvevaluierung.jpg',
+					'sancho_footer_lvevaluierung.jpg'
+				);
+
+				if ($mailSent)
+				{
+					$this->logInfo('LVE_KFL_TEXT_2 to ' . $leitung['to']);
+				} else
+				{
+					$this->logError('Failed to send LVE_KFL_TEXT_2 to ' . $leitung['to']);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendReflexionReadyInfoToKfl');
+	}
+
+	/**
+	 * Mails LVL_TEXT_7 und LEHR_TEXT_5: Profillinien verfügbar
+	 *
+	 * Für LVs mit Evaluierung auf Gesamt-LV Evaluierungsebene: Mail an LV-Leitung UND an Lehrende.
+	 * Für LVs mit Evaluierung auf Gruppen Evaluierungsebene: Mail an Lehrende.
+	 *
+	 *
+	 * @return void
+	 */
+	public function sendProfillinienAvailable()
+	{
+		$this->logInfo('Start Job sendProfillinienAvailable');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendProfillinienAvailable');
+		}
+
+		// Alle LVE Lehrveranstaltungen
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = hasData($result) ? getData($result) : [];
+
+			$gruppe_sent_users = [];
+			$gesamt_sent_users = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+
+			foreach ($lveLvs as $lveLv)
+			{
+				// TEST Mails only
+//				if ($lveLv->lvevaluierung_lehrveranstaltung_id != 2 && $lveLv->lvevaluierung_lehrveranstaltung_id != 19) continue;
+
+				// Gruppen
+				if ($lveLv->lv_aufgeteilt)
+				{
+					// Bei Gruppen Evaluierung ergeht Info an die jeweiligen LektorInnen
+					$resultLES = $this->LvevaluierungLehrveranstaltungModel->getLveLvWithLesAndGruppenById(
+						$lveLv->lvevaluierung_lehrveranstaltung_id
+					);
+
+					if (hasData($resultLES))
+					{
+						$dataLES = getData($resultLES);
+
+						// Group data by LE and add data
+						$groupedByLe = $this->initiierunglib->groupByLeAndAddData(
+							$dataLES,
+							$lveLv->lvevaluierung_lehrveranstaltung_id
+						);
+
+						foreach ($groupedByLe as $rowle)
+						{
+							foreach ($rowle->lektoren as $rowlkt)
+							{
+								if (!in_array($rowlkt['mitarbeiter_uid'], $gruppe_sent_users))
+								{
+									$gruppe_sent_users[] = $rowlkt['mitarbeiter_uid'];
+									$uid = $rowlkt['mitarbeiter_uid'];
+									//echo "\nGruppe Mail to ".$rowlkt['mitarbeiter_uid'];
+
+									$data = [
+										'vorname' => $rowlkt['vorname'],
+										'nachname' => $rowlkt['nachname'],
+										'studiensemester' => $studiensemester_kurzbz,
+										'link' => $link,
+										'zielgruppe' => 'Lehrende'
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LEHR_TEXT_5',
+										$data,
+										$uid . '@' . DOMAIN,
+										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LEHR_TEXT_5 to ' . $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LEHR_TEXT_5 to ' . $uid);
+									}
+								}
+							}
+						}
+					}
+					else
+					{
+						$this->logError('Laden der Personen einer Evaluierung fehlgeschlagen');
+					}
+				}
+				// Gesamt-LV
+				else
+				{
+					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung UND auch an die Lehrenden
+					$result_lkt = $this->_ci->LehrveranstaltungModel->getLecturersByLv(
+						$studiensemester_kurzbz,
+						$lveLv->lehrveranstaltung_id
+					);
+
+					if (hasData($result_lkt))
+					{
+						$dataLektor = getData($result_lkt);
+
+						foreach ($dataLektor as $rowLektor)
+						{
+							if (!in_array($rowLektor->uid, $gesamt_sent_users))
+							{
+								$gesamt_sent_users[] = $rowLektor->uid;
+								//echo "\nGesamt Mail to ".$rowLektor->uid;
+
+								$uid = $rowLektor->uid;
+
+								$data = [
+									'vorname' => $rowLektor->vorname,
+									'nachname' => $rowLektor->nachname,
+									'studiensemester' => $studiensemester_kurzbz,
+									'link' => $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LVL_TEXT_7',
+									$data,
+									$uid . '@' . DOMAIN,
+									'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
+									'sancho_header_lvevaluierung.jpg',
+									'sancho_footer_lvevaluierung.jpg'
+								);
+
+								if ($mailSent)
+								{
+									$this->logInfo('LVE_LVL_TEXT_7 to ' . $uid);
+
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LVL_TEXT_7 to ' . $uid);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendProfillinienAvailable');
+	}
+
+	/**
+	 * Mails STGL_TEXT_4: MALVE STGL abschließen
+	 *
+	 * @return void
+	 */
+	public function sendMalveStglAbschliessen()
+	{
+		$this->logInfo('Start Job sendMalveStgAbschliessen');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveStgAbschliessen');
+		}
+
+		// Mail an Studiengangsleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Alle LVE Lehrveranstaltungen
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+			$result = $this->_ci->StudiensemesterModel->getNext();
+			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+			// Malve Stgl Abschluss Enddatum
+			$malve_enddatum = clone $zeitfensterEnde;
+			$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Studiengangsleitung',
+						'link' => $link
+
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_4',
+						$data,
+						$stgl['to'],
+						'Maßnahmenableitung der LV-Evaluation (MALVE-STGL) bis '. $malve_enddatum->format('d.m.Y'),
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_4 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_4 to ' . $stgl['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveStgAbschliessen');
+	}
+
+	/**
+	 * Mails KFL_TEXT_3: MALVE KFL abschließen
+	 *
+	 * @return void
+	 */
+	public function sendMalveKflAbschliessen()
+	{
+		$this->logInfo('Start Job sendMalveKflAbschliessen');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveKflAbschliessen');
+		}
+
+		// Mail an Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+		// Malve Stgl Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		// Link zu Übersicht im CIS
+		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+		// Get Kompetenzfelder
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctKfs = $this->_ci->evaluationlib->getDistinctKfs($lvIds);
+
+			// For each Kompetenzfeld
+			foreach ($distinctKfs as $kf)
+			{
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Kompetenzfeldleitung',
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_3',
+						$data,
+						$leitung['to'],
+						'Maßnahmenableitung der LV-Evaluation (MALVE-KFL) bis ' . $malve_enddatum->format('d.m.Y'),
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_3 to ' . $leitung['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_3 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveKflAbschliessen');
+	}
+
+	/**
+	 * Mails STGL_TEXT_5: MALVE STGL abschließen - Reminder
+	 *
+	 * Ergeht nur an STGLs, die Malve noch nicht abgeschlossen haben.
+	 *
+	 * @return void
+	 */
+	public function sendMalveStglAbschliessenReminder()
+	{
+		$this->logInfo('Start Job sendMalveStglAbschliessenReminder');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveStglAbschliessenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveStglAbschliessenReminder');
+
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Malve Stgl Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		$remindDatum = clone $malve_enddatum;
+		$remindDatum->sub(new DateInterval('P1W'));    // todo check: macht jetzt 2026-09-10, da von 2026-09-17, nicht von 2026-09-16
+
+//		var_dump($zeitfensterEnde->format('d.m.Y'));
+//		var_dump($malve_enddatum->format('d.m.Y'));
+//		var_dump($remindDatum->format('d.m.Y'));
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveStglAbschliessenReminder');
+		}
+
+		// Mail an Studiengangsleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Alle LVE Lehrveranstaltungen
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
+
+			// Abgeschlossene MALVE
+			$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$result = $this->_ci->LvevaluierungMalveModel->loadWhere([
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+			$abgeschlosseneMalve = hasData($result) ? getData($result) : [];
+			$abgeschlosseneMalveOes = array_column($abgeschlosseneMalve, 'oe_kurzbz');
+
+			// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+			$result = $this->_ci->StudiensemesterModel->getNext();
+			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+			// Link zu Übersicht im CIS
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
+
+			$subject = 'Reminder: Maßnahmenableitung der LV-Evaluation (MALVE-STGL) bis '
+				. $malve_enddatum->format('d.m.Y');
+
+			foreach ($distinctStgs as $stg)
+			{
+				// Continue, wenn STGL die MALVE bereits abgeschlossen hat
+				if (in_array($stg->oe_kurzbz, $abgeschlosseneMalveOes))
+				{
+				//	var_dump('continue for: ' . $stg->oe_kurzbz);
+					continue;
+				}
+//				var_dump('mail to '. $stg->oe_kurzbz);
+
+				// Get STGL mail address
+				$stglMailReceiver_arr = $this->_getSTGLMailAddress($stg->studiengang_kz);
+
+				// Send mail
+				foreach ($stglMailReceiver_arr as $stgl)
+				{
+					$data = [
+						'vorname' => $stgl['vorname'],
+						'nachname' => $stgl['nachname'],
+						'stg_kurzbz' => $stg->stgKurzbz,
+						'stg_bezeichnung' => $stg->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Studiengangsleitung',
+						'link' => $link
+
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_STGL_TEXT_5',
+						$data,
+						$stgl['to'],
+						$subject,
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_STGL_TEXT_5 to ' . $stgl['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_STGL_TEXT_4 to ' . $stgl['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveStglAbschliessenReminder');
+	}
+
+	/**
+	 * Mails KFL_TEXT_4: MALVE KFL abschließen - Reminder
+	 *
+	 * Ergeht nur an KFLs, die MALVE noch nicht abgeschlossen haben.
+	 *
+	 * @return void
+	 */
+	public function sendMalveKflAbschliessenReminder()
+	{
+		$this->logInfo('Start Job sendMalveKflAbschliessenReminder');
+
+		// Aktuelles Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
+			$this->_ci->StudiensemesterModel->addLimit(1);
+			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
+		}
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster 'mailreflexionen' by Studiensemester
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Malve KFL Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		$remindDatum = clone $malve_enddatum;
+		$remindDatum->sub(new DateInterval('P1W'));    // todo check: macht jetzt 2026-09-10, da von 2026-09-17, nicht von 2026-09-16
+
+//		var_dump($zeitfensterEnde->format('d.m.Y'));
+//		var_dump($malve_enddatum->format('d.m.Y'));
+//		var_dump($remindDatum->format('d.m.Y'));
+
+		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
+		}
+
+		// Mail an Kompetenzfeldleitungen
+		// -------------------------------------------------------------------------------------------------------------
+
+		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
+
+		// Malve Stgl Abschluss Enddatum
+		$malve_enddatum = clone $zeitfensterEnde;
+		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+
+		// Link zu Übersicht im CIS
+		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
+
+		$subject = 'Reminder: Maßnahmenableitung der LV-Evaluation (MALVE-KFL) bis '
+			. $malve_enddatum->format('d.m.Y');
+
+		// Get Kompetenzfelder
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		elseif (hasData($result))
+		{
+			$lveLvs = getData($result);
+			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
+			$distinctKfs = $this->_ci->evaluationlib->getDistinctKfs($lvIds);
+
+			// Abgeschlossene MALVE
+			$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$result = $this->_ci->LvevaluierungMalveModel->loadWhere([
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+			$abgeschlosseneMalve = hasData($result) ? getData($result) : [];
+			$abgeschlosseneMalveOes = array_column($abgeschlosseneMalve, 'oe_kurzbz');
+
+			// For each Kompetenzfeld
+			foreach ($distinctKfs as $kf)
+			{
+				// Continue, wenn STGL die MALVE bereits abgeschlossen hat
+				if (in_array($kf->oe_kurzbz, $abgeschlosseneMalveOes))
+				{
+//					var_dump('continue for: ' . $kf->oe_kurzbz);
+					continue;
+				}
+//				var_dump('mail to '. $kf->oe_kurzbz);
+
+				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
+
+				// Send mail to Kompetenzfeldleitung
+				foreach ($leitungMailReceiver_arr as $leitung)
+				{
+					$data = [
+						'vorname' => $leitung['vorname'],
+						'nachname' => $leitung['nachname'],
+						'oe_bezeichnung' => $kf->bezeichnung,
+						'studiensemester' => $studiensemester_kurzbz,
+						'malve_enddatum' => $malve_enddatum->format('d.m.Y'),
+						'next_studiensemester' => $next_studiensemester_kurzbz,
+						'zielgruppe' => 'Kompetenzfeldleitung',
+						'link' => $link
+					];
+
+					$mailSent = sendSanchoMail(
+						'LVE_KFL_TEXT_4',
+						$data,
+						$leitung['to'],
+						$subject,
+						'sancho_header_lvevaluierung.jpg',
+						'sancho_footer_lvevaluierung.jpg'
+					);
+
+					if ($mailSent)
+					{
+						$this->logInfo('LVE_KFL_TEXT_4 to ' . $leitung['to']);
+					}
+					else
+					{
+						$this->logError('Failed to send LVE_KFL_TEXT_4 to ' . $leitung['to']);
+					}
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendMalveKflAbschliessenReminder');
+	}
+
+
+	// Private methods
+	// -----------------------------------------------------------------------------------------------------------------
+
+	/**
+	 * Build mail text for
+	 * @param $row
+	 * @return string
+	 */
+	private function _buildReflexionenMailText($row)
+	{
+		$reflexionenData = '';
+
+		if (!isEmptyArray($row['gesamtlv']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse inklusive LV-Reflexion der LV-Leitung (Gesamt)</b><br>';
+			$reflexionenData .= implode('<br>', $row['gesamtlv']);
+			$reflexionenData .= '<br><br>';
+		}
+
+		if (!isEmptyArray($row['gruppe']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse inklusive LV-Reflexionen aller Lehrenden (Gruppe)</b><br>';
+			$reflexionenData .= implode('<br>', $row['gruppe']);
+			$reflexionenData .= '<br><br>';
+		}
+
+		if (!isEmptyArray($row['missing']))
+		{
+			$reflexionenData .= '<b>LV-Evaluierungsergebnisse ohne vollständige LV-Reflexion(en)</b><br>';
+			$reflexionenData .= implode('<br>', $row['missing']);
+		}
+
+		return $reflexionenData;
+	}
+	// Get STGL mail address
+	private function _getSTGLMailAddress($studiengang_kz)
+	{
+		$stglMailAdress_arr = [];
+
+		$result = $this->StudiengangModel->getLeitung($studiengang_kz);
+
+		if (hasData($result))
+		{
+			foreach (getData($result) as $stgl)
+			{
+				$stglMailAdress_arr[] = [
+					'to' => $stgl->uid . '@' . DOMAIN,
+					'vorname' => $stgl->vorname,
+					'nachname' => $stgl->nachname
+				];
+			}
+		}
+
+		return $stglMailAdress_arr;
+	}
+
+	private function _getLeitungMailAddress($oe_kurzbz)
+	{
+		$leitungMailAdress_arr = [];
+
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_organisationseinheit oe', 'oe_kurzbz');
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_benutzer b', 'uid');
+		$this->_ci->BenutzerfunktionModel->addJoin('public.tbl_person p', 'person_id');
+
+		$result = $this->_ci->BenutzerfunktionModel->loadWhere(
+			[
+				'oe.oe_kurzbz' => $oe_kurzbz,
+				'b.aktiv' => TRUE,
+				'funktion_kurzbz' => 'Leitung',
+				'(datum_von IS NULL OR datum_von <= NOW())' => NULL,
+				'(datum_bis IS NULL OR datum_bis >= NOW())' => NULL
+			]
+		);
+
+		if (hasData($result))
+		{
+			foreach (getData($result) as $leitung)
+			{
+				$leitungMailAdress_arr[] = [
+					'to' => $leitung->uid . '@' . DOMAIN,
+					'vorname' => $leitung->vorname,
+					'nachname' => $leitung->nachname
+				];
+			}
+		}
+
+		return $leitungMailAdress_arr;
 	}
 }
