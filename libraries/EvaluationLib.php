@@ -305,7 +305,7 @@ class EvaluationLib
 	 * @param $studiensemester_kurzbz
 	 * @return array|mixed
 	 */
-	public function getLvData($lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function getLvData($lehrveranstaltung_id)
 	{
 		// LV data
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
@@ -398,17 +398,25 @@ class EvaluationLib
 
 		// Weighted median
 		$totalWeight = array_sum(array_column($pairs, 'weight'));
-		$medianPos   = $totalWeight / 2;
+
+		// beide mittleren Positionen ermitteln
+		$lowerPos = ceil($totalWeight / 2);
+		$upperPos = ceil(($totalWeight + 1) / 2);
 
 		$cumWeight = 0;
+		$lowerVal = null;
+		$upperVal = null;
 		foreach ($pairs as $pair) {
 			$cumWeight += $pair['weight'];
-			if ($cumWeight >= $medianPos) {
-				return round($pair['value'], 2);
+			if ($lowerVal === null && $cumWeight >= $lowerPos) $lowerVal = $pair['value'];
+			if ($cumWeight >= $upperPos)
+			{
+				$upperVal = $pair['value'];
+				break;
 			}
 		}
 
-		return null;
+		return round(($lowerVal + $upperVal) / 2, 1);
 	}
 
 

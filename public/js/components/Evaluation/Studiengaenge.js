@@ -42,7 +42,7 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
-				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester))
+				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 			})
 			.then(result => {
 				this.malve = result.data
@@ -231,7 +231,7 @@ export default {
 						},
 						bottomCalcFormatter: function(cell) {
 							const value = cell.getValue();
-							return value !== null ? value.toFixed(2) + "%" : "–";
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -315,7 +315,20 @@ export default {
 		onStudiensemesterChange() {
 			if (!this.selStudiensemester || !this.table) return;
 
-			this.table.replaceData();
+			this.$api
+				.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
+				.then(result => {
+					this.lists.orgforms = result.data;
+					if (!this.lists.orgforms.some(o => o.orgform_kurzbz === this.selOrgform)) {
+						this.selOrgform = this.lists.orgforms[0]?.orgform_kurzbz ?? null;
+					}
+
+					this.table.replaceData();
+
+					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
+				})
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onStgChange() {
 			if (!this.selStgKz || !this.selStudiensemester || !this.table) return;
@@ -330,7 +343,7 @@ export default {
 
 					this.table.replaceData();
 
-					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester));
+					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
 				})
 				.then(result => this.malve = result.data)
 				.catch(error => this.$fhcAlert.handleSystemError(error));
@@ -339,6 +352,11 @@ export default {
 			if (!this.selOrgform || !this.table) return;
 
 			this.table.replaceData();
+
+			this.$api
+				.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
 			const url = this.$api.getUri() +
@@ -382,7 +400,7 @@ export default {
 				return;
 			}
 
-			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selStudiensemester))
+			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 				.then(result => {
 					if (result.data) {
 						this.malve = result.data;

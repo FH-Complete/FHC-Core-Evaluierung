@@ -52,3 +52,33 @@ ALTER TABLE extension.tbl_lvevaluierung_malve
     ADD CONSTRAINT uq_studiensemester_kurzbz_oe_kurzbz UNIQUE (studiensemester_kurzbz, oe_kurzbz);
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
+
+DO
+$$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_malve
+    ADD COLUMN IF NOT EXISTS orgform_kurzbz varchar (5) DEFAULT NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO
+$$
+BEGIN
+ALTER TABLE extension.tbl_lvevaluierung_malve
+    ADD CONSTRAINT fk_tbl_lvevaluierung_malve_orgform_kurzbz FOREIGN KEY (orgform_kurzbz)
+        REFERENCES bis.tbl_orgform (orgform_kurzbz)
+        ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- Replace unique constraint to include OrgForm
+ALTER TABLE extension.tbl_lvevaluierung_malve
+    DROP CONSTRAINT IF EXISTS uq_studiensemester_kurzbz_oe_kurzbz;
+
+ALTER TABLE extension.tbl_lvevaluierung_malve
+    ADD CONSTRAINT uq_studiensemester_kurzbz_oe_kurzbz
+        UNIQUE (
+                studiensemester_kurzbz,
+                oe_kurzbz,
+                orgform_kurzbz
+            );

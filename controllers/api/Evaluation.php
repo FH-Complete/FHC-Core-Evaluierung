@@ -42,6 +42,22 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
+				'getLvsImVergleichDataByLve' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLveLv' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_STG . ':r',
+					self::BERECHTIGUNG_INIT . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
+				'getLvsImVergleichDataByLvTemplate' => [
+					self::BERECHTIGUNG_KF . ':r',
+					self::BERECHTIGUNG_ADMIN . ':r',
+				],
 				'getAuswertungHelpUrl' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_STG . ':r',
@@ -163,7 +179,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, Last inserted LV-Leitung, Admin
 		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
@@ -316,7 +332,7 @@ class Evaluation extends FHCAPI_Controller
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id, $lveLv->studiensemester_kurzbz);
+		$lvData = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
 
 		// KFL, STGL, LV-Leitung (last insertet LvLeitung), Admin
 		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
@@ -638,31 +654,17 @@ class Evaluation extends FHCAPI_Controller
 		}
 
 		// Auswertung data
-		$auswertungData = [];
 		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lvevaluierung_id);
 		$data = $this->getDataOrTerminateWithError($result);
 		$auswertungData = $this->mapAuswertungData($data);			// structure data
 		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Profillinien
-		// -------------------------------------------------------------------------------------------------------------
 		// Profillinien data - LV im Zeitverlauf
-		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz);
 
-		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
-		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
-
-		// Profillinien data - LV im LV-Vergleich
-		$now = new DateTime();
-		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
-		$showChartDate = new DateTime($zeitfenster->endedatum);
-		$showChartDate->setTime(00, 00, 00);
-
-		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if ($now > $showChartDate)
-		{
-
-		}
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
@@ -710,25 +712,12 @@ class Evaluation extends FHCAPI_Controller
 		$auswertungData = $this->mapAuswertungData($data);          // structure data
 		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Profillinien
-		// -------------------------------------------------------------------------------------------------------------
 		// Profillinien data - LV im Zeitverlauf
+		// -------------------------------------------------------------------------------------------------------------
 		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
 
-		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
-		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
-
-		// Profillinien data - LV im LV-Vergleich
-		$now = new DateTime();
-		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
-		$showChartDate = new DateTime($zeitfenster->endedatum);
-		$showChartDate->setTime(00, 00, 00);
-
-		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if ($now > $showChartDate)
-		{
-
-		}
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
@@ -781,29 +770,16 @@ class Evaluation extends FHCAPI_Controller
 		$auswertungData = $this->mapAuswertungData($data);			// structure data
 		$this->calculateHodgesLehmannEstimator($auswertungData);	// HLE for each Antwort
 
-		// Profillinien
-		// -------------------------------------------------------------------------------------------------------------
 		// Profillinien data - LV im Zeitverlauf
+		// -------------------------------------------------------------------------------------------------------------
 		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
 			$lehrveranstaltung_template_id,
 			$studiensemester_kurzbz
 		);
 		// $lvImZeitverlaufData = $this->getTESTlvImZeitverlaufData();	// !!!todo delete - nur test
 
-		// Merge Fragebogengruppen and Fragen across all semesters so each semester has same structure (for highchart)
-		$this->normalizeFragenAcrossStudiensemester($lvImZeitverlaufData);
-
-		// Profillinien data - LV im LV-Vergleich
-		$now = new DateTime();
-		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
-		$showChartDate = new DateTime($zeitfenster->endedatum);
-		$showChartDate->setTime(00, 00, 00);
-
-		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if ($now >= $showChartDate)
-		{
-
-		}
+		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
@@ -816,6 +792,159 @@ class Evaluation extends FHCAPI_Controller
 	 *
 	 * @return string|null URL if configured, otherwise null
 	 */
+
+	public function getLvsImVergleichDataByLve()
+	{
+		$lvevaluierung_id = $this->input->get('lvevaluierung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+		$role = $this->input->get('role');
+
+		$lve = $this->getLvevaluierungOrFail($lvevaluierung_id);
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lve->lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Vergleich zu Bewertungen aller LVs im gleichen STG und Ausbildungssemester',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg
+		]);
+	}
+
+	public function getLvsImVergleichDataByLveLv()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
+
+		// KFL, STGL, Lehrende
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_STG = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_STG);
+		$isBerechtigt_INIT = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_INIT);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (
+			!$isBerechtigt_KF &&
+			!$isBerechtigt_STG &&
+			!$isBerechtigt_INIT &&
+			!$isBerechtigt_ADMIN
+		)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = null;
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich zu anderen LVs',
+			'lvImVergleichSubtitle' => 'Bewertungen im gleichen STG und Ausbildungssemester',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
+	public function getLvsImVergleichDataByLvTemplate()
+	{
+		$lehrveranstaltung_template_id = $this->input->get('lehrveranstaltung_template_id');
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
+
+		// KFL, Admin
+		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN)
+		{
+			$this->terminateWithError('Permission denied');
+		}
+
+		// Profillinie - LV im LV-Vergleich
+		// -------------------------------------------------------------------------------------------------------------
+		$lvImVergleichMsg = '';
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+		$showChartDate = new DateTime($zeitfenster->endedatum);
+
+		// Im SS ab 06.8., im WW ab 22.02. anzeigen
+		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		{
+			$lvImVergleichData = $this->getLvImVergleichDataByTemplate(
+				$lehrveranstaltung_template_id,
+				$studiensemester_kurzbz
+			);
+
+			// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+			$this->normalizeFragenbogenStruktur($lvImVergleichData);
+		}
+		else
+		{
+			$lvImVergleichMsg = 'Ab ' . $showChartDate->format('d.m.Y') . ' verfügbar';
+			$lvImVergleichData = [];
+		}
+
+		$this->terminateWithSuccess([
+			'lvImVergleichTitle' => 'LV im Vergleich nach STGs',
+			'lvImVergleichSubtitle' => 'Bewertungen der LV in verschiedenen Studiengängen',
+			'lvImVergleichData' => $lvImVergleichData,
+			'lvImVergleichMsg' => $lvImVergleichMsg,
+		]);
+	}
+
 	public function getAuswertungHelpUrl()
 	{
 		$url = $this->config->item('auswertungHelpUrl');
@@ -1019,6 +1148,81 @@ class Evaluation extends FHCAPI_Controller
 		return $options;
 	}
 
+	/**
+	 * Gibt Hodges Lehmann Estimator zu LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 * Bsp:
+	 * SS2026 - HLE nach LVE (kann Gruppen oder Gesamt-LV Ergebnis sein)
+	 * SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 * SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lve
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
+	private function getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		$lvImZeitverlaufData = [];
+
+		// Aktuelles, letztes und vorletztes Studiensemester vom gleichen Typ (SS2026, SS2025, SS2024)
+		$result = $this->StudiensemesterModel->getPreviousSameSemesterFrom($studiensemester_kurzbz, 3);
+		$lvImZeitverlaufStudiensemester = hasData($result) ? getData($result) : [];
+
+		foreach ($lvImZeitverlaufStudiensemester as $studiensemester)
+		{
+			$semesterAuswertungData = [];
+			$semesterLveLvId = null;
+
+			// Aktuelles Studiensemester - nach LVE, kann also Gruppe oder Gesamt-LV sein
+			if ($studiensemester->studiensemester_kurzbz === $studiensemester_kurzbz)
+			{
+				$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+				$data = $this->getDataOrTerminateWithError($result);
+				$semesterAuswertungData = $this->mapAuswertungData($data);
+				$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+			}
+			// LveLv ID - Letzes or vorletztes Studiensemester - immer Gesamt-LV betrachten
+			else
+			{
+				$this->LvevaluierungLehrveranstaltungModel->addSelect('lvevaluierung_lehrveranstaltung_id');
+				$result = $this->LvevaluierungLehrveranstaltungModel->loadWhere([
+					'lehrveranstaltung_id' => $lveLv->lehrveranstaltung_id,
+					'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				]);
+
+				$semesterLveLvId = hasData($result) ? getData($result)->lvevaluierung_lehrveranstaltung_id : null;
+
+				if (is_numeric($semesterLveLvId))
+				{
+					$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($semesterLveLvId);
+					$data = $this->getDataOrTerminateWithError($result);
+					$semesterAuswertungData = $this->mapAuswertungData($data);
+					$this->calculateHodgesLehmannEstimator($semesterAuswertungData);
+				}
+			}
+
+			$lvImZeitverlaufData[] = [
+				'studiensemester_kurzbz' => $studiensemester->studiensemester_kurzbz,
+				'auswertungData' => $semesterAuswertungData
+			];
+		}
+
+		return $lvImZeitverlaufData;
+	}
+
+	/**
+	 *  Gibt Hodges Lehmann Estimator zur LV-Evaluierungen über 3 Studiensemester zurück.
+	 *
+	 *  Bsp:
+	 *  SS2026 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2025 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *  SS2024 - HLE nach LVE-LV (immer Gesamt-LV)
+	 *
+	 * @param $lveLv
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
 	private function getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz)
 	{
 		$lvImZeitverlaufData = [];
@@ -1066,6 +1270,13 @@ class Evaluation extends FHCAPI_Controller
 		return $lvImZeitverlaufData;
 	}
 
+	/**
+	 *   Gibt Hodges Lehmann Estimator aggregiert über alle LV-Evaluierungen eines Quellkurses über 3 Studiensemester zurück.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return array
+	 */
 	private function getLvImZeitverlaufDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
 	{
 		$lvImZeitverlaufData = [];
@@ -1095,6 +1306,104 @@ class Evaluation extends FHCAPI_Controller
 		return $lvImZeitverlaufData;
 	}
 
+	private function getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LVE
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLve($lve->lvevaluierung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs im gleichen STG ' . $lv->stgKurzbz . ' und Ausbildungssemester ' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz)
+	{
+		// LV Info
+		$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+		$lvImVergleichData = [];
+
+		// HLE - Diese LV
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'LV im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		// HLE - Alle LVs im gleichen STG und Ausbildungssemester
+		$result = $this->LvevaluierungFragebogenGruppeModel->getLvImVergleichDataByLveLv(
+			$lveLv->lvevaluierung_lehrveranstaltung_id
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+		$vergleichAuswertungData = $this->mapAuswertungData($data);
+		$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+		$lvImVergleichData[] = [
+			'vergleichZu' => 'Alle LVs in ' . $lv->stgKurzbz . '-' . $lv->semester . ' im ' . $studiensemester_kurzbz,
+			'auswertungData' => $vergleichAuswertungData
+		];
+
+		return $lvImVergleichData;
+	}
+
+	private function getLvImVergleichDataByTemplate($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$lvImVergleichData = [];
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->getLveLvsByLvTemplateId(
+			$lehrveranstaltung_template_id,
+			$studiensemester_kurzbz
+		);
+		$lveLvs = hasData($result) ? getData($result) : [];
+
+		foreach ($lveLvs as $lveLv)
+		{
+			// Get LV Auswertung by LveLv ID
+			$vergleichAuswertungData = [];
+			$result = $this->LvevaluierungFragebogenGruppeModel->getAuswertungDataByLveLv($lveLv->lvevaluierung_lehrveranstaltung_id);
+			$data = $this->getDataOrTerminateWithError($result);
+			$vergleichAuswertungData = $this->mapAuswertungData($data);
+			$this->calculateHodgesLehmannEstimator($vergleichAuswertungData);
+
+			// LV Info
+			$lv = $this->evaluationlib->getLvData($lveLv->lehrveranstaltung_id);
+
+			$lvImVergleichData[] = [
+				'vergleichZu' => $lv->stgKurzbz. ' - '. $lv->orgform_kurzbz,
+				'auswertungData' => $vergleichAuswertungData
+			];
+		}
+
+		// Merge Fragebogengruppen and Fragen to ensure consistent chart rendering
+		$this->normalizeFragenbogenStruktur($lvImVergleichData);
+
+		return $lvImVergleichData;
+	}
+
 	private function calculateHodgesLehmannEstimator(&$auswertungData)
 	{
 		foreach ($auswertungData as &$gruppe)
@@ -1111,129 +1420,105 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
-	 * Ergänzt fehlende Fragebogengruppen und Fragen in allen Studiensemestern.
+	 * Ergänzt fehlende Fragebogengruppen und Fragen in allen Vergleichsdatensätzen (Studienemester, LVs oder STGs).
+	 * Führt Gruppen anhand ihrer Bezeichnung zusammen, damit geteilte Fragen (n:m Gruppe<->Frage)
+	 * unabhängig vom Fragebogen/der Fragebogengruppen-IDs nur einmal dargestellt werden.
 	 * Vorhandene Daten werden niemals entfernt oder überschrieben.
+	 *
+	 * Bsp: Dual STG hat, im Vergleich zu anderen STGs, eine extra Fragebogengruppe mit eigenen Fragen.
+	 * Damit die Gruppen und Fragen nun richtig im Chart angezeigt werden, muss die Datenstruktur normalisiert werden.
 	 */
-	private function normalizeFragenAcrossStudiensemester(&$lvImZeitverlaufData)
+	private function normalizeFragenbogenStruktur(&$data)
 	{
+		// Masterstruktur
 		$allFbGruppen = [];
 
-		// Alle Gruppen und Fragen sammeln
-		foreach ($lvImZeitverlaufData as $semesterData)
+		// Gruppen/Fragen für Masterstruktur unique sammeln
+		foreach ($data as $item)
 		{
-			foreach ($semesterData['auswertungData'] as $gruppe)
+			foreach ($item['auswertungData'] as $gruppe)
 			{
-				$gruppeId = $gruppe['lvevaluierung_fragebogen_gruppe_id'];
+				// Gruppenbezeichnung als Merge-Kriterium
+				$bezeichnung = $gruppe['bezeichnung'];
 
-				if (!isset($allFbGruppen[$gruppeId]))
+				if (!isset($allFbGruppen[$bezeichnung])) // erst gefundene neue Bezeichnung
 				{
-					$allFbGruppen[$gruppeId] = [
-						'lvevaluierung_fragebogen_gruppe_id' => $gruppeId,
+					// Gruppe anlegen
+					$allFbGruppen[$bezeichnung] = [
+						'lvevaluierung_fragebogen_gruppe_id' => $gruppe['lvevaluierung_fragebogen_gruppe_id'],
 						'bezeichnung' => $gruppe['bezeichnung'],
 						'sort' => $gruppe['sort'],
 						'fbFragen' => []
 					];
 				}
 
+				// Fragen der Gruppe zusammenführen
 				foreach ($gruppe['fbFragen'] as $frage)
 				{
-					$frageId = $frage['lvevaluierung_frage_id'];
-
-					$allFbGruppen[$gruppeId]['fbFragen'][$frageId] = $frage;
+					$allFbGruppen[$bezeichnung]['fbFragen'][$frage['lvevaluierung_frage_id']] = $frage;
 				}
 			}
 		}
 
-
-		/*
-		 * Gruppen sortieren
-		 */
-		uasort($allFbGruppen, function ($a, $b)
-		{
+		// Gruppen in Masterstruktur sortieren
+		uasort($allFbGruppen, function($a, $b) {
 			return $a['sort'] <=> $b['sort'];
 		});
 
-
-		/*
-		 * 2. Semester angleichen
-		 */
-		foreach ($lvImZeitverlaufData as &$semesterData)
+		// Jeden Eintrag an die Masterstruktur angleichen
+		foreach ($data as &$item)
 		{
-			$semesterGruppen = [];
-
-			foreach ($semesterData['auswertungData'] as $gruppe)
+			// Alle Fragen dieses Eintrags flach sammeln, um sie per frage_id finden zu können
+			$itemFragenFlat = [];
+			foreach ($item['auswertungData'] as $gruppe)
 			{
-				$semesterGruppen[$gruppe['lvevaluierung_fragebogen_gruppe_id']] = $gruppe;
+				foreach ($gruppe['fbFragen'] as $frage)
+				{
+					$itemFragenFlat[$frage['lvevaluierung_frage_id']] = $frage;
+				}
 			}
-
 
 			$neueGruppen = [];
 
-
-			foreach ($allFbGruppen as $gruppeId => $masterGruppe)
+			// Jede bekannte Gruppe im Ergebnis abbilden, auch wenn sie hier fehlt
+			foreach ($allFbGruppen as $masterGruppe)
 			{
-				if (isset($semesterGruppen[$gruppeId]))
-				{
-					$aktuelleGruppe = $semesterGruppen[$gruppeId];
-				} else
-				{
-					$aktuelleGruppe = [
-						'lvevaluierung_fragebogen_gruppe_id' => $gruppeId,
-						'bezeichnung' => $masterGruppe['bezeichnung'],
-						'sort' => $masterGruppe['sort'],
-						'fbFragen' => []
-					];
-				}
-
-
-				/*
-				 * Fragen angleichen
-				 */
-				$semesterFragen = [];
-
-				foreach ($aktuelleGruppe['fbFragen'] as $frage)
-				{
-					$semesterFragen[$frage['lvevaluierung_frage_id']] = $frage;
-				}
-
-
 				$neueFragen = [];
-
 
 				foreach ($masterGruppe['fbFragen'] as $frageId => $masterFrage)
 				{
-					if (isset($semesterFragen[$frageId]))
+					if (isset($itemFragenFlat[$frageId]))
 					{
-						$neueFragen[] = $semesterFragen[$frageId];
-					} else
+						// Frage in diesem Eintrag vorhanden -> Wert übernehmen
+						$neueFragen[] = $itemFragenFlat[$frageId];
+					}
+					else
 					{
+						// Frage in diesem Eintrag nicht vorhanden -> Platzhalter ohne Werte
 						$fehlendeFrage = $masterFrage;
-
 						$fehlendeFrage['antworten']['frequencies'] = [];
 						$fehlendeFrage['antworten']['hodgesLehmann'] = null;
-
 						$neueFragen[] = $fehlendeFrage;
 					}
 				}
 
-
-				usort($neueFragen, function ($a, $b)
-				{
+				// Fragen innerhalb der Gruppe sortieren
+				usort($neueFragen, function($a, $b) {
 					return $a['sort'] <=> $b['sort'];
 				});
 
-
-				$aktuelleGruppe['fbFragen'] = $neueFragen;
-
-				$neueGruppen[] = $aktuelleGruppe;
+				$neueGruppen[] = [
+					'lvevaluierung_fragebogen_gruppe_id' => $masterGruppe['lvevaluierung_fragebogen_gruppe_id'],
+					'bezeichnung' => $masterGruppe['bezeichnung'],
+					'sort' => $masterGruppe['sort'],
+					'fbFragen' => $neueFragen
+				];
 			}
 
-
-			$semester['auswertungData'] = $neueGruppen;
+			$item['auswertungData'] = $neueGruppen;
 		}
 
-
-		unset($semester);
+		unset($item);
 	}
 
 	// Test Array: 3 Studiensemester Auswertungsdata für Profillinie LvImZeitverlauf // TODO DELETE later
@@ -2372,6 +2657,7 @@ class Evaluation extends FHCAPI_Controller
 	public function getMalveByStg()
 	{
 		$studiengang_kz = $this->input->get('studiengang_kz');
+		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -2384,6 +2670,7 @@ class Evaluation extends FHCAPI_Controller
 			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -2407,6 +2694,7 @@ class Evaluation extends FHCAPI_Controller
 	public function saveMalveByStg()
 	{
 		$studiengang_kz = $this->input->post('studiengang_kz');
+		$orgform_kurzbz = $this->input->post('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
@@ -2421,6 +2709,7 @@ class Evaluation extends FHCAPI_Controller
 			// Check if already exist
 			$result = $this->LvevaluierungMalveModel->loadWhere([
 				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -2430,6 +2719,7 @@ class Evaluation extends FHCAPI_Controller
 				// Insert
 				$result = $this->LvevaluierungMalveModel->insert([
 					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'orgform_kurzbz' => $orgform_kurzbz,
 					'studiensemester_kurzbz' => $studiensemester_kurzbz,
 					'insertvon' => $this->_uid
 				]);
@@ -2841,15 +3131,25 @@ class Evaluation extends FHCAPI_Controller
 	public function mapAuswertungData($data)
 	{
 		$fbGruppen = [];
+		$seenFrageGruppeIds = []; // merkt sich die erste gruppe_id pro Frage
 
 		foreach ($data as $item)
 		{
+			$gruppenKey = $item->fbGruppenBezeichnung; // Merge-Key: Gruppen-Bezeichnung statt gruppe_id
 			$fbGruppeId = $item->lvevaluierung_fragebogen_gruppe_id;
 			$frageId = $item->lvevaluierung_frage_id;
 
+			// Frage wurde bereits unter einer anderen Gruppe erfasst -> Zeile überspringen
+			if (isset($seenFrageGruppeIds[$frageId]) && $seenFrageGruppeIds[$frageId] !== $fbGruppeId)
+			{
+				continue;
+			}
+
+			$seenFrageGruppeIds[$frageId] = $fbGruppeId;
+
 			// Create group if not exists
-			if (!isset($fbGruppen[$fbGruppeId])) {
-				$fbGruppen[$fbGruppeId] = [
+			if (!isset($fbGruppen[$gruppenKey])) {
+				$fbGruppen[$gruppenKey] = [
 					'lvevaluierung_fragebogen_gruppe_id' => $fbGruppeId,
 					'bezeichnung' => $item->fbGruppenBezeichnung,
 					'typ' => $item->fbGruppenTyp,
@@ -2859,8 +3159,8 @@ class Evaluation extends FHCAPI_Controller
 			}
 
 			// Create question if not exists
-			if (!isset($fbGruppen[$fbGruppeId]['fbFragen'][$frageId])) {
-				$fbGruppen[$fbGruppeId]['fbFragen'][$frageId] = [
+			if (!isset($fbGruppen[$gruppenKey]['fbFragen'][$frageId])) {
+				$fbGruppen[$gruppenKey]['fbFragen'][$frageId] = [
 					'lvevaluierung_frage_id' => $frageId,
 					'bezeichnung' => $item->fbFrageBezeichnung,
 					'typ' => $item->fbFrageTyp,
@@ -2876,16 +3176,26 @@ class Evaluation extends FHCAPI_Controller
 			}
 
 			// Push antworten values
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['werte'][] = $item->wert;
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['frequencies'][] = $item->frequency;
-			$fbGruppen[$fbGruppeId]['fbFragen'][$frageId]['antworten']['bezeichnungen'][] = $item->fbFrageAntwortBezeichnung;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['werte'][] = $item->wert;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['frequencies'][] = $item->frequency;
+			$fbGruppen[$gruppenKey]['fbFragen'][$frageId]['antworten']['bezeichnungen'][] = $item->fbFrageAntwortBezeichnung;
 		}
 
 		// Re-index arrays
 		$fbGruppen = array_map(function($gruppe) {
+			usort($gruppe['fbFragen'], function ($a, $b)
+			{
+				return $a['sort'] <=> $b['sort'];
+			});
 			$gruppe['fbFragen'] = array_values($gruppe['fbFragen']);
 			return $gruppe;
 		}, array_values($fbGruppen));
+
+		// Gruppen nach sort ordnen
+		usort($fbGruppen, function ($a, $b)
+		{
+			return $a['sort'] <=> $b['sort'];
+		});
 
 		return $fbGruppen;
 	}
