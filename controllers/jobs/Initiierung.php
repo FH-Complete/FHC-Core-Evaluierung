@@ -743,6 +743,7 @@ class Initiierung extends JOB_Controller
 	{
 		$this->logInfo('Start Job sendEvaluationStartInfo');
 
+		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
 		if (!hasData($result))
 		{
@@ -752,6 +753,30 @@ class Initiierung extends JOB_Controller
 
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster LV-Leitungen eintragen
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+		if (!hasData($result))
+		{
+			$this->logError('Missing Zeitfenster');
+			return $this->logInfo('End Job sendEvaluationStartInfo');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		$sendMailDatum = clone $zeitfensterEnde;
+		$sendMailDatum->add(new DateInterval('P1D'));
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $sendMailDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent. Today is not mailing date.');
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
