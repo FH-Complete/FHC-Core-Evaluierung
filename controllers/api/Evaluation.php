@@ -826,7 +826,7 @@ class Evaluation extends FHCAPI_Controller
 		$showChartDate = new DateTime($zeitfenster->endedatum);
 
 		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
 		{
 			$lvImVergleichData = $this->getLvImVergleichDataByLve($lve, $lveLv, $studiensemester_kurzbz);
 
@@ -878,7 +878,7 @@ class Evaluation extends FHCAPI_Controller
 		$showChartDate = new DateTime($zeitfenster->endedatum);
 
 		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
 		{
 			$lvImVergleichData = $this->getLvImVergleichDataByLveLv($lveLv, $studiensemester_kurzbz);
 
@@ -921,7 +921,7 @@ class Evaluation extends FHCAPI_Controller
 		$showChartDate = new DateTime($zeitfenster->endedatum);
 
 		// Im SS ab 06.8., im WW ab 22.02. anzeigen
-		if (date('Y-m-d') > $showChartDate->format('Y-m-d'))
+		if (date('Y-m-d') >= $showChartDate->format('Y-m-d'))
 		{
 			$lvImVergleichData = $this->getLvImVergleichDataByTemplate(
 				$lehrveranstaltung_template_id,
