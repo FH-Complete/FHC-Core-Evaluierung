@@ -20,15 +20,20 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
 
 		$this->addSelect('
-			*, 
+			tbl_lvevaluierung_fragebogen_frage.*, 
 			bezeichnung[('. $this->evaluierunglib->getLanguageIndex(). ')] AS bezeichnung_by_language,
 			placeholder[('. $this->evaluierunglib->getLanguageIndex(). ')] AS placeholder_by_language
 		');
 
-		$this->addOrder('lvevaluierung_fragebogen_gruppe_id, sort');
+		$this->addJoin(
+			'extension.tbl_lvevaluierung_fragebogen_gruppe_frage lvefgf',
+			'lvefgf.lvevaluierung_frage_id = tbl_lvevaluierung_fragebogen_frage.lvevaluierung_frage_id'
+		);
+
+		$this->addOrder('sort');
 
 		return $this->loadWhere([
-			'lvevaluierung_fragebogen_gruppe_id' => $lvevaluierung_fragebogen_gruppe_id
+			'lvefgf.lvevaluierung_fragebogen_gruppe_id' => $lvevaluierung_fragebogen_gruppe_id
 		]);
 	}
 }

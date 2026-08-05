@@ -235,7 +235,7 @@ export default {
 						},
 						bottomCalcFormatter: function (cell) {
 							const value = cell.getValue();
-							return value !== null ? value.toFixed(2) + "%" : "–";
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -425,7 +425,7 @@ export default {
 						},
 						bottomCalcFormatter: function (cell) {
 							const value = cell.getValue();
-							return value !== null ? value.toFixed(2) + "%" : "–";
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -480,6 +480,11 @@ export default {
 
 			this.table.replaceData();
 			this.templateTable.replaceData();
+
+			this.$api
+				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onOeChange() {
 			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table || !this.templateTable) return;
@@ -605,22 +610,24 @@ export default {
 					{event: 'cellEdited', handler: onCellEdited},
 				]">
 				<template v-slot:actions>
-					<button 
-						v-if="malve !== null"
-						class="btn"
-						:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
-						@click="submitMalve" 
-						:disabled="isDisabledSubmitMalveBtn"
-						>
-						<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-						{{ malve.length > 0 ? 'MALVE-KFL abgeschlossen' : 'MALVE-KFL abschließen' }}
-					</button>
-					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+				 	<div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+						<button 
+							v-if="malve !== null"
+							class="btn"
+							:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
+							@click="submitMalve" 
+							:disabled="isDisabledSubmitMalveBtn"
+							>
+							<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+							{{ malve.length > 0 ? 'MALVE-KFL abgeschlossen' : 'MALVE-KFL abschließen' }}
+						</button>
+						<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+					</div>
 				</template>
 			</core-filter-cmpt>
 		</div>
 		<div class="row-cols align-items-center mt-5 mb-3">
-	 		<h4>Auswertungsdaten über Studiengänge aggregiert</h4>
+	 		<h4>Studienübergreifende LVs</h4>
 	  	
 			<div class="evaluation-studienbereich-template-table">
 			<core-filter-cmpt

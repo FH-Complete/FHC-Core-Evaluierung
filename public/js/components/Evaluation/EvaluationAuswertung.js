@@ -44,12 +44,17 @@ export default {
 			textantwortLveLvId: null, // for quellkurs lvs dropdown
 			lvImZeitverlaufData: null,
 			lvImZeitverlaufMsg: null,
+			lvImVergleichData: null,
+			lvImVergleichMsg: null,
+			lvImVergleichTitle: null,
+			lvImVergleichSubtitle: null,
 			auswertungHelpUrl: null,
 		}
 	},
 	created() {
 		let apiCallAuswertungData = null;
 		let apiCallTextantworten = null;
+		let apiCallLvsImVergleich = null;
 
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			apiCallAuswertungData = this.lvevaluierung_id
@@ -58,35 +63,49 @@ export default {
 			apiCallTextantworten = this.lvevaluierung_id
 					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
-
+			apiCallLvsImVergleich = this.lvevaluierung_id
+					? ApiEvaluation.getLvsImVergleichDataByLve(this.lvevaluierung_id,this.evalData.studiensemester_kurzbz, this.role)
+					: ApiEvaluation.getLvsImVergleichDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.evalData.studiensemester_kurzbz);
 		}
 		else if (this.lehrveranstaltung_template_id && this.studiensemester) {
 			apiCallAuswertungData = ApiEvaluation.getAuswertungDataByLvTemplate(
 					this.lehrveranstaltung_template_id,
 					this.studiensemester
 			);
+			apiCallLvsImVergleich = ApiEvaluation.getLvsImVergleichDataByLvTemplate(
+					this.lehrveranstaltung_template_id,
+					this.studiensemester
+			);
 		}
 
-			this.$api
-				.call(apiCallAuswertungData)
-				.then(result => {
-					this.auswertungData = result.data.auswertungData;
-					this.lvImZeitverlaufData = result.data.lvImZeitverlaufData;
-					this.lvImZeitverlaufMsg = result.data.lvImZeitverlaufMsg;
+		this.$api
+			.call(apiCallAuswertungData)
+			.then(result => {
+				this.auswertungData = result.data.auswertungData;
+				this.lvImZeitverlaufData = result.data.lvImZeitverlaufData;
+				this.lvImZeitverlaufMsg = result.data.lvImZeitverlaufMsg;
 
-					return apiCallTextantworten
-							? this.$api.call(apiCallTextantworten)
-							: null;
-				})
-				.then(result => {
-					this.textantworten = result?.data;
+				return apiCallTextantworten
+						? this.$api.call(apiCallTextantworten)
+						: null;
+			})
+			.then(result => {
+				this.textantworten = result?.data;
 
-					return this.$api.call(ApiEvaluation.getAuswertungHelpUrl())
-				})
-				.then(result => {
-					this.auswertungHelpUrl = result.data;
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+				return this.$api.call(ApiEvaluation.getAuswertungHelpUrl())
+			})
+			.then(result => {
+				this.auswertungHelpUrl = result.data;
+
+				return this.$api.call(apiCallLvsImVergleich)
+			})
+			.then(result => {
+				this.lvImVergleichData = result.data?.lvImVergleichData;
+				this.lvImVergleichMsg = result.data?.lvImVergleichMsg;
+				this.lvImVergleichTitle = result.data?.lvImVergleichTitle;
+				this.lvImVergleichSubtitle = result.data?.lvImVergleichSubtitle;
+			})
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
 	computed: {
 		chartOptionsByFrageId() {
@@ -100,6 +119,9 @@ export default {
 		},
 		chartOptionsLvImZeitverlauf() {
 			return this.createTimelineChart(this.lvImZeitverlaufData);
+		},
+		chartOptionsLvImVergleich() {
+			return this.createVergleichChart(this.lvImVergleichData);
 		},
 	},
 	methods: {
@@ -303,6 +325,153 @@ export default {
 				credits: { enabled: false }
 			};
 		},
+		createVergleichChart(vergleichData) {
+			const data = vergleichData || [];
+			const fbGruppen = data[0]?.auswertungData || [];
+
+			return {
+				chart: {
+					type: 'line',
+					height: 600,
+					inverted: true,
+					events: {
+						load() {
+							if (!this.series.some(series => series.data.length)) {
+								const label = this.renderer
+										.label(
+											`<div class="text-center text-secondary">
+												<i class="fa fa-chart-column fa-4x mb-3"></i><br>
+												${this.options.custom.noDataText}
+											</div>`,
+											0,
+											0,
+											null,
+											null,
+											null,
+											true
+										)
+										.attr({
+											align: 'center'
+										})
+										.css({
+											fontSize: '0.875rem'
+										})
+										.add();
+								label
+									.align({
+										align: 'center',
+										verticalAlign: 'middle',
+										x: 0,
+										y: 0
+									}, null, 'plotBox')
+							}
+						}
+					}
+				},// Fragen left, Bewertungen below
+				custom: {
+					noDataText: this.lvImVergleichMsg
+				},
+				title: {text: this.lvImVergleichTitle},
+				subtitle: {text: this.lvImVergleichSubtitle},
+				series: data.map(item => ({
+					name: item.vergleichZu,
+					data: item.auswertungData.flatMap(g =>
+							g.fbFragen.map((f, index) => ({
+								y: f.antworten.hodgesLehmann,
+								n: f.antworten.frequencies.reduce((a, b) => a + b, 0),
+								gruppe: g.bezeichnung,
+								frageNr: index + 1,
+								frage: f.bezeichnung
+							}))
+					),
+					// NOTE: connectNulls - Important! Verbindet HLE null values, um eine durchgängige Linie zuhaben
+					// Wichtig, wenn zB im Chart nicht alle Studienjahre die gleiche Anzahl an Fragebogengruppen oder Fragen haben
+					connectNulls: true,
+					// visible: item.studiensemester_kurzbz === currentSemester, // default display aktuelles Studiensemester
+					visible: true // display all
+
+				})),
+				yAxis: {
+					title: null, // set to null, otherwise it renders the word 'values'
+					min: 1,
+					max: 5,
+					tickInterval: 1,
+					opposite: true,
+					labels: {
+						useHTML: true,
+						formatter: function () {
+							const value = this.value; // 1..5
+							const iconName = ChartHelper.getIcon(value);
+							const iconClass = ChartHelper.getIconClass(value);
+							return `<i class="fa fa-${iconName} fa- ${iconClass}"></i>`;
+						},
+						style: {
+							fontSize: '16px' // icon size
+						}
+					},
+				},
+				xAxis: {
+					categories: fbGruppen.flatMap(g => g.fbFragen.map((f, idx) => `Frage ${idx + 1}`)),
+					plotLines: ChartHelper.getFbGruppenPlotlines(fbGruppen),
+					labels: {
+						useHTML: true,
+						formatter: function () {
+							const label = this.value;
+							const index = this.pos;
+
+							// Finde, zu welcher Gruppe die aktuelle Kategorie gehört
+							let currentGroup = null;
+							let runningIndex = 0;
+							for (const g of fbGruppen) {
+								if (index >= runningIndex && index < runningIndex + g.fbFragen.length) {
+									currentGroup = g;
+									break;
+								}
+								runningIndex += g.fbFragen.length;
+							}
+
+							// Prüfen, ob dies die erste Frage der Gruppe ist
+							let isGroupStart = false;
+							let checkIndex = 0;
+							for (const g of fbGruppen) {
+								if (index === checkIndex) {
+									isGroupStart = true;
+									break;
+								}
+								checkIndex += g.fbFragen.length;
+							}
+
+							// Gruppentitel über der ersten Frage anzeigen
+							return `
+						  <div class="d-flex self-align-end">
+							${isGroupStart ? `<div class="text-muted me-2">${currentGroup.bezeichnung}</div>` : ''}
+							<div>${label}</div>
+						  </div>
+						`;
+						}
+					}
+				},
+				tooltip: {
+					shared: false, // Nur den Punktwert eines Jahres zeigen
+					crosshairs: true,
+					formatter: function () {
+						return `
+							<b>${this.point.gruppe}</b><br/>
+            				<b>Frage ${this.point.frageNr}: ${this.point.frage}</b><br/>
+							Häufigkeit der Bewertungen (N = <b>${this.point.n}</b>)<br/>
+							Hodges-Lehmann Estimator (HLE: <b>${Highcharts.numberFormat(this.y, 1)}</b>)
+						`;
+					}
+				},
+				legend: {
+					align: 'center',
+					verticalAlign: 'bottom',
+					layout: 'vertical',
+					useHtml: true,
+				},
+				credits: {enabled: false}
+			};
+		},
 		changeView() {
 			this.$emit('changeView', 'reflexion');
 		},
@@ -403,25 +572,29 @@ export default {
 		</div>
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
-			<div v-if="evaluationView.open && lvImZeitverlaufData" class="row align-items-stretch g-3">
+			<div v-if="evaluationView.open" class="row align-items-stretch g-3">
 				<div class="col-lg-6">
-					<div class="card h-100">
+					<div v-if="lvImZeitverlaufData" class="card h-100">
 						<div class="card-body">
 							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
 						</div>
+					</div>
+					<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+						<i class="fa fa-chart-column fa-3x mb-3"></i>
+							<div>Keine Daten verfügbar.</div>
 					</div>
 				</div>
-			<!--	<div class="col-lg-6">
-					<div class="card h-100">
+				<div class="col-lg-6">
+					<div v-if="lvImVergleichData" class="card h-100">
 						<div class="card-body">
-							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
+							<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>
 						</div>
 					</div>
-				</div>-->
-			</div>
-			<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
-				<i class="fa fa-chart-column fa-3x mb-3"></i>
-					<div>Keine Daten verfügbar.</div>
+					<div v-else class="h-100 border rounded p-5 mb-5 text-center text-secondary align-content-center">
+						<i class="fa fa-chart-column fa-3x mb-3"></i>
+							<div>{{lvImVergleichMsg}}</div>
+					</div>
+				</div>
 			</div>
 		</div>
 		<div class="bg-primary-subtle mt-5 py-5 text-center">

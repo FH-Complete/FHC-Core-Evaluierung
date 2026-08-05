@@ -223,6 +223,48 @@ class EvaluationLib
 
 	}
 
+
+	/**
+	 * Get unique STG data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctStgs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('studiengang_kz');
+		$this->_ci->LehrveranstaltungModel->addSelect('UPPER(TRIM(CONCAT(stg.typ, stg.kurzbz))) AS "stgKurzbz"');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('stg.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_studiengang stg', 'studiengang_kz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere();
+
+		return hasData($result) ? getData($result) : [];
+	}
+
+	/**
+	 * Get unique KFL data for given Lehrveranstaltungen
+	 *
+	 * @param $lvIds
+	 * @return array
+	 */
+	public function getDistinctKfs($lvIds)
+	{
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->LehrveranstaltungModel->addDistinct('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.oe_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.bezeichnung');
+		$this->_ci->LehrveranstaltungModel->addSelect('oe.organisationseinheittyp_kurzbz');
+		$this->_ci->LehrveranstaltungModel->addJoin('public.tbl_organisationseinheit oe', 'oe.oe_kurzbz = tbl_lehrveranstaltung.oe_kurzbz');
+		$this->_ci->db->where_in('lehrveranstaltung_id', $lvIds);
+		$result = $this->_ci->LehrveranstaltungModel->loadWhere(['organisationseinheittyp_kurzbz' => 'Kompetenzfeld']);
+
+		return hasData($result) ? getData($result) : [];
+	}
+
 	public function isZeitfensterOffen($startDate, $endDate)
 	{
 		// Start ab Mitternacht
@@ -263,7 +305,7 @@ class EvaluationLib
 	 * @param $studiensemester_kurzbz
 	 * @return array|mixed
 	 */
-	public function getLvData($lehrveranstaltung_id, $studiensemester_kurzbz)
+	public function getLvData($lehrveranstaltung_id)
 	{
 		// LV data
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
@@ -356,17 +398,25 @@ class EvaluationLib
 
 		// Weighted median
 		$totalWeight = array_sum(array_column($pairs, 'weight'));
-		$medianPos   = $totalWeight / 2;
+
+		// beide mittleren Positionen ermitteln
+		$lowerPos = ceil($totalWeight / 2);
+		$upperPos = ceil(($totalWeight + 1) / 2);
 
 		$cumWeight = 0;
+		$lowerVal = null;
+		$upperVal = null;
 		foreach ($pairs as $pair) {
 			$cumWeight += $pair['weight'];
-			if ($cumWeight >= $medianPos) {
-				return round($pair['value'], 2);
+			if ($lowerVal === null && $cumWeight >= $lowerPos) $lowerVal = $pair['value'];
+			if ($cumWeight >= $upperPos)
+			{
+				$upperVal = $pair['value'];
+				break;
 			}
 		}
 
-		return null;
+		return round(($lowerVal + $upperVal) / 2, 1);
 	}
 
 

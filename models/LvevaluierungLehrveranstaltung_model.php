@@ -134,7 +134,8 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	}
 
 	/**
-	 *  Get Quellkurse that are scheduled for evaluation in the given Studiensemester and Kompetenzfeld.
+	 * Alle Quellkurs-LVs innerhalb eines Studiensemesters und Kompetenzfelds, die in mindestens 2 Studiengängen
+	 * vorkommen (Studienübergreifende LVs).
 	 *
 	 * @param $studiensemester_kurzbz
 	 * @param $oe_kurzbz
@@ -178,6 +179,12 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				WHERE
 				  stplsem.studiensemester_kurzbz = ?
 				  AND lv.oe_kurzbz IN ?
+				  -- NUR studienübergreifende LVs (also in mind 2 STGs vorkommend)
+				  AND lv.lehrveranstaltung_template_id IS NOT NULL
+					GROUP BY
+						lv.lehrveranstaltung_template_id
+					HAVING
+						COUNT(DISTINCT lv.studiengang_kz) >= 2
 			  )
 			  ORDER BY
 			  	lv.bezeichnung

@@ -81,7 +81,8 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				extension.tbl_lvevaluierung lve
 				JOIN extension.tbl_lvevaluierung_fragebogen fb USING (fragebogen_id)
 				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
-				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
 				LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
 				LEFT JOIN frequencies freq ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id AND freq.lvevaluierung_frage_antwort_id = fbfrantw.lvevaluierung_frage_antwort_id
 		  	WHERE
@@ -153,7 +154,8 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 			FROM extension.tbl_lvevaluierung_fragebogen fb
 			JOIN selected_lve sel USING (fragebogen_id)
 			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
-			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_fragebogen_gruppe_id)
+			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
 			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
 			LEFT JOIN frequencies freq
 				   ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id
@@ -241,9 +243,12 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 	
 			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr
 				USING (fragebogen_id)
+				
+			JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr
+				USING (lvevaluierung_fragebogen_gruppe_id)
 	
 			JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr
-				USING (lvevaluierung_fragebogen_gruppe_id)
+				USING (lvevaluierung_frage_id)
 	
 			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw
 				USING (lvevaluierung_frage_id)
@@ -264,5 +269,103 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 			$qry,
 			[$lehrveranstaltung_template_id, $studiensemester_kurzbz]
 		);
+	}
+
+	/**
+	 *  Get single-response comparison data for the same Studiensemester, STG and Semester of the given LVE-LV ID.
+	 *
+	 * @param $lvevaluierung_lehrveranstaltung_id
+	 * @return mixed
+	 */
+	public function getLvImVergleichDataByLveLv($lvevaluierung_lehrveranstaltung_id)
+	{
+		$langIndex = $this->evaluierunglib->getLanguageIndex();
+
+		$params = [$lvevaluierung_lehrveranstaltung_id, $lvevaluierung_lehrveranstaltung_id, $lvevaluierung_lehrveranstaltung_id];
+
+		$qry = '
+			WITH 
+			selected_lve AS (
+				SELECT 
+					lvevaluierung_id, fragebogen_id
+				FROM 
+					extension.tbl_lvevaluierung
+				 	JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lvevaluierung_lehrveranstaltung_id)
+    				JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
+    				JOIN public.tbl_studiengang stg USING (studiengang_kz)
+				WHERE 
+					lvelv.studiensemester_kurzbz = (
+						SELECT studiensemester_kurzbz 
+						FROM extension.tbl_lvevaluierung_lehrveranstaltung
+						WHERE lvevaluierung_lehrveranstaltung_id = ?
+					) 
+					AND semester = (
+						SELECT lv3.semester 
+						FROM lehre.tbl_lehrveranstaltung lv3
+						JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv3 USING (lehrveranstaltung_id)
+						WHERE lvelv3.lvevaluierung_lehrveranstaltung_id = ?
+					)
+					AND studiengang_kz = (
+						SELECT stg4.studiengang_kz 
+						FROM lehre.tbl_lehrveranstaltung lv4
+						JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv4 USING (lehrveranstaltung_id)
+						JOIN public.tbl_studiengang stg4 USING (studiengang_kz)
+						WHERE lvelv4.lvevaluierung_lehrveranstaltung_id = ?
+					)
+			),
+			
+			frequencies AS (
+				SELECT
+					antwort.lvevaluierung_frage_id,
+					antwort.lvevaluierung_frage_antwort_id,
+					COUNT(*) AS frequency
+				FROM 
+					extension.tbl_lvevaluierung_antwort antwort
+					JOIN extension.tbl_lvevaluierung_code code 
+						ON code.lvevaluierung_code_id = antwort.lvevaluierung_code_id AND code.endezeit IS NOT NULL
+				WHERE 
+					code.lvevaluierung_id IN (SELECT lvevaluierung_id FROM selected_lve)
+				GROUP BY
+					antwort.lvevaluierung_frage_id,
+					antwort.lvevaluierung_frage_antwort_id
+			)
+			
+			SELECT DISTINCT
+				fbgr.lvevaluierung_fragebogen_gruppe_id,
+				fbgr.typ AS "fbGruppenTyp",
+				fbgr.bezeichnung[(' . $langIndex . ')] AS "fbGruppenBezeichnung",
+				fbgr.sort AS "fbGruppenSort",
+				
+				fbfr.lvevaluierung_frage_id,
+				fbfr.typ AS "fbFrageTyp",
+				fbfr.bezeichnung[(' . $langIndex . ')] AS "fbFrageBezeichnung",
+				fbfr.sort AS "fbFrageSort",
+				fbfr.verpflichtend AS "fbFrageVerpflichtend",
+			
+				fbfrantw.lvevaluierung_frage_antwort_id,
+				fbfrantw.bezeichnung[(' . $langIndex . ')] AS "fbFrageAntwortBezeichnung",
+				fbfrantw.sort AS "fbFrageAntwortSort",
+				fbfrantw.wert,
+				
+				COALESCE(freq.frequency, 0) AS frequency	
+			FROM 
+				extension.tbl_lvevaluierung_fragebogen fb
+				JOIN selected_lve sel USING (fragebogen_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe fbgr USING (fragebogen_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage fbgrfr USING (lvevaluierung_fragebogen_gruppe_id)
+				JOIN extension.tbl_lvevaluierung_fragebogen_frage fbfr USING (lvevaluierung_frage_id)
+				LEFT JOIN extension.tbl_lvevaluierung_fragebogen_frage_antwort fbfrantw USING (lvevaluierung_frage_id)
+				LEFT JOIN frequencies freq
+			   		ON freq.lvevaluierung_frage_id = fbfr.lvevaluierung_frage_id
+					AND freq.lvevaluierung_frage_antwort_id = fbfrantw.lvevaluierung_frage_antwort_id
+			WHERE 
+				fbfr.typ = \'singleresponse\'
+			ORDER BY
+				fbgr.sort,
+				fbfr.sort,
+				fbfrantw.sort;
+    	';
+
+		return $this->execQuery($qry, $params);
 	}
 }
