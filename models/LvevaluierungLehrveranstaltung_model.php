@@ -127,11 +127,105 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				ON lvelv.lehrveranstaltung_id = lvs.lehrveranstaltung_id 
 				AND lvelv.studiensemester_kurzbz = lvs.studiensemester_kurzbz
 			ORDER BY
-			  	kurzbzlang,
 			  	lv_bezeichnung
 		';
 
 		return $this->execQuery($qry, $params);
+	}
+
+	/**
+	 * Alle Quellkurs-LVs innerhalb eines Studiensemesters und Kompetenzfelds, die in mindestens 2 Studiengängen
+	 * vorkommen (Studienübergreifende LVs).
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $oe_kurzbz
+	 * @return mixed
+	 */
+	public function getLveLvTemplatesByKf($studiensemester_kurzbz, $oe_kurzbz)
+	{
+		if (is_string($oe_kurzbz) && !is_array($oe_kurzbz))
+		{
+			$oe_kurzbz = [$oe_kurzbz];
+		}
+
+		$params = [$studiensemester_kurzbz, $oe_kurzbz];
+
+		$qry = '
+			-- Alle Template LVs eines bestimmten Studiensemesters, wo eingeloggter user Kompetenzfeldleiter ist
+			SELECT
+			  lv.lehrveranstaltung_id,
+			  lv.bezeichnung,
+			  lv.oe_kurzbz,
+			  lv.lehrtyp_kurzbz,
+			  lv.sprache
+			FROM
+			  lehre.tbl_lehrveranstaltung lv
+			WHERE
+			  lv.lehrtyp_kurzbz = \'tpl\'
+			  AND lv.lehrveranstaltung_id IN (
+				SELECT
+				  lv.lehrveranstaltung_template_id
+				FROM
+				  lehre.tbl_studienplan stpl
+				  JOIN lehre.tbl_studienordnung sto USING (studienordnung_id)
+				  JOIN lehre.tbl_studienplan_semester stplsem USING (studienplan_id)
+				  JOIN lehre.tbl_studienplan_lehrveranstaltung stpllv ON (
+					stpllv.studienplan_id = stpl.studienplan_id
+					AND stpllv.semester = stplsem.semester
+				  )
+				  JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
+				  -- NUR solche, die in der LveLv Tabelle sind (also nicht von Evaluierung abgewählt worden sind)
+				  JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id) 
+				WHERE
+				  stplsem.studiensemester_kurzbz = ?
+				  AND lv.oe_kurzbz IN ?
+				  -- NUR studienübergreifende LVs (also in mind 2 STGs vorkommend)
+				  AND lv.lehrveranstaltung_template_id IS NOT NULL
+					GROUP BY
+						lv.lehrveranstaltung_template_id
+					HAVING
+						COUNT(DISTINCT lv.studiengang_kz) >= 2
+			  )
+			  ORDER BY
+			  	lv.bezeichnung
+		';
+
+		return $this->execQuery($qry, $params);
+	}
+
+	/**
+	 * Get LveLvs by given Quellkurs and Studiensemester.
+	 *
+	 * @param $lehrveranstaltung_template_id
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 */
+	public function getLveLvsByLvTemplateId($lehrveranstaltung_template_id, $studiensemester_kurzbz)
+	{
+		$params = [$lehrveranstaltung_template_id, $studiensemester_kurzbz];
+
+		$qry = '
+			SELECT
+				lvelv.*,
+				stg.kurzbzlang,
+				lv.lehrveranstaltung_id,
+				lv.lehrtyp_kurzbz,
+				lv.lehrveranstaltung_template_id,
+				lv.semester,
+				lv.orgform_kurzbz,
+				lv.bezeichnung,
+				lv.sprache
+			FROM
+				lehre.tbl_lehrveranstaltung lv
+				JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id)
+				JOIN public.tbl_studiengang stg USING (studiengang_kz)
+			WHERE
+				lv.lehrveranstaltung_template_id = ?
+				AND lvelv.studiensemester_kurzbz = ?
+		';
+
+		return $this->execQuery($qry, $params);
+
 	}
 
 	/**
@@ -389,7 +483,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		if (empty($insertBatch))
 		{
-			return success('No new Lehrveranstaltungen to add for this Studiensemester');
+			return success([]);
 		}
 
 		return $this->insertBatch($insertBatch);
@@ -405,7 +499,7 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		if ($insert)
 		{
-			return success('Lehrveranstaltungen inserted successfully');
+			return success($batch);
 		}
 		else
 		{

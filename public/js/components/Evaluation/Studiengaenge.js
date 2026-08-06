@@ -1,12 +1,15 @@
 import FormInput from "../../../../../js/components/Form/Input.js";
 import {CoreFilterCmpt} from '../../../../../js/components/filter/Filter.js';
-import ApiEvaluation from "../../api/evaluation";
-import ApiFhc from "../../api/fhc";
+import ApiEvaluation from "../../api/evaluation.js";
+import ApiFhc from "../../api/fhc.js";
 
 export default {
 	components: {
 		FormInput,
 		CoreFilterCmpt
+	},
+	props: {
+		studiensemester: null
 	},
 	data() {
 		return {
@@ -26,7 +29,12 @@ export default {
 		this.$api
 			.call(ApiFhc.Studiensemester.getAll())
 			.then(result => this.lists.studiensemester = result.data)
-			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
+			.then(() => {
+				// Initialize Studiensemester from query parameter, otherwise fetch via api.
+				return this.studiensemester
+					? Promise.resolve({data: [{studiensemester_kurzbz: this.studiensemester}]})
+					: this.$api.call(ApiFhc.Studiensemester.getAktNext())
+			})
 			.then(result => {
 				this.selStudiensemester = result.data[0].studiensemester_kurzbz;
 				return this.$api.call(ApiEvaluation.getEntitledStgs(this.selStudiensemester))
@@ -34,7 +42,7 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
-				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester))
+				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 			})
 			.then(result => {
 				this.malve = result.data
@@ -183,6 +191,17 @@ export default {
 						hozAlign: "right",
 						minWidth: 100,
 						tooltip: "Abgeschlossene LV-Evaluierungen / zur LV-Evaluierung eingeladene Studierende",
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							return submittedTotal + "/" + ausgegebenTotal;
+						}
 					},
 					{
 						title:'RL-Quote',
@@ -195,14 +214,24 @@ export default {
 						},
 						sorter: "number",
 						width: 200,
-						bottomCalc: values => {
-							const nums = values.filter(v => typeof v === 'number')
-							if (!nums.length) return null
-							return nums.reduce((a, b) => a + b, 0) / nums.length
+						bottomCalc: function (values, data) {
+							let submittedTotal = 0;
+							let ausgegebenTotal = 0;
+
+							data.forEach(function (row) {
+								submittedTotal += Number(row.submittedCodes) || 0;
+								ausgegebenTotal += Number(row.codesAusgegeben) || 0;
+							});
+
+							if (ausgegebenTotal === 0) {
+								return null;
+							}
+
+							return (submittedTotal / ausgegebenTotal) * 100;
 						},
 						bottomCalcFormatter: function(cell) {
-							const num = cell.getValue();
-							return typeof num === 'number' ? num.toFixed(2) + "%" : "–";
+							const value = cell.getValue();
+							return value !== null ? Number(value).toFixed(2) + "%" : "–";
 						}
 					},
 					{
@@ -286,7 +315,20 @@ export default {
 		onStudiensemesterChange() {
 			if (!this.selStudiensemester || !this.table) return;
 
-			this.table.replaceData();
+			this.$api
+				.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
+				.then(result => {
+					this.lists.orgforms = result.data;
+					if (!this.lists.orgforms.some(o => o.orgform_kurzbz === this.selOrgform)) {
+						this.selOrgform = this.lists.orgforms[0]?.orgform_kurzbz ?? null;
+					}
+
+					this.table.replaceData();
+
+					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
+				})
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onStgChange() {
 			if (!this.selStgKz || !this.selStudiensemester || !this.table) return;
@@ -301,7 +343,7 @@ export default {
 
 					this.table.replaceData();
 
-					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selStudiensemester));
+					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
 				})
 				.then(result => this.malve = result.data)
 				.catch(error => this.$fhcAlert.handleSystemError(error));
@@ -310,6 +352,11 @@ export default {
 			if (!this.selOrgform || !this.table) return;
 
 			this.table.replaceData();
+
+			this.$api
+				.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
+				.then(result => this.malve = result.data)
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
 			const url = this.$api.getUri() +
@@ -353,7 +400,7 @@ export default {
 				return;
 			}
 
-			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selStudiensemester))
+			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 				.then(result => {
 					if (result.data) {
 						this.malve = result.data;
@@ -383,12 +430,16 @@ export default {
 	},
 	template: `
 	<div class="evaluation-studiengaenge container-fluid overflow-hidden">
-		<h1 class="mb-5">LV-Evaluation | Übersicht Studiengangsleitung</h1>
-	 	<div class="row align-items-center mb-3">
-	 		<h2>{{selStudiensemester}} - {{ selStgFullName }}</h2>
-			<div class="col-md-12">
-				<div class="d-flex justify-content-end align-items-center">
-					<div class="me-2">
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluation<small class="fw-normal"> | Übersicht Studiengang</small></h1>
+	 	<div class="row align-items-start mb-3">
+	 		<div class="col-12 col-md mb-4 mb-lg-0">
+				<h2 class="h4">
+					{{ selStudiensemester }} - {{ selStgFullName }}
+				</h2>
+			</div>
+			<div class="col-12 col-md-auto">
+				<div class="d-flex flex-column flex-md-row justify-content-md-end align-items-stretch align-items-md-end">
+					<div class="me-md-2 mb-2 mb-md-0">
 						<form-input
 							type="select"
 							v-model="selStudiensemester"
@@ -435,6 +486,7 @@ export default {
 	  	</div>
 	  	<div class="evaluation-studiengaenge-table">
 			<core-filter-cmpt
+				v-if="selStudiensemester && selStgKz && selOrgform"
 				ref="stgTable"
 				uniqueId="tabStudiengaenge"
 				table-only

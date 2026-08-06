@@ -2,7 +2,7 @@ import Studiengaenge from "../../components/Evaluation/Studiengaenge.js";
 import Phrasen from "../../../../../js/plugins/Phrasen.js";
 import highchartsPlugin from "../../../../../js/plugins/highchartsVue.js";
 import tooltip from "../../../../../js/directives/tooltip.js";
-import DateHelper from "../../helpers/DateHelper";
+import DateHelper from "../../helpers/DateHelper.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
 const router = VueRouter.createRouter({
@@ -11,7 +11,12 @@ const router = VueRouter.createRouter({
 		{
 			path: `/${ciPath}/extensions/FHC-Core-Evaluierung/Evaluation/Studiengaenge`,
 			name: 'Studiengaenge',
-			component: Studiengaenge
+			component: Studiengaenge,
+			props: route => ({
+				studiensemester: route.query.studiensemester && route.query.studiensemester !== 'null'
+						? route.query.studiensemester
+						: null,
+			})
 		}
 	]
 });
