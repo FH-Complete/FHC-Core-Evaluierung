@@ -210,22 +210,32 @@ class Lvevaluierung_model extends DB_Model
 
 		$placeholders = implode(',', array_fill(0, count($fragebogenIds), '?'));
 
+		// Returns one row per Frage. A Frage can belong to several Gruppen, but the export renders
+		// one column per Frage - without the GROUP BY, a shared Frage would be processed once per
+		// Gruppe in buildFragebogenHeaders() and in the pivot loop.
+		// Because of that, gruppe_id and gruppe_bezeichnung are no longer unique per Frage and are
+		// left out. gruppe_typ is 'group' when the Frage is optional in at least one of its Gruppen
+		// (drives the optionale_bereiche_angeklickt column).
 		$qry = "
         SELECT
-            lvefg.lvevaluierung_fragebogen_gruppe_id,
-            lvefg.sort         AS gruppe_sort,
-            lvefg.typ          AS gruppe_typ,
-            lvefg.bezeichnung  AS gruppe_bezeichnung,
             lvef.lvevaluierung_frage_id,
             lvef.sort          AS frage_sort,
             lvef.typ           AS frage_typ,
             lvef.verpflichtend,
-            lvef.bezeichnung   AS frage_bezeichnung
+            lvef.bezeichnung   AS frage_bezeichnung,
+            MIN(lvefg.sort)    AS gruppe_sort,
+            CASE
+                WHEN bool_or(lvefg.typ = 'group') THEN 'group'
+                ELSE MIN(lvefg.typ)
+            END                AS gruppe_typ
         FROM extension.tbl_lvevaluierung_fragebogen_gruppe lvefg
+        JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage lvefgf
+            ON lvefgf.lvevaluierung_fragebogen_gruppe_id = lvefg.lvevaluierung_fragebogen_gruppe_id
         JOIN extension.tbl_lvevaluierung_fragebogen_frage lvef
-            ON lvef.lvevaluierung_fragebogen_gruppe_id = lvefg.lvevaluierung_fragebogen_gruppe_id
+            ON lvef.lvevaluierung_frage_id = lvefgf.lvevaluierung_frage_id
         WHERE lvefg.fragebogen_id IN ($placeholders)
-        ORDER BY lvefg.sort, lvef.sort
+        GROUP BY lvef.lvevaluierung_frage_id
+        ORDER BY MIN(lvefg.sort), lvef.sort
     ";
 
 		return $this->execReadOnlyQuery($qry, $fragebogenIds);
