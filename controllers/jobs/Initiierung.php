@@ -829,8 +829,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid.'@'.DOMAIN,
 										'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster festlegen',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
@@ -879,8 +879,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid.'@'.DOMAIN,
 										'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)

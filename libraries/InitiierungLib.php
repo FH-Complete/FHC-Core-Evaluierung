@@ -385,8 +385,8 @@ class InitiierungLib
 			$mailData,
 			$student->uid . '@' . DOMAIN,
 			$lvBezeichnung.': Ihr Feedback gewünscht | Your feedback is requested',
-			'sancho_header_lvevaluierung.jpg',
-			'sancho_footer_lvevaluierung.jpg'
+			'sancho_header_lvevaluierung_rollout.jpg',
+			'sancho_footer_lvevaluierung_rollout.jpg'
 		);
 
 		if ($mailSent)
