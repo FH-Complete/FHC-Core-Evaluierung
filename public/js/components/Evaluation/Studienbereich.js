@@ -87,6 +87,12 @@ export default {
 				},
 				columns: [
 					{
+						title: 'LVE-LV-ID',
+						field: 'lvevaluierung_lehrveranstaltung_id',
+						headerFilter: "input",
+						visible: false
+					},
+					{
 						title: 'LV-ID',
 						field: 'lehrveranstaltung_id',
 						headerFilter: "input",
@@ -337,6 +343,12 @@ export default {
 					headerTooltip: true
 				},
 				columns: [
+					{
+						title: 'LVE-LV-ID',
+						field: 'lvevaluierung_lehrveranstaltung_id',
+						headerFilter: "input",
+						visible: false
+					},
 					{
 						title: 'LV-ID',
 						field: 'lehrveranstaltung_id',
