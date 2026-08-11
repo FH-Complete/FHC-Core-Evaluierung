@@ -25,8 +25,10 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 	}
 
 	/**
@@ -259,6 +261,240 @@ class Initiierung extends JOB_Controller
 		}
 
 		$this->logInfo('End Job sendLvsAbwaehlenReminder');
+	}
+
+	/**
+	 * Mail LVL_TEXT_1: Evaluierungsebene anpassen möglich (Gesamt-LV/Gruppe).
+	 *
+	 * Zeitfenster idR 1 Woche vor bis 1 Woche nach Semesterstart gesetzt wird.
+	 *
+	 * @return void
+	 */
+	public function sendEvaluierungsebeneAnpassen()
+	{
+		$this->logInfo('Start Job sendEvaluierungsebeneAnpassen');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendEvaluierungsebeneAnpassen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem LV-Leitung Evaluierungsebene switchen kann
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// Mailtag = erster Tag, an dem LVL switchen kann
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// Letzter Tag, an dem LVL switchen kann
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent - Next maildatum: ' . $zeitfensterStart->format('d.m.Y'));
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+		}
+
+		// Mail an LV-Leitungen senden
+		// -------------------------------------------------------------------------------------------------------------
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = getData($result);
+			$uniqueUids = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			foreach ($lveLvs as $lveLv)
+			{
+				$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+					$lveLv->lehrveranstaltung_id,
+					$studiensemester_kurzbz
+				);
+
+				if (hasData($result))
+				{
+					$lvLeitung = getData($result)[0];
+
+					if (!in_array($lvLeitung->mitarbeiter_uid, $uniqueUids))
+					{
+						$uniqueUids[] = $lvLeitung->mitarbeiter_uid;
+						// echo "\nMail to " . $lvLeitung->mitarbeiter_uid . ' - LV-ID:' . $lveLv->lehrveranstaltung_id;
+						$uid = $lvLeitung->mitarbeiter_uid;
+
+						$data = [
+							'vorname' => $lvLeitung->vorname,
+							'nachname' => $lvLeitung->nachname,
+							'datum' => $zeitfensterEnde->format('d.m.Y'),
+							'link' => $link,
+							'zielgruppe' => 'LV-Leitungen'
+						];
+
+						$mailSent = sendSanchoMail(
+							'LVE_LVL_TEXT_1',
+							$data,
+							$uid . '@' . DOMAIN,
+							'LV-Evaluation - Anpassung Evaluationsebene (Gesamt/Gruppe) bis '. $zeitfensterEnde->format('d.m.Y'),
+							'sancho_header_lvevaluierung_rollout.jpg',
+							'sancho_footer_lvevaluierung_rollout.jpg'
+						);
+
+						if ($mailSent)
+						{
+							$this->logInfo('LVE_LVL_TEXT_1 to ' . $uid);
+						}
+						else
+						{
+							$this->logError('Failed to send LVE_LVL_TEXT_1 to ' . $uid);
+						}
+					}
+				}
+				else
+				{
+					echo "\nLV-Leitung not found. LV-ID: " . $lveLv->lehrveranstaltung_id;
+					$this->logWarning('LV-Leitung not found for LV-ID ' . $lveLv->lehrveranstaltung_id);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+	}
+
+	/**
+	 * Mail LVL_TEXT_2: Evaluierungsebene anpassen möglich (Gesamt-LV/Gruppe) - Reminder.
+	 *
+	 * Zeitfenster idR 1 Woche vor bis 1 Woche nach Semesterstart gesetzt wird -> Reminder Zeitfensterstart + 1 Woche.
+	 * = Reminder zu Semesterstart
+	 *
+	 * @return void
+	 */
+	public function sendEvaluierungsebeneAnpassenReminder()
+	{
+		$this->logInfo('Start Job sendEvaluierungsebeneAnpassenReminder');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem LV-Leitung Evaluierungsebene switchen kann
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);    // Letzter Tag, an dem LVL switchen kann
+
+		// Eine Woche nach Zeitfensterstart mailen
+		$mailDatum = (clone $zeitfensterStart)->modify('+1 week');
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent - Next maildatum: ' . $mailDatum->format('d.m.Y'));
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		// Mail an LV-Leitungen senden
+		// -------------------------------------------------------------------------------------------------------------
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = getData($result);
+			$uniqueUids = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			foreach ($lveLvs as $lveLv)
+			{
+				$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+					$lveLv->lehrveranstaltung_id,
+					$studiensemester_kurzbz
+				);
+
+				if (hasData($result))
+				{
+					$lvLeitung = getData($result)[0];
+
+					if (!in_array($lvLeitung->mitarbeiter_uid, $uniqueUids))
+					{
+						$uniqueUids[] = $lvLeitung->mitarbeiter_uid;
+						// echo "\nMail to " . $lvLeitung->mitarbeiter_uid . ' - LV-ID:' . $lveLv->lehrveranstaltung_id;
+						$uid = $lvLeitung->mitarbeiter_uid;
+
+						$data = [
+							'vorname' => $lvLeitung->vorname,
+							'nachname' => $lvLeitung->nachname,
+							'datum' => $zeitfensterEnde->format('d.m.Y'),
+							'link' => $link,
+							'zielgruppe' => 'LV-Leitungen'
+						];
+
+						$mailSent = sendSanchoMail(
+							'LVE_LVL_TEXT_2',
+							$data,
+							$uid . '@' . DOMAIN,
+							'Reminder LV-Evaluation - Anpassung Evaluationsebene (Gesamt/Gruppe) bis ' . $zeitfensterEnde->format('d.m.Y'),
+							'sancho_header_lvevaluierung_rollout.jpg',
+							'sancho_footer_lvevaluierung_rollout.jpg'
+						);
+
+						if ($mailSent)
+						{
+							$this->logInfo('LVE_LVL_TEXT_2 to ' . $uid);
+						}
+						else
+						{
+							$this->logError('Failed to send LVE_LVL_TEXT_2 to ' . $uid);
+						}
+					}
+				}
+				else
+				{
+					echo "\nLV-Leitung not found. LV-ID: " . $lveLv->lehrveranstaltung_id;
+					$this->logWarning('LV-Leitung not found for LV-ID ' . $lveLv->lehrveranstaltung_id);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluierungsebeneSwitchen');
 	}
 
 	/**
