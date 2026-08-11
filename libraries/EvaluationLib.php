@@ -119,7 +119,6 @@ class EvaluationLib
 		);
 		$lvLeitung = hasData($result) ? getData($result)[0] : null;
 
-
 		if ($lveLv->lv_aufgeteilt && is_int($lve->lehreinheit_id)) // Gruppen Evaluierung
 		{
 			// Aufgrund Gruppen Logik sollte hier nur ein Lektor zurückgegeben werden
@@ -139,15 +138,18 @@ class EvaluationLib
 				$lektoren = hasData($result) ? getData($result) : [];
 
 				// LV-Leitung ergänzen, falls nicht Lehrender ist
-				if (!in_array($lvLeitung->mitarbeiter_uid, array_column($lektoren, 'uid')))
+				if ($lvLeitung !== null && !in_array($lvLeitung->mitarbeiter_uid, array_column($lektoren, 'uid')))
 				{
 					$lektoren[]= $lvLeitung;
 				}
 			}
 			else
 			{
-				// Reflexion nur für LV-Leitung verpflichtend
-				$lektoren = array($lvLeitung);
+				if (!is_null($lvLeitung))
+				{
+					// Reflexion nur für LV-Leitung verpflichtend
+					$lektoren = $lvLeitung !== null ? [$lvLeitung] : [];
+				}
 			}
 		}
 
@@ -155,20 +157,13 @@ class EvaluationLib
 		$result = [];
 		foreach ($lektoren as $lektor)
 		{
-			$isLvLeitung = null;
-			if(isset($lektor->lehrfunktion_kurzbz))
-			{
-				$isLvLeitung = $lektor->lehrfunktion_kurzbz === 'LV-Leitung' ? true : false;
-			}
-			elseif (isset($lektor->lvleiter))
-			{
-				$isLvLeitung = $lektor->lvleiter;
-			}
+			$lektorUid = isset($lektor->mitarbeiter_uid) ? $lektor->mitarbeiter_uid : $lektor->uid;
+
 			$result[]= (object) [
 				'vorname' => $lektor->vorname,
 				'nachname' => $lektor->nachname,
-				'uid' => isset($lektor->mitarbeiter_uid) ? $lektor->mitarbeiter_uid : $lektor->uid,
-				'isLvLeitung' => $isLvLeitung
+				'uid' => $lektorUid,
+				'isLvLeitung' => $lvLeitung !== null && $lektorUid === $lvLeitung->mitarbeiter_uid
 			];
 		}
 
