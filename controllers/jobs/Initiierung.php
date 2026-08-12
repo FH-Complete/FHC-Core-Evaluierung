@@ -195,7 +195,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mailtag ist
 		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent - Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
 		}
 
@@ -726,7 +726,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mailtag ist
 		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterStart->format('d.m.Y'));
 			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
 		}
 
@@ -1009,7 +1009,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mailtag ist
 		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
 		}
 
@@ -1760,7 +1760,6 @@ class Initiierung extends JOB_Controller
 		{
 			$this->logError('Missing Lvevaluierung Zeitfenster');
 			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
-
 		}
 
 		$zeitfenster = getData($result)[0];
@@ -1789,7 +1788,19 @@ class Initiierung extends JOB_Controller
 		// Exit wenn heute kein Mailtag ist
 		if ($mailtagIndex === false)
 		{
-			$this->logInfo('No mails sent. Today is not report day.');
+			// Info, wann nächster Mailtag ist
+			foreach ($mailtage as $mailtag)
+			{
+				if ($mailtag->format('Y-m-d') > date('Y-m-d'))
+				{
+					$this->logInfo('No mails sent - Next maildatum: ' . $mailtag->format('d.m.Y'));
+					$this->logInfo('End Job sendReflexionReadyInfoToStgl');
+					return;
+				}
+			}
+
+			// Info, wenn alle Mailtage in der Vergangenheit liegen
+			$this->logInfo('No mails sent - All Mail dates for ' . $studiensemester_kurzbz . ' have past.');
 			$this->logInfo('End Job sendReflexionReadyInfoToStgl');
 			return;
 		}
@@ -2003,7 +2014,7 @@ class Initiierung extends JOB_Controller
 			$mailDatum->modify('+1 month');
 		}
 
-		// Periodische Mailtage ermitteln
+		// Prüft, ob heute ein Mailtag ist
 		$mailtagIndex = array_search(
 			date('Y-m-d'),
 			array_map(function ($date)
@@ -2016,7 +2027,19 @@ class Initiierung extends JOB_Controller
 		// Exit wenn heute kein Mailtag ist
 		if ($mailtagIndex === false)
 		{
-			$this->logInfo('No mails sent. Today is not report day.');
+			// Info, wann nächster Mailtag ist
+			foreach ($mailtage as $mailtag)
+			{
+				if ($mailtag->format('Y-m-d') > date('Y-m-d'))
+				{
+					$this->logInfo('No mails sent - Next maildatum: ' . $mailtag->format('d.m.Y'));
+					$this->logInfo('End Job sendReflexionReadyInfoToKfl');
+					return;
+				}
+			}
+
+			// Info, wenn alle Mailtage in der Vergangenheit liegen
+			$this->logInfo('No mails sent - All Mail dates for ' . $studiensemester_kurzbz . ' have past.');
 			$this->logInfo('End Job sendReflexionReadyInfoToKfl');
 			return;
 		}
@@ -2224,7 +2247,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendProfillinienAvailable');
 		}
 
@@ -2418,7 +2441,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveStgAbschliessen');
 		}
 
@@ -2443,7 +2466,7 @@ class Initiierung extends JOB_Controller
 			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
 
 			// MALVE Stgl Abschluss Enddatum
-			$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks'); // todo ok?: aktuell 06.08. + 6 Wo => 17.09. (nicht 16.09.)
+			$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 			// Link zu Übersicht im CIS
 			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
@@ -2541,7 +2564,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveKflAbschliessen');
 		}
 
@@ -2553,7 +2576,7 @@ class Initiierung extends JOB_Controller
 		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
 
 		// MALVE Stgl Abschluss Enddatum
-		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks'); // todo ok?: aktuell 06.08. + 6 Wo => 17.09. (nicht 16.09.)
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 		// Link zu Übersicht im CIS
 		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
@@ -2662,7 +2685,7 @@ class Initiierung extends JOB_Controller
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
 		// MALVE Abschluss bis 6 Wochen nach Zeitfensterende möglich
-		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks'); // todo ok?: aktuell 06.08. + 6 Wo => 17.09. (nicht 16.09.)
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 		// Eine Woche davor erinnern
 		$mailDatum = (clone $malve_enddatum)->modify('-1 week');
@@ -2670,7 +2693,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveStglAbschliessenReminder');
 		}
 
@@ -2807,7 +2830,7 @@ class Initiierung extends JOB_Controller
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
 		// Malve STGL Abschluss bis 6 Wochen nach Zeitfensterende möglich
-		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');  // todo ok?: aktuell 06.08. + 6 Wo => 17.09. (nicht 16.09.)
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 		// Eine Woche davor erinnern
 		$mailDatum = (clone $malve_enddatum)->modify('-1 week');
@@ -2815,7 +2838,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
 		}
 
