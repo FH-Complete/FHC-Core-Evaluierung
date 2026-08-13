@@ -113,25 +113,43 @@ class LvevaluierungCode_model extends DB_Model
 		if (empty($lvevaluierung_lehrveranstaltung_ids)) return;
 
 		$qry = "
+			WITH codes_ausgegeben AS (
+				SELECT
+					lvevaluierung_lehrveranstaltung_id,
+					SUM(codes_ausgegeben) AS sum_codes_ausgegeben
+				FROM 
+					extension.tbl_lvevaluierung
+				GROUP BY 
+					lvevaluierung_lehrveranstaltung_id
+			),
+			submitted_codes AS (
+				SELECT
+					lve.lvevaluierung_lehrveranstaltung_id,
+					COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes
+				FROM 
+					extension.tbl_lvevaluierung lve
+				LEFT JOIN extension.tbl_lvevaluierung_code lvec 
+					ON lvec.lvevaluierung_id = lve.lvevaluierung_id
+					AND lvec.endezeit IS NOT NULL
+				GROUP BY 
+					lve.lvevaluierung_lehrveranstaltung_id
+			)
+			
 			SELECT
 				lvelv.lvevaluierung_lehrveranstaltung_id,
-				COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes,
-				COALESCE(SUM(DISTINCT lve.codes_ausgegeben), 0) AS sum_codes_ausgegeben,
+				COALESCE(sc.count_submitted_codes, 0) AS count_submitted_codes,
+				COALESCE(ca.sum_codes_ausgegeben, 0) AS sum_codes_ausgegeben,
 				ROUND(
-					COUNT(lvec.lvevaluierung_code_id)::numeric 
-					/ NULLIF(SUM(DISTINCT lve.codes_ausgegeben), 0) * 100,
+					COALESCE(sc.count_submitted_codes, 0)::numeric
+					/ NULLIF(COALESCE(ca.sum_codes_ausgegeben, 0), 0) * 100,
 					2
 				) AS ruecklaufquote
 			FROM 
 				extension.tbl_lvevaluierung_lehrveranstaltung lvelv
-				JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
-				LEFT JOIN extension.tbl_lvevaluierung_code lvec
-					ON lvec.lvevaluierung_id = lve.lvevaluierung_id
-					AND lvec.endezeit IS NOT NULL   -- only per Abschicken-button abgeschlossene 
+				LEFT JOIN codes_ausgegeben ca USING (lvevaluierung_lehrveranstaltung_id)
+				LEFT JOIN submitted_codes sc USING (lvevaluierung_lehrveranstaltung_id)
 			WHERE 
-				lvelv.lvevaluierung_lehrveranstaltung_id IN ?
-			GROUP BY 
-				lvelv.lvevaluierung_lehrveranstaltung_id;
+				lvelv.lvevaluierung_lehrveranstaltung_id IN ?;
 		";
 
 		return $this->execQuery($qry, array($lvevaluierung_lehrveranstaltung_ids));
@@ -150,31 +168,51 @@ class LvevaluierungCode_model extends DB_Model
 	public function getAggregatedRuecklaufDataByLvTemplateIds($lehrveranstaltung_template_ids, $studiensemester_kurzbz)
 	{
 		$qry = "
+			WITH codes_ausgegeben AS (
+				SELECT
+					lv.lehrveranstaltung_template_id,
+					SUM(lve.codes_ausgegeben) AS sum_codes_ausgegeben
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id)
+					JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+				WHERE
+					lv.lehrveranstaltung_template_id IN ?
+					AND lvelv.studiensemester_kurzbz = ?
+				GROUP BY
+					lv.lehrveranstaltung_template_id
+			),
+			submitted_codes AS (
+				SELECT
+					lv.lehrveranstaltung_template_id,
+					COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes
+				FROM
+					lehre.tbl_lehrveranstaltung lv
+					JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv USING (lehrveranstaltung_id)
+					JOIN extension.tbl_lvevaluierung lve USING (lvevaluierung_lehrveranstaltung_id)
+					LEFT JOIN extension.tbl_lvevaluierung_code lvec 
+						ON lvec.lvevaluierung_id = lve.lvevaluierung_id
+						AND lvec.endezeit IS NOT NULL
+				WHERE
+					lv.lehrveranstaltung_template_id IN ?
+					AND lvelv.studiensemester_kurzbz = ?
+				GROUP BY
+					lv.lehrveranstaltung_template_id
+			)
 			SELECT
-				lv.lehrveranstaltung_template_id,
-				COUNT(lvec.lvevaluierung_code_id) AS count_submitted_codes,
-				COALESCE(SUM(DISTINCT lve.codes_ausgegeben), 0) AS sum_codes_ausgegeben,
+				ca.lehrveranstaltung_template_id,
+				COALESCE(sc.count_submitted_codes, 0) AS count_submitted_codes,
+				COALESCE(ca.sum_codes_ausgegeben, 0) AS sum_codes_ausgegeben,
 				ROUND(
-					COUNT(lvec.lvevaluierung_code_id)::numeric 
-					/ NULLIF(SUM(DISTINCT lve.codes_ausgegeben), 0) * 100,
+					COALESCE(sc.count_submitted_codes, 0)::numeric
+					/ NULLIF(COALESCE(ca.sum_codes_ausgegeben, 0), 0) * 100,
 					2
 				) AS ruecklaufquote
 			FROM 
-				lehre.tbl_lehrveranstaltung lv
-			JOIN extension.tbl_lvevaluierung_lehrveranstaltung lvelv
-				USING (lehrveranstaltung_id)
-			JOIN extension.tbl_lvevaluierung lve
-				USING (lvevaluierung_lehrveranstaltung_id)
-			LEFT JOIN extension.tbl_lvevaluierung_code lvec
-				ON lvec.lvevaluierung_id = lve.lvevaluierung_id
-				AND lvec.endezeit IS NOT NULL
-			WHERE
-				lv.lehrveranstaltung_template_id IN ?
-				AND lvelv.studiensemester_kurzbz = ?
-			GROUP BY
-				lv.lehrveranstaltung_template_id
+				codes_ausgegeben ca
+				LEFT JOIN submitted_codes sc USING (lehrveranstaltung_template_id);
 		";
 
-		return $this->execQuery($qry, array($lehrveranstaltung_template_ids, $studiensemester_kurzbz));
+		return $this->execQuery($qry, array($lehrveranstaltung_template_ids, $studiensemester_kurzbz, $lehrveranstaltung_template_ids, $studiensemester_kurzbz));
 	}
 }
