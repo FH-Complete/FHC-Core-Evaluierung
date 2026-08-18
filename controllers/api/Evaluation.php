@@ -2519,7 +2519,7 @@ class Evaluation extends FHCAPI_Controller
 	// Evaluation Studiengaenge
 	//------------------------------------------------------------------------------------------------------------------
 	/**
-	 * Get Studiengaenge by given Studiensemester for which the user is entitled.
+	 * Get Studiengaenge/Lehrgänge by given Studiensemester for which the user is entitled.
 	 *
 	 * @return void
 	 */
@@ -2531,6 +2531,31 @@ class Evaluation extends FHCAPI_Controller
 		$entitledStgs = $this->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_STG) ?: [];
 		$result = $this->StudiengangModel->getByStgs($entitledStgs, $studiensemester_kurzbz);
 		$stgs = $this->getDataOrTerminateWithError($result);
+
+		// STGs entfernen, die keine LVs zu evaluieren haben.
+		// zB Lehrgänge mit verschiedenen Ausbildungsabschlüssen,
+		// wo die LVs nur dem Lehrgang mit dem höchsten Abschluss zugeordnet werden.
+		foreach ($stgs as $key => $stg)
+		{
+			$this->LehrveranstaltungModel->addJoin('lehre.tbl_studienplan_lehrveranstaltung stpllv', 'lehrveranstaltung_id');
+			$this->LehrveranstaltungModel->addJoin('lehre.tbl_studienplan stpl', 'studienplan_id');
+			$this->LehrveranstaltungModel->addJoin('lehre.tbl_studienplan_semester stplsem', 'studienplan_id');
+			$result = $this->LehrveranstaltungModel->loadWhere(
+				[
+					'stplsem.studiensemester_kurzbz' => $studiensemester_kurzbz,
+					'lehre.tbl_lehrveranstaltung.studiengang_kz' => $stg->studiengang_kz,
+					'lehre.tbl_lehrveranstaltung.orgform_kurzbz' => $stg->orgform_kurzbz
+				]
+			);
+
+			if (!hasData($result))
+			{
+				unset($stgs[$key]);
+			}
+		}
+
+		// Nach unset re-index nötig
+		$stgs = array_values($stgs);
 
 		$this->terminateWithSuccess($stgs);
 	}
