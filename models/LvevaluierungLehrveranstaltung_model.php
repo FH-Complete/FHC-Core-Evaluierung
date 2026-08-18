@@ -429,9 +429,13 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 * @param $studiensemester_kurzbz
 	 * @return mixed
 	 */
-	public function insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs = null)
+	public function insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs = [])
 	{
-		$params = [];
+		$stgs = !is_array($stgs) ? [$stgs] : $stgs;
+
+		$params[] = $studiensemester_kurzbz;
+		$params[] = $stgs;
+		$params[] = $studiensemester_kurzbz;
 
 		$qry = "
 			SELECT
@@ -447,8 +451,11 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
-				-- filter only main studies (to start with)
-				AND stg.studiengang_kz BETWEEN 0 AND 10000
+				-- filter only main stgs or particular stgs
+				AND (
+				    (stg.studiengang_kz BETWEEN 0 AND 10000)
+				    OR stg.studiengang_kz IN ?
+				)
 			  	-- filter only to be evaluated
 				AND lv.evaluierung = TRUE
 			  	-- filter only not already inserted
@@ -460,14 +467,11 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 				  WHERE
 					studiensemester_kurzbz = ?
 				)";
-		$params[]= $studiensemester_kurzbz;
-		$params[]= $studiensemester_kurzbz;
 
-		// Filter particular Studiengaenge // todo for Pilotphase. Remove then?
-		if (!is_null($stgs))
+		if (!empty($stgs))
 		{
-			$stgs = !is_array($stgs) ? [$stgs] : $stgs;
 			$qry.= " AND stg.studiengang_kz IN ? ";
+
 			$params[]= $stgs;
 		}
 
