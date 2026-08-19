@@ -42,15 +42,15 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
-				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
-			})
-			.then(result => {
-				this.malve = result.data
 				return this.$api.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
 			})
 			.then(result => {
 				this.lists.orgforms = result.data
 				this.selOrgform = result.data[0].orgform_kurzbz;
+				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
+			})
+			.then(result => {
+				this.malve = result.data;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
@@ -69,8 +69,32 @@ export default {
 		isDisabledSubmitMalveBtn(){
 			return this.malve?.length > 0;
 		},
-		malveAbgeschlossenTxt(){
-			if (this.malve !== null) return 'MALVE-STGL abgeschlossen am ' + this.DateHelper.formatDate(this.malve[0].insertamum)
+		texts() {
+			const isLehrgang = this.selStgKz < 0 || this.selStgKz > 10000;
+
+			return {
+				stgWeiterentwicklungBtn: isLehrgang
+						? 'Lehrgang-Weiterentwicklung'
+						: 'STG-Weiterentwicklung',
+
+				malveAbschliessenBtn: isLehrgang
+						? 'MALVE-Lehrgang abschließen'
+						: 'MALVE-STGL abschließen',
+
+				malveAbgeschlossenBtn: isLehrgang
+						? 'MALVE-Lehrgang abgeschlossen'
+						: 'MALVE-STGL abgeschlossen',
+
+				malveAbgeschlossenTxt: this.malve !== null
+						? `${isLehrgang ? 'MALVE-Lehrgang' : 'MALVE-STGL'} abgeschlossen am ${this.DateHelper.formatDate(this.malve[0]?.insertamum)}`
+						: null,
+
+				malveConfirm: `Ich habe alle LV-Evaluierungen des ${isLehrgang ? 'Lehrgangs' : 'Studiengangs'} - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die ${isLehrgang ? 'Lehrgang-Weiterentwicklung' : 'STG-Weiterentwicklung'} wurden abgeleitet.`,
+
+				stgWeiterentwicklungBtnTooltip: isLehrgang
+						? 'MALVE Lehrgang: Schnittstelle zur Maßnahmenableitung für den Lehrgang in OP.'
+						: 'MALVE STGL: Schnittstelle zur Maßnahmenableitung für den STG in OP.'
+			};
 		},
 		tabulatorOptions() {
 			const self = this;
@@ -97,6 +121,18 @@ export default {
 					headerTooltip: true
 				},
 				columns: [
+					{
+						title: 'LVE-LV-ID',
+						field: 'lvevaluierung_lehrveranstaltung_id',
+						headerFilter: "input",
+						visible: false
+					},
+					{
+						title: 'LV-ID',
+						field: 'lehrveranstaltung_id',
+						headerFilter: "input",
+						visible: false
+					},
 					{
 						title:'LV-Bezeichnung',
 						field:'bezeichnung',
@@ -394,7 +430,7 @@ export default {
 		async submitMalve(){
 			if (await this.$fhcAlert.confirm({
 					header: 'Bitte bestätigen Sie:',
-					message:`Ich habe alle LV-Evaluierungen des Studiengangs - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die STG-Weiterentwicklung wurden abgeleitet.`
+					message: this.texts.malveConfirm
 				}) === false
 			){
 				return;
@@ -499,8 +535,8 @@ export default {
 				<template v-slot:actions>
 					<!-- workaround: wrap a tag with span to show tooltip also on disabled button-->
 					<span
-					  v-tooltip
-					  title="MALVE STGL: Schnittstelle zur Maßnahmenableitung für den STG in OP."
+					  v-tooltip="texts.stgWeiterentwicklungBtnTooltip"
+					  :title="texts.stgWeiterentwicklungBtnTooltip"
 					  :class="{ 'd-inline-block': true, 'cursor-not-allowed': isDisabledSubmitMalveBtn }"
 					>
 						<a 
@@ -509,7 +545,7 @@ export default {
 							:href="site_url_opStgKvp" 
 							target="_blank"
 						>
-							<i class="fa fa-external-link me-2"></i>STG-Weiterentwicklung
+							<i class="fa fa-external-link me-2"></i>{{texts.stgWeiterentwicklungBtn}}
 						</a>
 					</span>
 					<button 
@@ -520,9 +556,9 @@ export default {
 						:disabled="isDisabledSubmitMalveBtn"
 						>
 						<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-						{{ malve.length > 0 ? 'MALVE-STGL abgeschlossen' : 'MALVE-STGL abschließen' }}
+						{{ malve.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
 					</button>
-					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
 				</template>
 			</core-filter-cmpt>
 		</div>

@@ -427,11 +427,13 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 	 *  Only Lehrveranstaltungen that are marked for evaluation and not yet present in target table will be inserted.
 	 *
 	 * @param $studiensemester_kurzbz
+	 * @param null|array $stgs
 	 * @return mixed
 	 */
 	public function insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs = null)
 	{
-		$params = [];
+		$hasStgs = is_array($stgs) && !empty($stgs);
+		$params = [$studiensemester_kurzbz];
 
 		$qry = "
 			SELECT
@@ -447,27 +449,37 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			WHERE
 				-- filter by Studiensemester
 				le.studiensemester_kurzbz = ?
-				-- filter only main studies (to start with)
-				AND stg.studiengang_kz BETWEEN 0 AND 10000
-			  	-- filter only to be evaluated
-				AND lv.evaluierung = TRUE
-			  	-- filter only not already inserted
-				AND lv.lehrveranstaltung_id NOT IN (
-				  SELECT
-					lehrveranstaltung_id
-				  FROM
-					extension.tbl_lvevaluierung_lehrveranstaltung
-				  WHERE
-					studiensemester_kurzbz = ?
-				)";
-		$params[]= $studiensemester_kurzbz;
-		$params[]= $studiensemester_kurzbz;
+				-- filter only bachelor/master
+				AND (
+				    (stg.studiengang_kz BETWEEN 0 AND 10000)";
 
-		// Filter particular Studiengaenge // todo for Pilotphase. Remove then?
-		if (!is_null($stgs))
+				if ($hasStgs)
+				{
+					// ...or other particular stgs
+					$qry.= " OR stg.studiengang_kz IN ?";
+					$params[] = $stgs;
+				}
+
+		$qry.= ")
+			-- filter only to be evaluated
+			AND lv.evaluierung = TRUE
+			-- filter only not already inserted
+			AND lv.lehrveranstaltung_id NOT IN (
+			  SELECT
+				lehrveranstaltung_id
+			  FROM
+				extension.tbl_lvevaluierung_lehrveranstaltung
+			  WHERE
+				studiensemester_kurzbz = ?
+			)";
+
+		$params[] = $studiensemester_kurzbz;
+
+		// filter particular stgs
+		if ($hasStgs)
 		{
-			$stgs = !is_array($stgs) ? [$stgs] : $stgs;
 			$qry.= " AND stg.studiengang_kz IN ? ";
+
 			$params[]= $stgs;
 		}
 
@@ -477,7 +489,11 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 		";
 
 		$result = $this->execQuery($qry, $params);
-		if (isError($result)) return (getError($result));
+
+		if (isError($result))
+		{
+			return getError($result);
+		}
 
 		$insertBatch = hasData($result) ? getData($result) : [];
 

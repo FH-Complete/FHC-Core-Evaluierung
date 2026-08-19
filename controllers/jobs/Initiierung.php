@@ -25,8 +25,10 @@ class Initiierung extends JOB_Controller
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/Lvevaluierung_model', 'LvevaluierungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
+
 		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 	}
 
 	/**
@@ -52,36 +54,17 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
-		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
-			'typ' => 'stgauswahl',
-			'studiensemester_kurzbz' => $studiensemester_kurzbz
-		]);
-
-		if (!hasData($result))
-		{
-			$this->logError('Missing Lvevaluierung Zeitfenster');
-			return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
-		}
-
-		$zeitfenster = getData($result)[0];
-		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// Letzter Tag, an dem STGLs abwählen können
-
-		/**
-		 * LVs für Evaluierung eintragen
-		 * Eintrag erfolgt nur, wenn LV nicht bereits in der Lvevaluierung Lehrveranstaltung Tabelle ist
-		 * */
+		// LVs für Evaluierung anlegen, wenn diese noch nicht vorhanden sind
 	 	// -------------------------------------------------------------------------------------------------------------
-
-		// Ausgewählte LVs: Only for pilotphase
 		if (defined('CIS_EVALUIERUNG_ANZEIGEN_STG') && CIS_EVALUIERUNG_ANZEIGEN_STG )
 		{
+			// LVs bestimmter STGs
 			$stgs = unserialize(CIS_EVALUIERUNG_ANZEIGEN_STG);
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz, $stgs);
 		}
-		// Alle LVs
 		else
 		{
+			// Alle LVs
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->insertLehrveranstaltungenFor($studiensemester_kurzbz);
 		}
 
@@ -105,6 +88,22 @@ class Initiierung extends JOB_Controller
 			$link = CIS_ROOT
 				. 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge?studiensemester='
 				. $studiensemester_kurzbz;
+
+			// Zeitfenster, in dem STGLs LV von Evaluierung abwählen können
+			$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+				'typ' => 'stgauswahl',
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			if (!hasData($result))
+			{
+				$this->logError('Missing Lvevaluierung Zeitfenster');
+				return $this->logInfo('End Job initEvaluierungForLehrveranstaltungen');
+			}
+
+			// Letzter Tag, an dem STGLs abwählen können
+			$zeitfenster = getData($result)[0];
+			$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
 			foreach ($distinctStgs as $stg)
 			{
@@ -190,19 +189,18 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);    // Letzter Tag, an dem STGLs abwählen können
 
-		$remindDatum = clone $zeitfensterEnde;
-		$remindDatum = $remindDatum->sub(new DateInterval('P1W'));
+		// Eine Woche vor Zeitfensterende erinnern
+		$mailDatum = (clone $zeitfensterEnde)->modify('-1 week');
 
-		// Exit wenn nicht Mailtag ist	// todo check: wollen wir so einschränken?
-		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent - Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendLvsAbwaehlenReminder');
 		}
 
 		// Mail an Studiengangsleitungen
 		// -------------------------------------------------------------------------------------------------------------
-
 		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
 
 		if (isError($result))
@@ -266,6 +264,240 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
+	 * Mail LVL_TEXT_1: Evaluierungsebene anpassen möglich (Gesamt-LV/Gruppe).
+	 *
+	 * Zeitfenster idR 1 Woche vor bis 1 Woche nach Semesterstart gesetzt wird.
+	 *
+	 * @return void
+	 */
+	public function sendEvaluierungsebeneAnpassen()
+	{
+		$this->logInfo('Start Job sendEvaluierungsebeneAnpassen');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendEvaluierungsebeneAnpassen');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem LV-Leitung Evaluierungsebene switchen kann
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);	// Mailtag = erster Tag, an dem LVL switchen kann
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);	// Letzter Tag, an dem LVL switchen kann
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent - Next maildatum: ' . $zeitfensterStart->format('d.m.Y'));
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+		}
+
+		// Mail an LV-Leitungen senden
+		// -------------------------------------------------------------------------------------------------------------
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = getData($result);
+			$uniqueUids = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			foreach ($lveLvs as $lveLv)
+			{
+				$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+					$lveLv->lehrveranstaltung_id,
+					$studiensemester_kurzbz
+				);
+
+				if (hasData($result))
+				{
+					$lvLeitung = getData($result)[0];
+
+					if (!in_array($lvLeitung->mitarbeiter_uid, $uniqueUids))
+					{
+						$uniqueUids[] = $lvLeitung->mitarbeiter_uid;
+						// echo "\nMail to " . $lvLeitung->mitarbeiter_uid . ' - LV-ID:' . $lveLv->lehrveranstaltung_id;
+						$uid = $lvLeitung->mitarbeiter_uid;
+
+						$data = [
+							'vorname' => $lvLeitung->vorname,
+							'nachname' => $lvLeitung->nachname,
+							'datum' => $zeitfensterEnde->format('d.m.Y'),
+							'link' => $link,
+							'zielgruppe' => 'LV-Leitungen'
+						];
+
+						$mailSent = sendSanchoMail(
+							'LVE_LVL_TEXT_1',
+							$data,
+							$uid . '@' . DOMAIN,
+							'LV-Evaluation - Anpassung Evaluationsebene (Gesamt/Gruppe) bis '. $zeitfensterEnde->format('d.m.Y'),
+							'sancho_header_lvevaluierung_rollout.jpg',
+							'sancho_footer_lvevaluierung_rollout.jpg'
+						);
+
+						if ($mailSent)
+						{
+							$this->logInfo('LVE_LVL_TEXT_1 to ' . $uid);
+						}
+						else
+						{
+							$this->logError('Failed to send LVE_LVL_TEXT_1 to ' . $uid);
+						}
+					}
+				}
+				else
+				{
+					echo "\nLV-Leitung not found. LV-ID: " . $lveLv->lehrveranstaltung_id;
+					$this->logWarning('LV-Leitung not found for LV-ID ' . $lveLv->lehrveranstaltung_id);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluierungsebeneAnpassen');
+	}
+
+	/**
+	 * Mail LVL_TEXT_2: Evaluierungsebene anpassen möglich (Gesamt-LV/Gruppe) - Reminder.
+	 *
+	 * Zeitfenster idR 1 Woche vor bis 1 Woche nach Semesterstart gesetzt wird -> Reminder Zeitfensterstart + 1 Woche.
+	 * = Reminder zu Semesterstart
+	 *
+	 * @return void
+	 */
+	public function sendEvaluierungsebeneAnpassenReminder()
+	{
+		$this->logInfo('Start Job sendEvaluierungsebeneAnpassenReminder');
+
+		// Next Studiensemester
+		$result = $this->_ci->StudiensemesterModel->getNext();
+		if (!hasData($result))
+		{
+			$this->logError('Missing Studiensemester');
+			return $this->logInfo('Start Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		$studiensemester = getData($result)[0];
+		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster, in dem LV-Leitung Evaluierungsebene switchen kann
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->logError('Missing Lvevaluierung Zeitfenster');
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterStart = new DateTime($zeitfenster->startdatum);
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);    // Letzter Tag, an dem LVL switchen kann
+
+		// Eine Woche nach Zeitfensterstart mailen
+		$mailDatum = (clone $zeitfensterStart)->modify('+1 week');
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent - Next maildatum: ' . $mailDatum->format('d.m.Y'));
+			return $this->logInfo('End Job sendEvaluierungsebeneAnpassenReminder');
+		}
+
+		// Mail an LV-Leitungen senden
+		// -------------------------------------------------------------------------------------------------------------
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
+
+		if (isError($result))
+		{
+			$this->logError(getError($result));
+		}
+		else
+		{
+			$lveLvs = getData($result);
+			$uniqueUids = [];
+
+			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
+
+			foreach ($lveLvs as $lveLv)
+			{
+				$result = $this->_ci->LehrveranstaltungModel->getLvLeitung(
+					$lveLv->lehrveranstaltung_id,
+					$studiensemester_kurzbz
+				);
+
+				if (hasData($result))
+				{
+					$lvLeitung = getData($result)[0];
+
+					if (!in_array($lvLeitung->mitarbeiter_uid, $uniqueUids))
+					{
+						$uniqueUids[] = $lvLeitung->mitarbeiter_uid;
+						// echo "\nMail to " . $lvLeitung->mitarbeiter_uid . ' - LV-ID:' . $lveLv->lehrveranstaltung_id;
+						$uid = $lvLeitung->mitarbeiter_uid;
+
+						$data = [
+							'vorname' => $lvLeitung->vorname,
+							'nachname' => $lvLeitung->nachname,
+							'datum' => $zeitfensterEnde->format('d.m.Y'),
+							'link' => $link,
+							'zielgruppe' => 'LV-Leitungen'
+						];
+
+						$mailSent = sendSanchoMail(
+							'LVE_LVL_TEXT_2',
+							$data,
+							$uid . '@' . DOMAIN,
+							'Reminder LV-Evaluation - Anpassung Evaluationsebene (Gesamt/Gruppe) bis ' . $zeitfensterEnde->format('d.m.Y'),
+							'sancho_header_lvevaluierung_rollout.jpg',
+							'sancho_footer_lvevaluierung_rollout.jpg'
+						);
+
+						if ($mailSent)
+						{
+							$this->logInfo('LVE_LVL_TEXT_2 to ' . $uid);
+						}
+						else
+						{
+							$this->logError('Failed to send LVE_LVL_TEXT_2 to ' . $uid);
+						}
+					}
+				}
+				else
+				{
+					echo "\nLV-Leitung not found. LV-ID: " . $lveLv->lehrveranstaltung_id;
+					$this->logWarning('LV-Leitung not found for LV-ID ' . $lveLv->lehrveranstaltung_id);
+				}
+			}
+		}
+
+		$this->logInfo('End Job sendEvaluierungsebeneSwitchen');
+	}
+
+	/**
 	 * Evaluierungen erstellen entsprechend der gewählten Evaluierungsebene (Gesamt/Gruppe), aber erst nach Ablauf des Zeitfensters,
 	 * in dem Evaluierungsebene gewechselt werden darf.
 	 * Create Evaluierungen entries for  Lehrveranstaltungen of given Studiensemester.
@@ -280,7 +512,8 @@ class Initiierung extends JOB_Controller
 	{
 		$this->logInfo('Start Job createEvaluierungen');
 
-		// Next Studiensemester
+		// Aktuelles Studiensemester
+		// Exit, wenn keines vorhanden -> kein Fallback für Sommerferien, da Job erst nach Semesterstart relevant ist
 		$result = $this->_ci->StudiensemesterModel->getAkt();
 		if (!hasData($result))
 		{
@@ -291,7 +524,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster that allows LV-Leitung to switch Evaluierungsebene
+		// Zeitfenster, in dem LV-Leitung Evaluierungsebene switchen kann
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'typswitch',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -305,10 +538,11 @@ class Initiierung extends JOB_Controller
 
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
-		$today = new DateTime('today');
 
-		// Go on only if Zeitfenster is closed
-		if ($today > $zeitfensterEnde)
+		// Evaluierungen erstellen ab dem Tag nach dem letzten möglichen Wechsel der Evaluierungsebene.
+		// Bestehende Evaluierungen werden geprüft, um Doppelanlagen zu vermeiden.
+		// -------------------------------------------------------------------------------------------------------------
+		if (date('Y-m-d') > $zeitfensterEnde->format('Y-m-d'))
 		{
 			// Get LveLvs by Studiensemester
 			$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
@@ -492,7 +726,7 @@ class Initiierung extends JOB_Controller
 		// Exit wenn nicht Mailtag ist
 		if (date('Y-m-d') !== $zeitfensterStart->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterStart->format('d.m.Y'));
 			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
 		}
 
@@ -743,6 +977,8 @@ class Initiierung extends JOB_Controller
 	{
 		$this->logInfo('Start Job sendEvaluationStartInfo');
 
+		// Aktuelles Studiensemester
+		// Exit, wenn keines vorhanden -> kein Fallback für Sommerferien, da Job erst nach Studienstart relevant ist
 		$result = $this->_ci->StudiensemesterModel->getAkt();
 		if (!hasData($result))
 		{
@@ -752,6 +988,30 @@ class Initiierung extends JOB_Controller
 
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
+
+		// Zeitfenster LV-Leitungen eintragen
+		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'typswitch',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+		if (!hasData($result))
+		{
+			$this->logError('Missing Zeitfenster');
+			return $this->logInfo('End Job sendEvaluationStartInfo');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// Einen Tag nach Zeitfensterstart mailen
+		$mailDatum = (clone $zeitfensterEnde)->modify('+1 day');
+
+		// Exit wenn nicht Mailtag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
+		{
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
+			return $this->logInfo('End Job sendLvLeitungenEintragenInfo');
+		}
 
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
@@ -805,8 +1065,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid.'@'.DOMAIN,
 										'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster festlegen',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
@@ -855,8 +1115,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid.'@'.DOMAIN,
 										'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
@@ -1490,7 +1750,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Reflexion mail period of Studiensemester
+		// Zeitfenster, in dem periodisch über Reflexionen berichtet wird
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -1500,38 +1760,47 @@ class Initiierung extends JOB_Controller
 		{
 			$this->logError('Missing Lvevaluierung Zeitfenster');
 			return $this->logInfo('End Job sendReflexionReadyInfoToStgl');
-
 		}
 
-		$mailZeitfenster = getData($result)[0];
+		$zeitfenster = getData($result)[0];
 
-		// Monthly report dates within reporting period
+		// Periodische Mailtage ermitteln
 		$mailtage = [];
-		$startdatum = new DateTime($mailZeitfenster->startdatum);
-		$endedatum = new DateTime($mailZeitfenster->endedatum);
+		$mailDatum = new DateTime($zeitfenster->startdatum);
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		while ($startdatum <= $endedatum)
+		while ($mailDatum <= $zeitfensterEnde)
 		{
-			$mailtage[] = clone $startdatum;
-			$startdatum->modify('+1 month');
+			$mailtage[] = clone $mailDatum;
+			$mailDatum->modify('+1 month');
 		}
 
-		// Define index to check if today is report day and to get the previous report day
-		$today = new DateTime('today');
- // $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
+		// Prüft, ob heute ein Mailtag ist
 		$mailtagIndex = array_search(
-			$today->format('Y-m-d H:i:s'),
+			date('Y-m-d'),
 			array_map(function ($date)
 			{
-				return $date->format('Y-m-d H:i:s');
+				return $date->format('Y-m-d');
 			}, $mailtage),
 			true
 		);
 
-		// Return if today is not Berichtstag (do not send Sammelmail)
+		// Exit wenn heute kein Mailtag ist
 		if ($mailtagIndex === false)
 		{
-			$this->logInfo('No mails sent. Today is not report day.');
+			// Info, wann nächster Mailtag ist
+			foreach ($mailtage as $mailtag)
+			{
+				if ($mailtag->format('Y-m-d') > date('Y-m-d'))
+				{
+					$this->logInfo('No mails sent - Next maildatum: ' . $mailtag->format('d.m.Y'));
+					$this->logInfo('End Job sendReflexionReadyInfoToStgl');
+					return;
+				}
+			}
+
+			// Info, wenn alle Mailtage in der Vergangenheit liegen
+			$this->logInfo('No mails sent - All Mail dates for ' . $studiensemester_kurzbz . ' have past.');
 			$this->logInfo('End Job sendReflexionReadyInfoToStgl');
 			return;
 		}
@@ -1557,7 +1826,7 @@ class Initiierung extends JOB_Controller
 		}
 
 		// Berichtsperiode Endedatum
-		$berichtszeitraumBis = $today;
+		$berichtszeitraumBis = new DateTime('today');;
 
 		/**
 		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
@@ -1719,7 +1988,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Reflexion mail period of Studiensemester
+		// Zeitfenster, in dem periodisch über Reflexionen berichtet wird
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -1732,35 +2001,45 @@ class Initiierung extends JOB_Controller
 
 		}
 
-		$mailZeitfenster = getData($result)[0];
+		$zeitfenster = getData($result)[0];
 
-		// Monthly report dates within reporting period
+		// Periodische Mailtage ermitteln
 		$mailtage = [];
-		$startdatum = new DateTime($mailZeitfenster->startdatum);
-		$endedatum = new DateTime($mailZeitfenster->endedatum);
+		$mailDatum = new DateTime($zeitfenster->startdatum);
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		while ($startdatum <= $endedatum)
+		while ($mailDatum <= $zeitfensterEnde)
 		{
-			$mailtage[] = clone $startdatum;
-			$startdatum->modify('+1 month');
+			$mailtage[] = clone $mailDatum;
+			$mailDatum->modify('+1 month');
 		}
 
-		// Define index to check if today is report day and to get the previous report day
-		$today = new DateTime('today');
-	// $today = new DateTime('2026-06-06 00:00:00'); // todo delete after testing
+		// Prüft, ob heute ein Mailtag ist
 		$mailtagIndex = array_search(
-			$today->format('Y-m-d H:i:s'),
+			date('Y-m-d'),
 			array_map(function ($date)
 			{
-				return $date->format('Y-m-d H:i:s');
+				return $date->format('Y-m-d');
 			}, $mailtage),
 			true
 		);
 
-		// Return if today is not Berichtstag (do not send Sammelmail)
+		// Exit wenn heute kein Mailtag ist
 		if ($mailtagIndex === false)
 		{
-			$this->logInfo('No mails sent. Today is not report day.');
+			// Info, wann nächster Mailtag ist
+			foreach ($mailtage as $mailtag)
+			{
+				if ($mailtag->format('Y-m-d') > date('Y-m-d'))
+				{
+					$this->logInfo('No mails sent - Next maildatum: ' . $mailtag->format('d.m.Y'));
+					$this->logInfo('End Job sendReflexionReadyInfoToKfl');
+					return;
+				}
+			}
+
+			// Info, wenn alle Mailtage in der Vergangenheit liegen
+			$this->logInfo('No mails sent - All Mail dates for ' . $studiensemester_kurzbz . ' have past.');
 			$this->logInfo('End Job sendReflexionReadyInfoToKfl');
 			return;
 		}
@@ -1786,7 +2065,7 @@ class Initiierung extends JOB_Controller
 		}
 
 		// Berichtsperiode Endedatum
-		$berichtszeitraumBis = $today;
+		$berichtszeitraumBis = new DateTime('today');
 
 		/**
 		 * var_dump('BERICHTSZEITRAUM VON - BIS:');
@@ -1949,7 +2228,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster 'mailreflexionen' by Studiensemester
+		// Zeitfenster 'mailreflexionen'
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -1965,10 +2244,10 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendProfillinienAvailable');
 		}
 
@@ -2143,7 +2422,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster 'mailreflexionen' by Studiensemester
+		// Zeitfenster 'mailreflexionen'
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -2159,10 +2438,10 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveStgAbschliessen');
 		}
 
@@ -2182,13 +2461,12 @@ class Initiierung extends JOB_Controller
 			$lvIds = array_column($lveLvs, 'lehrveranstaltung_id');
 			$distinctStgs = $this->_ci->evaluationlib->getDistinctStgs($lvIds);
 
-			// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+			// Next Studiensemester
 			$result = $this->_ci->StudiensemesterModel->getNext();
 			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
 
-			// Malve Stgl Abschluss Enddatum
-			$malve_enddatum = clone $zeitfensterEnde;
-			$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+			// MALVE Stgl Abschluss Enddatum
+			$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 			// Link zu Übersicht im CIS
 			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studiengaenge';
@@ -2267,7 +2545,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster 'mailreflexionen' by Studiensemester
+		// Zeitfenster 'mailreflexionen'
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -2283,23 +2561,22 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
+		// Exit wenn nicht Mail-Tag ist
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveKflAbschliessen');
 		}
 
 		// Mail an Kompetenzfeldleitungen
 		// -------------------------------------------------------------------------------------------------------------
 
-		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		// Next Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getNext();
 		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
 
-		// Malve Stgl Abschluss Enddatum
-		$malve_enddatum = clone $zeitfensterEnde;
-		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+		// MALVE Stgl Abschluss Enddatum
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
 		// Link zu Übersicht im CIS
 		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
@@ -2391,7 +2668,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster 'mailreflexionen' by Studiensemester
+		// Zeitfenster 'mailreflexionen'
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -2407,27 +2684,21 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		// Malve Stgl Abschluss Enddatum
-		$malve_enddatum = clone $zeitfensterEnde;
-		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+		// MALVE Abschluss bis 6 Wochen nach Zeitfensterende möglich
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
-		$remindDatum = clone $malve_enddatum;
-		$remindDatum->sub(new DateInterval('P1W'));    // todo check: macht jetzt 2026-09-10, da von 2026-09-17, nicht von 2026-09-16
+		// Eine Woche davor erinnern
+		$mailDatum = (clone $malve_enddatum)->modify('-1 week');
 
-//		var_dump($zeitfensterEnde->format('d.m.Y'));
-//		var_dump($malve_enddatum->format('d.m.Y'));
-//		var_dump($remindDatum->format('d.m.Y'));
-
-		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
-		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		// Exit wenn nicht Mail-Tag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveStglAbschliessenReminder');
 		}
 
 		// Mail an Studiengangsleitungen
 		// -------------------------------------------------------------------------------------------------------------
-
 		// Alle LVE Lehrveranstaltungen
 		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getLveLvsByStSem($studiensemester_kurzbz);
 
@@ -2449,7 +2720,7 @@ class Initiierung extends JOB_Controller
 			$abgeschlosseneMalve = hasData($result) ? getData($result) : [];
 			$abgeschlosseneMalveOes = array_column($abgeschlosseneMalve, 'oe_kurzbz');
 
-			// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+			// Next Studiensemester
 			$result = $this->_ci->StudiensemesterModel->getNext();
 			$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
 
@@ -2543,7 +2814,7 @@ class Initiierung extends JOB_Controller
 		$studiensemester = getData($result)[0];
 		$studiensemester_kurzbz = $studiensemester->studiensemester_kurzbz;
 
-		// Zeitfenster 'mailreflexionen' by Studiensemester
+		// Zeitfenster 'mailreflexionen'
 		$result = $this->_ci->LvevaluierungZeitfensterModel->loadWhere([
 			'typ' => 'mailreflexionen',
 			'studiensemester_kurzbz' => $studiensemester_kurzbz
@@ -2558,34 +2829,24 @@ class Initiierung extends JOB_Controller
 		$zeitfenster = getData($result)[0];
 		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
 
-		// Malve KFL Abschluss Enddatum
-		$malve_enddatum = clone $zeitfensterEnde;
-		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
+		// Malve STGL Abschluss bis 6 Wochen nach Zeitfensterende möglich
+		$malve_enddatum = (clone $zeitfensterEnde)->modify('+6 weeks');
 
-		$remindDatum = clone $malve_enddatum;
-		$remindDatum->sub(new DateInterval('P1W'));    // todo check: macht jetzt 2026-09-10, da von 2026-09-17, nicht von 2026-09-16
+		// Eine Woche davor erinnern
+		$mailDatum = (clone $malve_enddatum)->modify('-1 week');
 
-//		var_dump($zeitfensterEnde->format('d.m.Y'));
-//		var_dump($malve_enddatum->format('d.m.Y'));
-//		var_dump($remindDatum->format('d.m.Y'));
-
-		// Exit wenn nicht Mail-Tag ist	// todo check: wollen wir so einschränken?
-		if (date('Y-m-d') !== $remindDatum->format('Y-m-d'))
+		// Exit wenn nicht Mail-Tag ist
+		if (date('Y-m-d') !== $mailDatum->format('Y-m-d'))
 		{
-			$this->logInfo('No mails sent. Today is not mailing date.');
+			$this->logInfo('No mails sent- Next maildatum: ' . $mailDatum->format('d.m.Y'));
 			return $this->logInfo('End Job sendMalveKflAbschliessenReminder');
 		}
 
 		// Mail an Kompetenzfeldleitungen
 		// -------------------------------------------------------------------------------------------------------------
-
-		// Next Studiensemester // todo check mit QS ob next SS ihrer Anforderung entspricht: <EVALUIERUNGSSEMESTER JAHR PLUS 1 SEMESTER>
+		// Next Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getNext();
 		$next_studiensemester_kurzbz = hasData($result) ? getData($result)[0]->studiensemester_kurzbz : '';
-
-		// Malve Stgl Abschluss Enddatum
-		$malve_enddatum = clone $zeitfensterEnde;
-		$malve_enddatum = $malve_enddatum->add(new DateInterval('P6W')); // todo check: macht jetzt 2026-09-17, da von 2026-08-06 6 wochen dazu rechnet, nicht von 2026-08-05
 
 		// Link zu Übersicht im CIS
 		$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/evaluation/Studienbereich';
@@ -2620,10 +2881,8 @@ class Initiierung extends JOB_Controller
 				// Continue, wenn STGL die MALVE bereits abgeschlossen hat
 				if (in_array($kf->oe_kurzbz, $abgeschlosseneMalveOes))
 				{
-//					var_dump('continue for: ' . $kf->oe_kurzbz);
 					continue;
 				}
-//				var_dump('mail to '. $kf->oe_kurzbz);
 
 				$leitungMailReceiver_arr = $this->_getLeitungMailAddress($kf->oe_kurzbz);
 
