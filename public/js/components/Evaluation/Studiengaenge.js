@@ -42,15 +42,15 @@ export default {
 			.then(result => {
 				this.lists.stgs = result.data
 				this.selStgKz = result.data[0].studiengang_kz;
-				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
-			})
-			.then(result => {
-				this.malve = result.data
 				return this.$api.call(ApiEvaluation.getOrgformsByStg(this.selStgKz, this.selStudiensemester))
 			})
 			.then(result => {
 				this.lists.orgforms = result.data
 				this.selOrgform = result.data[0].orgform_kurzbz;
+				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
+			})
+			.then(result => {
+				this.malve = result.data;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
