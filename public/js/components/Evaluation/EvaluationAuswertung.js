@@ -552,38 +552,40 @@ export default {
 				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
 			</button>
 		</div>
-		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
-			<h4 class="mt-5 mb-4">3. Profillinien</h4>
-			<div v-if="evaluationView.open" class="row align-items-stretch g-3">
-				<div class="col-lg-6" v-if="lvImZeitverlaufData">
-					<div v-if="lvImZeitverlaufData" class="card h-100">
-						<div class="card-body">
-							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
+		<template v-if="lvImZeitverlaufData || lvImVergleichData">
+			<div class="evaluation-evaluation-auswertung-profillinien mb-3">
+				<h4 class="mt-5 mb-4">3. Profillinien</h4>
+				<div v-if="evaluationView.open" class="row align-items-stretch g-3">
+					<div class="col-lg-6" v-if="lvImZeitverlaufData">
+						<div v-if="lvImZeitverlaufData" class="card h-100">
+							<div class="card-body">
+								<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
+							</div>
+						</div>
+						<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+							<i class="fa fa-chart-column fa-3x mb-3"></i>
+								<div>Keine Daten verfügbar.</div>
 						</div>
 					</div>
-					<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
-						<i class="fa fa-chart-column fa-3x mb-3"></i>
-							<div>Keine Daten verfügbar.</div>
-					</div>
-				</div>
-				<div class="col-lg-6" v-if="lvImVergleichData">
-					<div v-if="lvImVergleichData" class="card h-100">
-						<div class="card-body">
-							<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>
+					<div class="col-lg-6" v-if="lvImVergleichData">
+						<div v-if="lvImVergleichData" class="card h-100">
+							<div class="card-body">
+								<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>
+							</div>
 						</div>
-					</div>
-					<div v-else class="h-100 border rounded p-5 mb-5 text-center text-secondary align-content-center">
-						<i class="fa fa-chart-column fa-3x mb-3"></i>
-							<div>{{lvImVergleichMsg}}</div>
+						<div v-else class="h-100 border rounded p-5 mb-5 text-center text-secondary align-content-center">
+							<i class="fa fa-chart-column fa-3x mb-3"></i>
+								<div>{{lvImVergleichMsg}}</div>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-		<div class="bg-primary-subtle mt-5 py-5 text-center">
+			<div class="bg-primary-subtle mt-5 py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">
 				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
 			</button>
 		</div>
+		</template>
 	</div>	
 	`
 }
