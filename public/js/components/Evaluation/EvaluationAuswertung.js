@@ -54,7 +54,6 @@ export default {
 	created() {
 		let apiCallAuswertungData = null;
 		let apiCallTextantworten = null;
-		let apiCallLvsImVergleich = null;
 
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			apiCallAuswertungData = this.lvevaluierung_id
@@ -63,16 +62,9 @@ export default {
 			apiCallTextantworten = this.lvevaluierung_id
 					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
-			apiCallLvsImVergleich = this.lvevaluierung_id
-					? ApiEvaluation.getLvsImVergleichDataByLve(this.lvevaluierung_id,this.evalData.studiensemester_kurzbz, this.role)
-					: ApiEvaluation.getLvsImVergleichDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.evalData.studiensemester_kurzbz);
 		}
 		else if (this.lehrveranstaltung_template_id && this.studiensemester) {
 			apiCallAuswertungData = ApiEvaluation.getAuswertungDataByLvTemplate(
-					this.lehrveranstaltung_template_id,
-					this.studiensemester
-			);
-			apiCallLvsImVergleich = ApiEvaluation.getLvsImVergleichDataByLvTemplate(
 					this.lehrveranstaltung_template_id,
 					this.studiensemester
 			);
@@ -96,14 +88,6 @@ export default {
 			})
 			.then(result => {
 				this.auswertungHelpUrl = result.data;
-
-				return this.$api.call(apiCallLvsImVergleich)
-			})
-			.then(result => {
-				this.lvImVergleichData = result.data?.lvImVergleichData;
-				this.lvImVergleichMsg = result.data?.lvImVergleichMsg;
-				this.lvImVergleichTitle = result.data?.lvImVergleichTitle;
-				this.lvImVergleichSubtitle = result.data?.lvImVergleichSubtitle;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
@@ -584,7 +568,7 @@ export default {
 							<div>Keine Daten verfügbar.</div>
 					</div>
 				</div>
-				<div class="col-lg-6">
+				<div class="col-lg-6" v-if="lvImVergleichData">
 					<div v-if="lvImVergleichData" class="card h-100">
 						<div class="card-body">
 							<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>

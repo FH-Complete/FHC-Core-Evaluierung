@@ -43,19 +43,12 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getLvsImVergleichDataByLve' => [
-					self::BERECHTIGUNG_KF . ':r',
-					self::BERECHTIGUNG_STG . ':r',
-					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getLvsImVergleichDataByLveLv' => [
-					self::BERECHTIGUNG_KF . ':r',
-					self::BERECHTIGUNG_STG . ':r',
-					self::BERECHTIGUNG_INIT . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getLvsImVergleichDataByLvTemplate' => [
-					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
 				'getAuswertungHelpUrl' => [
