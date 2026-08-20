@@ -74,8 +74,6 @@ export default {
 			.call(apiCallAuswertungData)
 			.then(result => {
 				this.auswertungData = result.data.auswertungData;
-				this.lvImZeitverlaufData = result.data.lvImZeitverlaufData;
-				this.lvImZeitverlaufMsg = result.data.lvImZeitverlaufMsg;
 
 				return apiCallTextantworten
 						? this.$api.call(apiCallTextantworten)
@@ -557,7 +555,7 @@ export default {
 		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
 			<h4 class="mt-5 mb-4">3. Profillinien</h4>
 			<div v-if="evaluationView.open" class="row align-items-stretch g-3">
-				<div class="col-lg-6">
+				<div class="col-lg-6" v-if="lvImZeitverlaufData">
 					<div v-if="lvImZeitverlaufData" class="card h-100">
 						<div class="card-body">
 							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>

@@ -654,14 +654,14 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinien data - LV im Zeitverlauf
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz);
-
-		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
-		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
+//		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLve($lve, $lveLv, $studiensemester_kurzbz);
+//
+//		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+//		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
-			'lvImZeitverlaufData' => $lvImZeitverlaufData
+			'lvImZeitverlaufData' => null
 		]);
 	}
 
@@ -707,14 +707,14 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinien data - LV im Zeitverlauf
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
-
-		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
-		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
+//		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByLveLv($lveLv, $studiensemester_kurzbz);
+//
+//		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+//		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
-			'lvImZeitverlaufData' => $lvImZeitverlaufData
+			'lvImZeitverlaufData' => null
 		]);
 	}
 
@@ -765,18 +765,18 @@ class Evaluation extends FHCAPI_Controller
 
 		// Profillinien data - LV im Zeitverlauf
 		// -------------------------------------------------------------------------------------------------------------
-		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
-			$lehrveranstaltung_template_id,
-			$studiensemester_kurzbz
-		);
-		// $lvImZeitverlaufData = $this->getTESTlvImZeitverlaufData();	// !!!todo delete - nur test
-
-		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
-		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
+//		$lvImZeitverlaufData = $this->getLvImZeitverlaufDataByTemplate(
+//			$lehrveranstaltung_template_id,
+//			$studiensemester_kurzbz
+//		);
+//		// $lvImZeitverlaufData = $this->getTESTlvImZeitverlaufData();	// !!!todo delete - nur test
+//
+//		// Merge Fragebogengruppen and Fragen across all semesters to ensure consistent chart rendering
+//		$this->normalizeFragenbogenStruktur($lvImZeitverlaufData);
 
 		$this->terminateWithSuccess([
 			'auswertungData' => $auswertungData,
-			'lvImZeitverlaufData' => $lvImZeitverlaufData
+			'lvImZeitverlaufData' => null
 		]);
 	}
 
