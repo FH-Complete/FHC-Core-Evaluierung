@@ -2206,6 +2206,9 @@ class Initiierung extends JOB_Controller
 	 */
 	public function sendProfillinienAvailable()
 	{
+		// Bis auf weiteres job nicht verwenden.
+		exit;
+
 		$this->logInfo('Start Job sendProfillinienAvailable');
 
 		// Aktuelles Studiensemester

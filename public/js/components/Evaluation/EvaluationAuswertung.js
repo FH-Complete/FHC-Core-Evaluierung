@@ -54,7 +54,6 @@ export default {
 	created() {
 		let apiCallAuswertungData = null;
 		let apiCallTextantworten = null;
-		let apiCallLvsImVergleich = null;
 
 		if (this.lvevaluierung_id || this.lvevaluierung_lehrveranstaltung_id) {
 			apiCallAuswertungData = this.lvevaluierung_id
@@ -63,16 +62,9 @@ export default {
 			apiCallTextantworten = this.lvevaluierung_id
 					? ApiEvaluation.getTextantwortenByLve(this.lvevaluierung_id, this.role)
 					: ApiEvaluation.getTextantwortenByLveLv(this.lvevaluierung_lehrveranstaltung_id);
-			apiCallLvsImVergleich = this.lvevaluierung_id
-					? ApiEvaluation.getLvsImVergleichDataByLve(this.lvevaluierung_id,this.evalData.studiensemester_kurzbz, this.role)
-					: ApiEvaluation.getLvsImVergleichDataByLveLv(this.lvevaluierung_lehrveranstaltung_id, this.evalData.studiensemester_kurzbz);
 		}
 		else if (this.lehrveranstaltung_template_id && this.studiensemester) {
 			apiCallAuswertungData = ApiEvaluation.getAuswertungDataByLvTemplate(
-					this.lehrveranstaltung_template_id,
-					this.studiensemester
-			);
-			apiCallLvsImVergleich = ApiEvaluation.getLvsImVergleichDataByLvTemplate(
 					this.lehrveranstaltung_template_id,
 					this.studiensemester
 			);
@@ -82,8 +74,6 @@ export default {
 			.call(apiCallAuswertungData)
 			.then(result => {
 				this.auswertungData = result.data.auswertungData;
-				this.lvImZeitverlaufData = result.data.lvImZeitverlaufData;
-				this.lvImZeitverlaufMsg = result.data.lvImZeitverlaufMsg;
 
 				return apiCallTextantworten
 						? this.$api.call(apiCallTextantworten)
@@ -96,14 +86,6 @@ export default {
 			})
 			.then(result => {
 				this.auswertungHelpUrl = result.data;
-
-				return this.$api.call(apiCallLvsImVergleich)
-			})
-			.then(result => {
-				this.lvImVergleichData = result.data?.lvImVergleichData;
-				this.lvImVergleichMsg = result.data?.lvImVergleichMsg;
-				this.lvImVergleichTitle = result.data?.lvImVergleichTitle;
-				this.lvImVergleichSubtitle = result.data?.lvImVergleichSubtitle;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
@@ -570,38 +552,40 @@ export default {
 				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
 			</button>
 		</div>
-		<div class="evaluation-evaluation-auswertung-profillinien mb-3">
-			<h4 class="mt-5 mb-4">3. Profillinien</h4>
-			<div v-if="evaluationView.open" class="row align-items-stretch g-3">
-				<div class="col-lg-6">
-					<div v-if="lvImZeitverlaufData" class="card h-100">
-						<div class="card-body">
-							<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
+		<template v-if="lvImZeitverlaufData || lvImVergleichData">
+			<div class="evaluation-evaluation-auswertung-profillinien mb-3">
+				<h4 class="mt-5 mb-4">3. Profillinien</h4>
+				<div v-if="evaluationView.open" class="row align-items-stretch g-3">
+					<div class="col-lg-6" v-if="lvImZeitverlaufData">
+						<div v-if="lvImZeitverlaufData" class="card h-100">
+							<div class="card-body">
+								<fhc-chart :chartOptions="chartOptionsLvImZeitverlauf"></fhc-chart>
+							</div>
+						</div>
+						<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
+							<i class="fa fa-chart-column fa-3x mb-3"></i>
+								<div>Keine Daten verfügbar.</div>
 						</div>
 					</div>
-					<div v-else class="border rounded p-5 mb-5 text-center text-secondary">
-						<i class="fa fa-chart-column fa-3x mb-3"></i>
-							<div>Keine Daten verfügbar.</div>
-					</div>
-				</div>
-				<div class="col-lg-6">
-					<div v-if="lvImVergleichData" class="card h-100">
-						<div class="card-body">
-							<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>
+					<div class="col-lg-6" v-if="lvImVergleichData">
+						<div v-if="lvImVergleichData" class="card h-100">
+							<div class="card-body">
+								<fhc-chart :chartOptions="chartOptionsLvImVergleich"></fhc-chart>
+							</div>
 						</div>
-					</div>
-					<div v-else class="h-100 border rounded p-5 mb-5 text-center text-secondary align-content-center">
-						<i class="fa fa-chart-column fa-3x mb-3"></i>
-							<div>{{lvImVergleichMsg}}</div>
+						<div v-else class="h-100 border rounded p-5 mb-5 text-center text-secondary align-content-center">
+							<i class="fa fa-chart-column fa-3x mb-3"></i>
+								<div>{{lvImVergleichMsg}}</div>
+						</div>
 					</div>
 				</div>
 			</div>
-		</div>
-		<div class="bg-primary-subtle mt-5 py-5 text-center">
+			<div class="bg-primary-subtle mt-5 py-5 text-center">
 			<button class="btn btn-primary" @click="changeView()">
 				<i class="fa fa-list-check me-2"></i>Zur LV-Reflexion
 			</button>
 		</div>
+		</template>
 	</div>	
 	`
 }
