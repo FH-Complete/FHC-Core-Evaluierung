@@ -2263,8 +2263,8 @@ class Initiierung extends JOB_Controller
 		{
 			$lveLvs = hasData($result) ? getData($result) : [];
 
-			$gruppe_sent_users = [];
-			$gesamt_sent_users = [];
+			$lehrende_sent_users = [];
+			$lvleitung_sent_users = [];
 
 			$link = CIS_ROOT . 'index.ci.php/extensions/FHC-Core-Evaluierung/Initiierung';
 
@@ -2297,11 +2297,11 @@ class Initiierung extends JOB_Controller
 						{
 							foreach ($rowle->lektoren as $rowlkt)
 							{
-								if (!in_array($rowlkt['mitarbeiter_uid'], $gruppe_sent_users))
+								if (!in_array($rowlkt['mitarbeiter_uid'], $lehrende_sent_users))
 								{
-									$gruppe_sent_users[] = $rowlkt['mitarbeiter_uid'];
+									$lehrende_sent_users[] = $rowlkt['mitarbeiter_uid'];
 									$uid = $rowlkt['mitarbeiter_uid'];
-									//echo "\nGruppe Mail to ".$rowlkt['mitarbeiter_uid'];
+						// echo "\nGruppe Mail to Lektor ".$rowlkt['mitarbeiter_uid'];
 
 									$data = [
 										'vorname' => $rowlkt['vorname'],
@@ -2352,19 +2352,22 @@ class Initiierung extends JOB_Controller
 
 						foreach ($dataLektor as $rowLektor)
 						{
-							if (!in_array($rowLektor->uid, $gesamt_sent_users))
+							// LV-Leitung: nur LVL Mail Template
+							if ($rowLektor->lvleiter)
 							{
-								$gesamt_sent_users[] = $rowLektor->uid;
-								//echo "\nGesamt Mail to ".$rowLektor->uid;
+								if (!in_array($rowLektor->uid, $lvleitung_sent_users))
+								{
+									$lvleitung_sent_users[] = $rowLektor->uid;
+						//echo "\nGesamt Mail to LVLeitung ".$rowLektor->uid;
 
-								$uid = $rowLektor->uid;
+									$uid = $rowLektor->uid;
 
-								$data = [
-									'vorname' => $rowLektor->vorname,
-									'nachname' => $rowLektor->nachname,
-									'studiensemester' => $studiensemester_kurzbz,
-									'link' => $link
-								];
+									$data = [
+										'vorname' => $rowLektor->vorname,
+										'nachname' => $rowLektor->nachname,
+										'studiensemester' => $studiensemester_kurzbz,
+										'link' => $link
+									];
 
 									$mailSent = sendSanchoMail(
 										'LVE_LVL_TEXT_7',
@@ -2375,14 +2378,52 @@ class Initiierung extends JOB_Controller
 										'sancho_footer_lvevaluierung.jpg'
 									);
 
-								if ($mailSent)
-								{
-									$this->logInfo('LVE_LVL_TEXT_7 to ' . $uid);
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LVL_TEXT_7 to ' . $uid);
 
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LVL_TEXT_7 to ' . $uid);
+									}
 								}
-								else
+							}
+							else
+							{
+								// Übrige Lehrnde: LEHR Mail Template
+								if (!in_array($rowLektor->uid, $lehrende_sent_users))
 								{
-									$this->logError('Failed to send LVE_LVL_TEXT_7 to ' . $uid);
+									$lehrende_sent_users[] = $rowLektor->uid;
+								//echo "\nGesamt Mail to Lektor ".$rowLektor->uid;
+
+									$uid = $rowLektor->uid;
+
+									$data = [
+										'vorname' => $rowLektor->vorname,
+										'nachname' => $rowLektor->nachname,
+										'studiensemester' => $studiensemester_kurzbz,
+										'link' => $link,
+										'zielgruppe' => 'Lehrende'
+									];
+
+									$mailSent = sendSanchoMail(
+										'LVE_LEHR_TEXT_5',
+										$data,
+										$uid . '@' . DOMAIN,
+										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
+
+									if ($mailSent)
+									{
+										$this->logInfo('LVE_LEHR_TEXT_5 to ' . $uid);
+									}
+									else
+									{
+										$this->logError('Failed to send LVE_LEHR_TEXT_5 to ' . $uid);
+									}
 								}
 							}
 						}
@@ -2391,7 +2432,7 @@ class Initiierung extends JOB_Controller
 			}
 		}
 
-		$this->logInfo('End Job sendProfillinienAvailable');
+		$this->logInfo('End Job sendEvaluationBeendetInfo');
 	}
 
 	/**
