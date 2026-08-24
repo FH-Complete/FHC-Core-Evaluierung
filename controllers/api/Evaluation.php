@@ -2536,8 +2536,7 @@ class Evaluation extends FHCAPI_Controller
 			$result = $this->LehrveranstaltungModel->loadWhere(
 				[
 					'stplsem.studiensemester_kurzbz' => $studiensemester_kurzbz,
-					'lehre.tbl_lehrveranstaltung.studiengang_kz' => $stg->studiengang_kz,
-					'lehre.tbl_lehrveranstaltung.orgform_kurzbz' => $stg->orgform_kurzbz
+					'lehre.tbl_lehrveranstaltung.studiengang_kz' => $stg->studiengang_kz
 				]
 			);
 
