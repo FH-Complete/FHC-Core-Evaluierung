@@ -22,7 +22,10 @@ export default {
 			selStgKz: null,
 			selOrgform: null,
 			table: null,
-			malve: null
+			malve: {
+				data: null,
+				submit: false
+			}
 		}
 	},
 	created() {
@@ -50,7 +53,8 @@ export default {
 				return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 			})
 			.then(result => {
-				this.malve = result.data;
+				this.malve.data = result.data.data;
+				this.malve.submit = result.data.submit;
 			})
 			.catch(error => this.$fhcAlert.handleSystemError(error) );
 	},
@@ -67,7 +71,7 @@ export default {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/Redirect/toStg/' + this.selStgKz;
 		},
 		isDisabledSubmitMalveBtn(){
-			return this.malve?.length > 0;
+			return !this.malve.submit;
 		},
 		texts() {
 			const isLehrgang = this.selStgKz < 0 || this.selStgKz > 10000;
@@ -85,8 +89,8 @@ export default {
 						? 'MALVE-Lehrgang abgeschlossen'
 						: 'MALVE-STGL abgeschlossen',
 
-				malveAbgeschlossenTxt: this.malve !== null
-						? `${isLehrgang ? 'MALVE-Lehrgang' : 'MALVE-STGL'} abgeschlossen am ${this.DateHelper.formatDate(this.malve[0]?.insertamum)}`
+				malveAbgeschlossenTxt: this.malve.data !== null
+						? `${isLehrgang ? 'MALVE-Lehrgang' : 'MALVE-STGL'} abgeschlossen am ${this.DateHelper.formatDate(this.malve.data[0]?.insertamum)}`
 						: null,
 
 				malveConfirm: `Ich habe alle LV-Evaluierungen des ${isLehrgang ? 'Lehrgangs' : 'Studiengangs'} - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die ${isLehrgang ? 'Lehrgang-Weiterentwicklung' : 'STG-Weiterentwicklung'} wurden abgeleitet.`,
@@ -363,7 +367,10 @@ export default {
 
 					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
 				})
-				.then(result => this.malve = result.data)
+				.then(result => {
+					this.malve.data = result.data.data;
+					this.malve.submit = result.data.submit;
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onStgChange() {
@@ -381,7 +388,10 @@ export default {
 
 					return this.$api.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester));
 				})
-				.then(result => this.malve = result.data)
+				.then(result => {
+					this.malve.data = result.data.data;
+					this.malve.submit = result.data.submit;
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		onOrgformChange() {
@@ -391,7 +401,10 @@ export default {
 
 			this.$api
 				.call(ApiEvaluation.getMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
-				.then(result => this.malve = result.data)
+				.then(result => {
+					this.malve.data = result.data.data;
+					this.malve.submit = result.data.submit;
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id){
@@ -439,7 +452,8 @@ export default {
 			this.$api.call(ApiEvaluation.saveMalveByStg(this.selStgKz, this.selOrgform, this.selStudiensemester))
 				.then(result => {
 					if (result.data) {
-						this.malve = result.data;
+						this.malve.data = result.data;
+						this.malve.submit = false;
 						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
 					}
 				})
@@ -549,16 +563,16 @@ export default {
 						</a>
 					</span>
 					<button 
-						v-if="malve !== null"
+						v-if="malve.data !== null"
 						class="btn"
-						:class="malve?.length > 0 ? 'btn-success' : 'btn-primary'" 
+						:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
 						@click="submitMalve" 
 						:disabled="isDisabledSubmitMalveBtn"
 						>
-						<i v-if="malve?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-						{{ malve.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
+						<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+						{{ malve.data.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
 					</button>
-					<span v-if="malve !== null && malve.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
+					<span v-if="malve.data !== null && malve.data.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
 				</template>
 			</core-filter-cmpt>
 		</div>
