@@ -2196,7 +2196,7 @@ class Initiierung extends JOB_Controller
 	}
 
 	/**
-	 * Mails LVL_TEXT_7 und LEHR_TEXT_5: Profillinien verfügbar
+	 * Mails LVL_TEXT_7 und LEHR_TEXT_5: LV-Evaluation beendet.
 	 *
 	 * Für LVs mit Evaluierung auf Gesamt-LV Evaluierungsebene: Mail an LV-Leitung UND an Lehrende.
 	 * Für LVs mit Evaluierung auf Gruppen Evaluierungsebene: Mail an Lehrende.
@@ -2204,12 +2204,10 @@ class Initiierung extends JOB_Controller
 	 *
 	 * @return void
 	 */
-	public function sendProfillinienAvailable()
+	public function sendEvaluationBeendetInfo()
 	{
-		// Bis auf weiteres job nicht verwenden.
-		exit;
 
-		$this->logInfo('Start Job sendProfillinienAvailable');
+		$this->logInfo('Start Job sendEvaluationBeendetInfo');
 
 		// Aktuelles Studiensemester
 		$result = $this->_ci->StudiensemesterModel->getAkt();
@@ -2225,7 +2223,7 @@ class Initiierung extends JOB_Controller
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
-			return $this->logInfo('End Job sendProfillinienAvailable');
+			return $this->logInfo('End Job sendEvaluationBeendetInfo');
 		}
 
 		$studiensemester = getData($result)[0];
@@ -2240,7 +2238,7 @@ class Initiierung extends JOB_Controller
 		if (!hasData($result))
 		{
 			$this->logError('Missing Lvevaluierung Zeitfenster');
-			return $this->logInfo('End Job sendProfillinienAvailable');
+			return $this->logInfo('End Job sendEvaluationBeendetInfo');
 
 		}
 
@@ -2251,7 +2249,7 @@ class Initiierung extends JOB_Controller
 		if (date('Y-m-d') !== $zeitfensterEnde->format('Y-m-d'))
 		{
 			$this->logInfo('No mails sent- Next maildatum: ' . $zeitfensterEnde->format('d.m.Y'));
-			return $this->logInfo('End Job sendProfillinienAvailable');
+			return $this->logInfo('End Job sendEvaluationBeendetInfo');
 		}
 
 		// Alle LVE Lehrveranstaltungen
@@ -2317,7 +2315,7 @@ class Initiierung extends JOB_Controller
 										'LVE_LEHR_TEXT_5',
 										$data,
 										$uid . '@' . DOMAIN,
-										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
+										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
 										'sancho_header_lvevaluierung.jpg',
 										'sancho_footer_lvevaluierung.jpg'
 									);
@@ -2368,14 +2366,14 @@ class Initiierung extends JOB_Controller
 									'link' => $link
 								];
 
-								$mailSent = sendSanchoMail(
-									'LVE_LVL_TEXT_7',
-									$data,
-									$uid . '@' . DOMAIN,
-									'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet – zusätzliche Profillinie verfügbar',
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
-								);
+									$mailSent = sendSanchoMail(
+										'LVE_LVL_TEXT_7',
+										$data,
+										$uid . '@' . DOMAIN,
+										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
+										'sancho_header_lvevaluierung.jpg',
+										'sancho_footer_lvevaluierung.jpg'
+									);
 
 								if ($mailSent)
 								{
