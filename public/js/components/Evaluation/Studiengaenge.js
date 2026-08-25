@@ -95,6 +95,11 @@ export default {
 
 				malveConfirm: `Ich habe alle LV-Evaluierungen des ${isLehrgang ? 'Lehrgangs' : 'Studiengangs'} - ${this.selStgFullName} im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die ${isLehrgang ? 'Lehrgang-Weiterentwicklung' : 'STG-Weiterentwicklung'} wurden abgeleitet.`,
 
+				malveAbschliessenBtnTooltip:
+					!this.isDisabledSubmitMalveBtn || this.malve.data?.length > 0
+						? null
+						: 'MALVE Abschluss erst nach Ende des allgemeinen Evaluationszeitraums möglich',
+
 				stgWeiterentwicklungBtnTooltip: isLehrgang
 						? 'MALVE Lehrgang: Schnittstelle zur Maßnahmenableitung für den Lehrgang in OP.'
 						: 'MALVE STGL: Schnittstelle zur Maßnahmenableitung für den STG in OP.'
@@ -562,16 +567,18 @@ export default {
 							<i class="fa fa-external-link me-2"></i>{{texts.stgWeiterentwicklungBtn}}
 						</a>
 					</span>
-					<button 
-						v-if="malve.data !== null"
-						class="btn"
-						:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
-						@click="submitMalve" 
-						:disabled="isDisabledSubmitMalveBtn"
-						>
-						<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-						{{ malve.data.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
-					</button>
+					<span v-tooltip :title="texts.malveAbschliessenBtnTooltip" class="d-inline-block">
+						<button 
+							v-if="malve.data !== null"
+							class="btn"
+							:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
+							@click="submitMalve" 
+							:disabled="isDisabledSubmitMalveBtn"
+							>
+							<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+							{{ malve.data.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
+						</button>
+					</span>
 					<span v-if="malve.data !== null && malve.data.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
 				</template>
 			</core-filter-cmpt>

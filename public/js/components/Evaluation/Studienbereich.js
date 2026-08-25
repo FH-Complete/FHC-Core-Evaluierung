@@ -64,11 +64,6 @@ export default {
 		isDisabledSubmitMalveBtn() {
 			return !this.malve.submit;
 		},
-		malveAbgeschlossenTxt() {
-			if (this.malve.data !== null){
-				return 'MALVE-KFL abgeschlossen am ' + this.DateHelper.formatDate(this.malve.data[0].insertamum)
-			}
-		},
 		tabulatorOptions() {
 			const self = this;
 			return {
@@ -493,6 +488,20 @@ export default {
 				]
 			}
 		},
+		texts() {
+			return {
+				malveAbschliessenBtn: 'MALVE-KFL abschließen',
+				malveAbgeschlossenBtn:'MALVE-KFL abgeschlossen',
+				malveConfirm: `Ich habe alle LV-Evaluierungen des Kompetenzfelds - ${this.selOeFullName} - im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die KF-Weiterentwicklung wurden abgeleitet.`,
+				malveAbgeschlossenTxt: this.malve.data !== null && this.malve.data[0]
+					? 'MALVE-KFL abgeschlossen am ' + this.DateHelper.formatDate(this.malve.data[0].insertamum)
+					: null,
+				malveAbschliessenBtnTooltip:
+					!this.isDisabledSubmitMalveBtn || this.malve.data?.length > 0
+						? null
+						: 'MALVE Abschluss erst nach Ende des allgemeinen Evaluationszeitraums möglich',
+			}
+		}
 	},
 	methods: {
 		onStudiensemesterChange() {
@@ -548,7 +557,7 @@ export default {
 		async submitMalve() {
 			if (await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: `Ich habe alle LV-Evaluierungen des Kompetenzfelds - ${this.selOeFullName} - im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die KF-Weiterentwicklung wurden abgeleitet.`
+				message: this.texts.malveConfirm
 			}) === false
 			) {
 				return;
@@ -638,17 +647,19 @@ export default {
 				]">
 				<template v-slot:actions>
 				 	<div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
-						<button 
-							v-if="malve.data !== null"
-							class="btn"
-							:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
-							@click="submitMalve" 
-							:disabled="isDisabledSubmitMalveBtn"
-							>
-							<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-							{{ malve.data.length > 0 ? 'MALVE-KFL abgeschlossen' : 'MALVE-KFL abschließen' }}
-						</button>
-						<span v-if="malve.data !== null && malve.data.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ malveAbgeschlossenTxt }}</span>
+				 		<span v-tooltip :title="texts.malveAbschliessenBtnTooltip" class="d-inline-block">
+							<button 
+								v-if="malve.data !== null"
+								class="btn"
+								:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
+								@click="submitMalve" 
+								:disabled="isDisabledSubmitMalveBtn"
+								>
+								<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
+								{{ malve.data.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
+							</button>
+						</span>
+						<span v-if="malve.data !== null && malve.data.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
 					</div>
 				</template>
 			</core-filter-cmpt>
