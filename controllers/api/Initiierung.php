@@ -87,6 +87,8 @@ class Initiierung extends FHCAPI_Controller
 	public function getDataForEvaluierungByLe()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		// immer true, da API request nur bei Gruppenevaluierung
+		$selectedLvAufgeteilt = filter_var($this->input->get('lv_aufgeteilt'), FILTER_VALIDATE_BOOLEAN);
 		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
 		$canSwitch = true;
 		$canSwitchInfo = [];
@@ -113,7 +115,10 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get and merge all Evaluierungen of that LV
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$groupedByLe = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLe, $lves, $lveLv->lv_aufgeteilt);
+
+		// Wir wollen die Daten und die editableChecks für die aktuelle Auswahl (Gruppenevaluierung) abfragen,
+		// und nicht das 'bestehendes' lveLv->lv_aufgeteilt aus der Datenbank.
+		$groupedByLe = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLe, $lves, $selectedLvAufgeteilt);
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
@@ -162,6 +167,9 @@ class Initiierung extends FHCAPI_Controller
 	public function getDataForEvaluierungByLv()
 	{
 		$lvevaluierung_lehrveranstaltung_id = $this->input->get('lvevaluierung_lehrveranstaltung_id');
+		// immer false, da API request nur bei Gesamt-LV Evaluierung
+		$selectedLvAufgeteilt = filter_var($this->input->get('lv_aufgeteilt'), FILTER_VALIDATE_BOOLEAN);
+
 		$lvLeitungRequired = $this->config->item('lvLeitungRequired');
 		$canSwitch = true;
 		$canSwitchInfo = [];
@@ -192,7 +200,10 @@ class Initiierung extends FHCAPI_Controller
 
 		// Get and merge all Evaluierungen of that LV
 		$lves = $this->getLvevaluierungByLveLvOrFail($lvevaluierung_lehrveranstaltung_id);
-		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $lveLv->lv_aufgeteilt);
+
+		// Wir wollen die Daten und die editableChecks für die aktuelle Auswahl (Gesamt-LV) abfragen,
+		// und nicht das 'bestehendes' lveLv->lv_aufgeteilt aus der Datenbank...
+		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $selectedLvAufgeteilt);
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
@@ -249,7 +260,7 @@ class Initiierung extends FHCAPI_Controller
 	 */
 	public function updateLvAufgeteilt(){
 		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
-		$lv_aufgeteilt = $this->input->post('lv_aufgeteilt');
+		$lv_aufgeteilt = filter_var($this->input->post('lv_aufgeteilt'), FILTER_VALIDATE_BOOLEAN);
 
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($lvevaluierung_lehrveranstaltung_id);
 
@@ -491,7 +502,7 @@ class Initiierung extends FHCAPI_Controller
 
 		if ($lv_aufgeteilt)
 		{
-			$this->form_validation->set_rules('lehreinheit_id', 'LE-ID', 'required');
+			$this->form_validation->set_rules('lehreinheit_id', 'LE-ID', 'required', ['required' => 'Bitte erst Evaluierungsebene Gesamt-LV speichern']);
 		}
 
 		// On error

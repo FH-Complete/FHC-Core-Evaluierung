@@ -9,23 +9,25 @@ export default {
 			}
 		}
 	},
-	getDataForEvaluierungByLe(lvevaluierung_lehrveranstaltung_id)
+	getDataForEvaluierungByLe(lvevaluierung_lehrveranstaltung_id, lv_aufgeteilt)
 	{
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getDataForEvaluierungByLe',
 			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				lv_aufgeteilt: lv_aufgeteilt
 			}
 		}
 	},
-	getDataForEvaluierungByLv(lvevaluierung_lehrveranstaltung_id)
+	getDataForEvaluierungByLv(lvevaluierung_lehrveranstaltung_id, lv_aufgeteilt)
 	{
 		return {
 			method: 'get',
 			url: '/extensions/FHC-Core-Evaluierung/api/Initiierung/getDataForEvaluierungByLv',
 			params: {
-				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id
+				lvevaluierung_lehrveranstaltung_id: lvevaluierung_lehrveranstaltung_id,
+				lv_aufgeteilt: lv_aufgeteilt
 			}
 		}
 	},
