@@ -175,7 +175,10 @@ class InitiierungLib
 
 	public function mergeEvaluierungenIntoData($data, $evaluierungen, $isAufgeteilt)
 	{
-		foreach ($data as &$item) {
+		foreach ($data as &$item)
+		{
+			$item->lv_aufgeteilt = $isAufgeteilt;
+			
 			$evalMatch = null;
 
 			if ($isAufgeteilt) {

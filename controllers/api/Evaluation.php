@@ -2677,6 +2677,12 @@ class Evaluation extends FHCAPI_Controller
 		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
+		$malve = [
+			'data' => null,
+			'submit' => false,
+		];
+
+		// Prüfung ob es bereits eine MALVE gibt
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
 		$result = $this->StudiengangModel->load($studiengang_kz);
 
@@ -2693,12 +2699,31 @@ class Evaluation extends FHCAPI_Controller
 
 			$data = $this->getDataOrTerminateWithError($result);
 
-			$this->terminateWithSuccess($data);
+			// Malve gefunden
+			$malve['data'] = $data;
 		}
-		else
+
+		// Prüfung, ob MALVE abgeschlossen werden darf
+		$result = $this->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
 		{
-			$this->terminateWithError('No Studiengang found to get MALVE data');
+			$this->terminateWithError('Kein Zeitfenster vorhanden');
 		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// MALVE-Button enablen wenn MALVE zeitlich abgeschlossen werden darf und nicht bereits eine MALVE existiert
+		if ((date('Y-m-d') >= $zeitfensterEnde->format('Y-m-d')) && empty($malve['data']))
+		{
+			$malve['submit'] = true;
+		}
+
+		$this->terminateWithSuccess($malve);
 	}
 
 	/**
@@ -2928,6 +2953,12 @@ class Evaluation extends FHCAPI_Controller
 
 		if (!$isKFL && !$isBerechtigt_ADMIN) $this->terminateWithSuccess(null);
 
+		$malve = [
+			'data' => null,
+			'submit' => false,
+		];
+
+		// Prüfung ob es bereits eine MALVE gibt
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 		$result = $this->LvevaluierungMalveModel->loadWhere([
 			'oe_kurzbz' => $oe_kurzbz,
@@ -2936,7 +2967,30 @@ class Evaluation extends FHCAPI_Controller
 
 		$data = $this->getDataOrTerminateWithError($result);
 
-		$this->terminateWithSuccess($data);
+		// Malve gefunden
+		$malve['data'] = $data;
+
+		// Prüfung, ob MALVE abgeschlossen werden darf
+		$result = $this->LvevaluierungZeitfensterModel->loadWhere([
+			'typ' => 'mailreflexionen',
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (!hasData($result))
+		{
+			$this->terminateWithError('Kein Zeitfenster vorhanden');
+		}
+
+		$zeitfenster = getData($result)[0];
+		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
+
+		// MALVE-Button enablen wenn MALVE zeitlich abgeschlossen werden darf und nicht bereits eine MALVE existiert
+		if ((date('Y-m-d') >= $zeitfensterEnde->format('Y-m-d')) && empty($malve['data']))
+		{
+			$malve['submit'] = true;
+		}
+
+		$this->terminateWithSuccess($malve);
 	}
 
 	/**

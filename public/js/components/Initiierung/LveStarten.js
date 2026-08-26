@@ -97,8 +97,8 @@ export default {
 			if (!lveLvId) return Promise.reject("No LveLvID provided");
 
 			const apiCall = lv_aufgeteilt
-				? ApiInitiierung.getDataForEvaluierungByLe(lveLvId)
-				: ApiInitiierung.getDataForEvaluierungByLv(lveLvId);
+				? ApiInitiierung.getDataForEvaluierungByLe(lveLvId, lv_aufgeteilt)
+				: ApiInitiierung.getDataForEvaluierungByLv(lveLvId, lv_aufgeteilt);
 
 			// Return basic data
 			return this.$api
