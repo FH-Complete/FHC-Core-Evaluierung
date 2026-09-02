@@ -391,7 +391,14 @@ class Initiierung extends JOB_Controller
 		$this->logInfo('Start Job sendEvaluierungsebeneAnpassenReminder');
 
 		// Next Studiensemester
-		$result = $this->_ci->StudiensemesterModel->getNext();
+		$result = $this->_ci->StudiensemesterModel->getAkt();
+
+		if (!hasData($result))
+		{
+			// Fallback Sommerferien - Next Studiensemester
+			$result = $this->_ci->StudiensemesterModel->getNext();
+		}
+
 		if (!hasData($result))
 		{
 			$this->logError('Missing Studiensemester');
