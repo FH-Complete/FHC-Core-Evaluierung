@@ -566,8 +566,8 @@ class Initiierung extends JOB_Controller
 
 				if (!hasData($result))
 				{
-					$this->logError('No Active Fragebogen for LV-ID '.$lveLv->lehrveranstaltung_id);
-					return $this->logInfo('End Job createEvaluierungen');
+					$this->logWarning('No Active Fragebogen for LveLv-ID: ' . $lveLv->lvevaluierung_lehrveranstaltung_id . ', LV-ID ' . $lveLv->lehrveranstaltung_id);
+					continue;
 				}
 
 				$fragebogenId = getData($result)[0]->fragebogen_id;
