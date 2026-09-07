@@ -1212,8 +1212,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'LV-Evaluation auf Gruppen-Ebene – Evaluierungszeitfenster startet bald',
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1263,8 +1263,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster startet bald',
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1362,8 +1362,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'LV-Evaluation auf Gruppen-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1413,8 +1413,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor – LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1464,8 +1464,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - optionale LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1575,8 +1575,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'Reminder: LV-Evaluation auf Gruppen-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1637,8 +1637,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'Reminder: LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor – LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1699,8 +1699,8 @@ class Initiierung extends JOB_Controller
 									$data,
 									$uid.'@'.DOMAIN,
 									'Reminder: LV-Evaluation auf Gesamt-Ebene: Ergebnisse für '. $row->lv_bezeichnung. ' aus '. $row->stg_typ_kurzbz. ' liegen vor - optionale LV-Reflexion bis '. $reflexionBis,
-									'sancho_header_lvevaluierung.jpg',
-									'sancho_footer_lvevaluierung.jpg'
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
 								);
 
 								if ($mailSent)
@@ -1943,8 +1943,8 @@ class Initiierung extends JOB_Controller
 					$data,
 					$stgl['to'],
 					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['stg_kurzbz']. ' ' . $studiensemester_kurzbz,
-					'sancho_header_lvevaluierung.jpg',
-					'sancho_footer_lvevaluierung.jpg'
+					'sancho_header_lvevaluierung_rollout.jpg',
+					'sancho_footer_lvevaluierung_rollout.jpg'
 				);
 
 				if ($mailSent)
@@ -2185,8 +2185,8 @@ class Initiierung extends JOB_Controller
 					$data,
 					$leitung['to'],
 					'LV-Evaluation: Neu verfügbare Ergebnisse im ' . $row['organisationseinheittyp_kurzbz'] . ' '  . $row['oe_bezeichnung'] . ' ' . $studiensemester_kurzbz,
-					'sancho_header_lvevaluierung.jpg',
-					'sancho_footer_lvevaluierung.jpg'
+					'sancho_header_lvevaluierung_rollout.jpg',
+					'sancho_footer_lvevaluierung_rollout.jpg'
 				);
 
 				if ($mailSent)
@@ -2323,8 +2323,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid . '@' . DOMAIN,
 										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
@@ -2381,8 +2381,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid . '@' . DOMAIN,
 										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
@@ -2419,8 +2419,8 @@ class Initiierung extends JOB_Controller
 										$data,
 										$uid . '@' . DOMAIN,
 										'LV-Evaluation für ' . $studiensemester_kurzbz . ' ist beendet',
-										'sancho_header_lvevaluierung.jpg',
-										'sancho_footer_lvevaluierung.jpg'
+										'sancho_header_lvevaluierung_rollout.jpg',
+										'sancho_footer_lvevaluierung_rollout.jpg'
 									);
 
 									if ($mailSent)
