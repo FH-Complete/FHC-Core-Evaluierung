@@ -10,13 +10,14 @@ export default {
 		selLveLv: { type: Object, required: true },
 		lvLeitungen: { type: Array, default: () => [] }
 	},
-	emits: ['onUpdateLvAufgeteilt'],
+	emits: ['onPreviewLvAufgeteilt'],
 	components: {
 		FormForm,
 		FormInput
 	},
 	data(){
 		return {
+			previewLvAufgeteilt: this.selLveLv.lv_aufgeteilt,
 			infoEvaluierungByLv:  `
 				Die Evaluierung der LV erfolgt auf Gesamt-Ebene.<br><br>
 				Das Start- und Enddatum der LV-Evaluierung kann geändert bzw. angepasst werden, solange die Studierenden noch nicht eingeladen wurden.<br><br>
@@ -31,14 +32,22 @@ export default {
 	},
 	methods: {
 		onSwitch() {
-			this.$emit('onUpdateLvAufgeteilt', this.selLveLv.lv_aufgeteilt);
+			// Voranzeige erstellecn
+			this.$emit('onPreviewLvAufgeteilt', this.previewLvAufgeteilt);
+		},
+		cancelPreview() {
+			this.previewLvAufgeteilt = this.selLveLv.lv_aufgeteilt;
+			this.$emit('onPreviewLvAufgeteilt', this.previewLvAufgeteilt);
 		},
 		updateLvAufgeteilt() {
 			if (!this.canSwitch) return;
 
 			this.$api
 				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, this.selLveLv.lv_aufgeteilt))
-				.then(() => this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert')))
+				.then(() => {
+					this.selLveLv.lv_aufgeteilt =  this.previewLvAufgeteilt;
+					this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'))
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		getLektorenInfoString(lektoren) {
@@ -50,12 +59,32 @@ export default {
 		<div class="mb-3">
 			<!-- LV-Leitungen -->
 			<div class="mb-3 pb-3 border-bottom" v-if="this.lvLeitungen">
-		<!--		<i class="fa fa-star me-2"></i>-->
 				<span class="me-2 fw-bolder">LV-Leitung:</span>
 				<span v-html="getLektorenInfoString(lvLeitungen)"></span>
+			</div>	
+			<div 
+				v-if="canSwitchInfo.length > 0"
+				class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 mb-3"
+			>
+				<i class="fa fa-ban text-muted fa-lg"></i>
+				<span>{{canSwitchInfo.join(', ')}}</span>
+			</div><!--.div Voranzeige Alert-->
+			<!-- Evaluierungsebene -->
+			<div class="mb-3">
+				<span>Evaluierungsebene: <strong class="text-body">{{ selLveLv.lv_aufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}</strong></span>
+				<span class="ms-2">
+					<i 
+						class="fa fa-info-circle text-primary fa-lg" 
+						:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+						v-tooltip="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+						data-bs-html="true"
+						data-bs-custom-class="tooltip-left">
+					</i>
+				</span>	
 			</div>
-			<!-- Switch Radio Buttons -->
+			<!-- Evaluierungsebene wechseln -->
 			<fieldset :disabled="!canSwitch">
+				<!-- Radiobuttons -->
 				<div class="d-flex flex-wrap flex-md-nowrap gap-2 align-items-start">
 					<div class="flex-grow-1 flex-md-grow-0 d-flex flex-wrap gap-2 align-items-center">
 						<div class="form-check form-check-inline ps-0">
@@ -64,7 +93,7 @@ export default {
 								class="form-check-input"
 								type="radio"
 								:value="false"
-								v-model="selLveLv.lv_aufgeteilt"
+								v-model="previewLvAufgeteilt"
 								 @change="onSwitch"
 							>
 							</form-input>
@@ -75,19 +104,10 @@ export default {
 								class="form-check-input"
 								type="radio"
 								:value="true"
-								v-model="selLveLv.lv_aufgeteilt"
+								v-model="previewLvAufgeteilt"
 								 @change="onSwitch"
 							>
 							</form-input>
-						</div>
-						<div class="flex-grow-1 flex-md-grow-0 align-self-end">
-							<button 
-							  type="button" 
-							  class="btn btn-primary mt-2 mt-md-0 ms-md-2 w-100 w-md-auto"
-							  @click="updateLvAufgeteilt()"
-							>
-							  Speichern
-							</button>
 						</div>
 					</div>
 					<div class="flex-md-grow-0 ms-auto mt-2 mt-md-0 d-flex align-items-center">
@@ -100,18 +120,28 @@ export default {
 								data-bs-custom-class="tooltip-left">
 							</i>
 						</span>			
-					<!--	<span v-if="canSwitchInfo.length > 0">{{canSwitchInfo.join(', ')}}</span>-->
-						<span class="ms-2">
-							<i 
-								class="fa fa-info-circle text-primary fa-lg" 
-								:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-								v-tooltip="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-								data-bs-html="true"
-								data-bs-custom-class="tooltip-left">
-							</i>
-						</span>	
 					</div>
-				</div><!--.div Switch Radio Buttons-->
+				</div><!--.div Radiobuttons-->
+				<!-- Voranzeige Alert-->
+				<div 
+					v-if="previewLvAufgeteilt !== selLveLv.lv_aufgeteilt"
+					class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mt-3 mb-0"
+				>
+					<span>Voranzeige: 
+						<strong>{{ previewLvAufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}</strong>
+						<i 
+							class="ms-2 fa fa-info-circle text-primary fa-lg" 
+							:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+							v-tooltip="previewLvAufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+							data-bs-html="true"
+							data-bs-custom-class="tooltip-left">
+						</i>
+						Jetzt übernehmen und speichern?
+					</span>
+					<button type="button" class="btn btn-primary ms-2" @click="updateLvAufgeteilt()">
+						Evaluierungsebene speichern
+					</button>
+				</div><!--.div Voranzeige Alert-->
 			</fieldset>
 		</div><!--.card -->
 	</div>

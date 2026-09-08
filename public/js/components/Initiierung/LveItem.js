@@ -25,7 +25,8 @@ export default {
 		selLveLvDetails: {
 			type: Array,
 			required: true
-		}
+		},
+		isPreview: {type: Boolean, default: false},
 	},
 	methods: {
 		saveOrUpdateLvevaluierung(lveLvDetail){
@@ -127,10 +128,13 @@ export default {
 		}
 	},
 	template: `
-		<div class="card mb-3" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
+		<div class="card mb-3" :class="{'border-primary': isPreview}" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
 			<!-- Card title -->
 			<div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-				<div>LV-Evaluierung</div>
+				<div>
+					LV-Evaluierung
+					<span class="badge bg-primary ms-2" v-if="isPreview">Voranzeige</span>
+				</div>
 				<div>
 					<button 
 						v-if="lveLvDetail.editableCheck.isRenderedBtnAuswertung"
@@ -183,7 +187,7 @@ export default {
 			</div><!--.end card body-->
 			<!-- LV-Evaluierungen -->
 			<div class="card-body pb-3 border-bottom">
-				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung" class="text-muted">
+				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview" class="text-muted">
 					<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
 					<div class="row gx-5">
 					<!-- Form Inputs + Button -->
@@ -200,9 +204,10 @@ export default {
 									format="dd.MM.yyyy HH:mm"
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
-								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail"
-  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
-  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
+								  	:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail || isPreview"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung || !isPreview"
+  									
 								>
 								</form-input>
 							</div>
@@ -218,9 +223,9 @@ export default {
 									model-type="yyyy-MM-dd HH:mm:ss"
 									:auto-apply="true"
 									:start-time="{hours: 0, minutes: 0}"
-									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail"
-  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung"
-  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung"
+									:disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isSendingMail || isPreview"
+  									:readonly-input="lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview"
+  									:show-icon="!lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview"
 								>
 								</form-input>
 							</div>
@@ -229,7 +234,7 @@ export default {
 									type="submit"  
 									class="btn btn-primary w-100 w-md-auto"
 								>
-									Speichern
+									Zeitfenster speichern
 								</button>
 							</div>
 							<div class="ms-auto text-muted d-flex gap-2 text-end align-items-baseline">	
@@ -259,7 +264,7 @@ export default {
 			</div><!--.end card-body -->
 			<!-- Codes versenden -->
 			<div class="card-body mb-3" v-if="lveLvDetail.editableCheck.isRenderedSendMail">
-				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail">
+				<fieldset :disabled="lveLvDetail.editableCheck.isDisabledSendMail || isPreview">
 				<div class="row gx-5">
 					<div class="col-6 col-md-5">
 						<span class="d-lg-none"><i class="fa fa-envelope"></i></span>

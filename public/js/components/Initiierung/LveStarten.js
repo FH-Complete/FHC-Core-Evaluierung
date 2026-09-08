@@ -56,7 +56,8 @@ export default {
 			filteredLvs: [],			// Autocomplete Lehrveranstaltung suggestions
 			selLv: null,					// Autocomplete selected LV
 			isLoading: false,
-			routeLvNotFound: false
+			routeLvNotFound: false,
+			loadedLvAufgeteilt: null,	// für welche Evaluierungsebene selLveLvDetails aktuell geladen wird
 		}
 	},
 	computed: {
@@ -68,6 +69,12 @@ export default {
 				return this.lveLvs.filter(lv => lv.lvevaluierung_lehrveranstaltung_id === this.selLveLvId);
 			}
 			return this.lveLvs;
+		},
+		isPreview() {
+			// ist es Voranzeige von Gruppen- oder Gesamt-LV? (anstatt dem tatsächlich gespeichertem Stand)
+			return this.loadedLvAufgeteilt !== null
+				&& !!this.selLveLv
+				&& this.loadedLvAufgeteilt !== this.selLveLv.lv_aufgeteilt;
 		}
 	},
 	watch: {
@@ -111,6 +118,7 @@ export default {
 					this.selLveLvDetails = lv_aufgeteilt
 							? data.groupedByLe
 							: data.groupedByLv;
+					this.loadedLvAufgeteilt = lv_aufgeteilt;
 
 					// If start- and endezeit is null, set default values
 					this.selLveLvDetails.forEach(item => {
@@ -171,7 +179,7 @@ export default {
 				this.selLveLvId = Number(accBtn.dataset.lveLvId);
 			}
 		},
-		onUpdateLvAufgeteilt(newVal){
+		onPreviewLvAufgeteilt(newVal){
 			this.loadEvaluierungData(this.selLveLvId, newVal);
 		},
 		updateEditableChecks(isAllSent){
@@ -323,7 +331,7 @@ export default {
   							:can-switch-info="canSwitchInfo"
   							:sel-lve-lv="selLveLv"
 							:lv-leitungen="lvLeitungen"
-							@on-update-lv-aufgeteilt="onUpdateLvAufgeteilt"
+							@on-preview-lv-aufgeteilt="onPreviewLvAufgeteilt"
 						>
 						</Switcher>						
 						<!-- LV-Evaluierungen -->
@@ -331,6 +339,7 @@ export default {
 							v-if="lveLv.lvevaluierung_lehrveranstaltung_id === selLveLvId"
 							:sel-lve-lv-id="selLveLvId"
 							:sel-lve-lv-details="selLveLvDetails"
+							:is-preview="isPreview"
 							@update-editable-checks="updateEditableChecks"
 						>								
 						</Lve-Item>

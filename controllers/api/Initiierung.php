@@ -122,7 +122,7 @@ class Initiierung extends FHCAPI_Controller
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
-			$canSwitchInfo []= 'At least one Evaluierung in LV started';
+			$canSwitchInfo []= 'Wechsel nicht mehr möglich: Mindestens ein Evaluierungszeitfenster wurde bereits gespeichert';
 		}
 
 		$zeitfensteroffen = $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('typswitch',$lvevaluierung_lehrveranstaltung_id);
@@ -207,7 +207,7 @@ class Initiierung extends FHCAPI_Controller
 		if (count($lves) > 0)
 		{
 			$canSwitch = false;
-			$canSwitchInfo []= 'Entscheidung für Gesamt- oder Gruppen-Ebene kann nicht mehr verändert werden.';
+			$canSwitchInfo []= 'Wechsel nicht mehr möglich: Mindestens ein Evaluierungszeitfenster wurde bereits gespeichert';
 		}
 
 		$zeitfensteroffen = $this->LvevaluierungZeitfensterModel->isZeitfensterOffenLve('typswitch',$lvevaluierung_lehrveranstaltung_id);
