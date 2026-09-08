@@ -320,6 +320,12 @@ class Initiierung extends FHCAPI_Controller
 		// Get LV-ID and Studiensemester
 		$lveLv = $this->getLvevaluierungLehrveranstaltungOrFail($data['lvevaluierung_lehrveranstaltung_id']);
 
+		// Exit, um Evaluierung für LE nicht zu speichern, wenn die Evaluierungsebene noch "Gesamt-LV" ist
+		if (!is_null($data['lehreinheit_id']) && $lveLv->lv_aufgeteilt === false)
+		{
+			$this->terminateWithError('Evaluierungsebene "Gruppenbasis" wurde noch nicht gespeichert.');
+		}
+
 		// If Lvevaluierung is evaluated as Gesamt-Lv
 		if ($this->config->item('lvLeitungRequired') && $lveLv->lv_aufgeteilt === false)
 		{
