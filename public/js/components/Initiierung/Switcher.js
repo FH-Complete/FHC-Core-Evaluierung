@@ -54,21 +54,14 @@ export default {
 			return lektoren.map(l => l.vorname + ' ' + l.nachname).join(', ');
 		}
 	},
-	template: `
+	template: ` 	
 	<div class="switcher mt-4">
-		<div class="mb-3">
+		<div class="border border-secondary-subtle rounded-3 p-3 mb-3">
 			<!-- LV-Leitungen -->
 			<div class="mb-3 pb-3 border-bottom" v-if="this.lvLeitungen">
 				<span class="me-2 fw-bolder">LV-Leitung:</span>
 				<span v-html="getLektorenInfoString(lvLeitungen)"></span>
 			</div>	
-			<div 
-				v-if="canSwitchInfo.length > 0"
-				class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 mb-3"
-			>
-				<i class="fa fa-ban text-muted fa-lg"></i>
-				<span>{{canSwitchInfo.join(', ')}}</span>
-			</div><!--.div Voranzeige Alert-->
 			<!-- Evaluierungsebene -->
 			<div class="mb-3">
 				<span>Evaluierungsebene: <strong class="text-body">{{ selLveLv.lv_aufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}</strong></span>
@@ -80,7 +73,15 @@ export default {
 						data-bs-html="true"
 						data-bs-custom-class="tooltip-left">
 					</i>
-				</span>	
+				</span>
+				<!-- Switch Sperre Infos -->	
+				<div 
+					v-if="canSwitchInfo.length > 0"
+					class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 mb-3"
+				>
+					<i class="fa fa-ban text-muted fa-lg"></i>
+					<span>{{canSwitchInfo.join(', ')}}</span>
+				</div>
 			</div>
 			<!-- Evaluierungsebene wechseln -->
 			<fieldset :disabled="!canSwitch">
@@ -110,25 +111,13 @@ export default {
 							</form-input>
 						</div>
 					</div>
-					<div class="flex-md-grow-0 ms-auto mt-2 mt-md-0 d-flex align-items-center">
-						<span v-if="canSwitchInfo.length > 0">
-							<i 
-								class="fa fa-ban fa-lg text-muted" 
-								:title="canSwitchInfo.join(', ')"
-								v-tooltip="canSwitchInfo.join(', ')"
-								data-bs-html="true"
-								data-bs-custom-class="tooltip-left">
-							</i>
-						</span>			
-					</div>
 				</div><!--.div Radiobuttons-->
 				<!-- Voranzeige Alert-->
 				<div 
-					v-if="previewLvAufgeteilt !== selLveLv.lv_aufgeteilt"
-					class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mt-3 mb-0"
+					v-if="canSwitch && previewLvAufgeteilt !== selLveLv.lv_aufgeteilt"
+					class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mt-3 mb-0 text-primary fw-bold"
 				>
-					<span>Voranzeige: 
-						<strong>{{ previewLvAufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}</strong>
+					<span>Voranzeige: {{ previewLvAufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}
 						<i 
 							class="ms-2 fa fa-info-circle text-primary fa-lg" 
 							:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
@@ -138,9 +127,11 @@ export default {
 						</i>
 						Jetzt übernehmen und speichern?
 					</span>
-					<button type="button" class="btn btn-primary ms-2" @click="updateLvAufgeteilt()">
-						Evaluierungsebene speichern
-					</button>
+					   <div class="d-flex gap-2 ms-2">
+						  
+						  <button type="button" class="btn btn-primary" @click="updateLvAufgeteilt()">Evaluierungsebene speichern</button>
+						  <button type="button" class="btn btn-outline-primary" @click="cancelPreview()">Abbrechen</button>
+					   </div>
 				</div><!--.div Voranzeige Alert-->
 			</fieldset>
 		</div><!--.card -->

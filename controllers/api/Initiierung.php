@@ -626,7 +626,25 @@ class Initiierung extends FHCAPI_Controller
 			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
 			{
 				// ...set positive msg: Versand ok
-				$isDisabledSendMailInfo[]= 'bereit zum Versand der E-Mail-Einladungen';
+				$isDisabledSendMailInfo[]= 'Bereit zum Versand anonymer E-Mail-Einladungen';
+			}
+
+			$isDisabledBtnAuswertung = true;
+			$isDisabledBtnAuswertungInfo = [];
+
+			// Case: Ergebnisse erst ab dem Tag nach dem Evaluierungs-Enddatum verfügbar
+			if ($hasStartAndEndezeit)
+			{
+				$verfuegbarAb = (new DateTime($item->endezeit))->modify('+1 day')->setTime(0, 0, 0);
+
+				if (new DateTime() >= $verfuegbarAb)
+				{
+					$isDisabledBtnAuswertung = false;
+				}
+				else
+				{
+					$isDisabledBtnAuswertungInfo [] = 'Ergebnisse nach Evaluierungszeitfenster verfügbar';
+				}
 			}
 
 			// Add infos
@@ -636,7 +654,9 @@ class Initiierung extends FHCAPI_Controller
 				'isRenderedSendMail' => $isRenderedSendMail,
 				'isDisabledSendMail' => $isDisabledSendMail,
 				'isDisabledSendMailInfo' => $isDisabledSendMailInfo,
-				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung
+				'isRenderedBtnAuswertung' => $isRenderedBtnAuswertung,
+				'isDisabledBtnAuswertung' => $isDisabledBtnAuswertung,
+				'isDisabledBtnAuswertungInfo' => $isDisabledBtnAuswertungInfo
 			];
 		}
 
