@@ -23,13 +23,13 @@ class LvevaluierungStundenplan_model extends DB_Model
 		$params = [$lehreinheit_id];
 
 		$qry = '
-			SELECT DISTINCT
+			SELECT
 			    datum
 			FROM 
 		       	lehre.vw_stundenplan
-				JOIN lehre.tbl_lehreinheit le USING (lehreinheit_id)
-			WHERE 
-				le.lehreinheit_id = ?
+				JOIN lehre.tbl_lehreinheit le ON 
+	   			    le.lehreinheit_id = lehre.vw_stundenplan.lehreinheit_id AND
+	   			    le.lehreinheit_id = ?
 		';
 
 		if (is_array($excludedLehrformen) && !empty($excludedLehrformen))
@@ -40,7 +40,10 @@ class LvevaluierungStundenplan_model extends DB_Model
 		}
 
 		$qry .= '
-			ORDER BY datum ASC
+			GROUP BY
+	  		     datum
+			ORDER BY
+				datum ASC
 		';
 
 		return $this->execQuery($qry, $params);
@@ -62,29 +65,28 @@ class LvevaluierungStundenplan_model extends DB_Model
 		$params = [$lehrveranstaltung_id, $studiensemester_kurzbz];
 
 		$qry = '
-		  	SELECT DISTINCT
+		  	SELECT
 				datum
 	   		FROM
 	   		    lehre.vw_stundenplan
-	   			JOIN lehre.tbl_lehreinheit le USING (lehreinheit_id)
-	  		WHERE 
-	  		    lehreinheit_id IN (
-					SELECT lehreinheit_id
-					FROM lehre.tbl_lehreinheit 
-					WHERE lehrveranstaltung_id = ?
-					AND studiensemester_kurzbz = ?
-				)    
+	   			JOIN lehre.tbl_lehreinheit le ON 
+	   			    le.lehreinheit_id = lehre.vw_stundenplan.lehreinheit_id AND 
+	   			    le.lehrveranstaltung_id = ? AND 
+	   			    le.studiensemester_kurzbz = ?
 		';
 
 		if (is_array($excludedLehrformen) && !empty($excludedLehrformen))
 		{
-			$qry .= ' AND le.lehrform_kurzbz NOT IN ? ';
+			$qry .= ' AND lehrform_kurzbz NOT IN ? ';
 
 			$params[] = $excludedLehrformen;
 		}
 
 		$qry .= '
-			ORDER BY datum ASC
+		 	GROUP BY
+	  		     datum
+			ORDER BY 
+				datum ASC
 		';
 
 		return $this->execQuery($qry, $params);
