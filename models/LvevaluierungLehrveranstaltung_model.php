@@ -562,4 +562,50 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 
 		return $this->execQuery($qry, array($studiensemester_kurzbz));
 	}
+
+	/**
+	 * Gets vorname, nachname, uid and prestudent_id of active/inactive students of a Lehrveranstaltung.
+	 * Leichtgewichtige Variante von getStudentsByLv() nur für Lvevaluierung-Badges/Mailversand -
+	 * ohne die dort ungenutzten Joins/Subquery (Studiengang, Zeugnisnote, Bisio, Mitarbeiter, Prestudentstatus).
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @param $lehrveranstaltung_id
+	 * @param $active optional, if true, only active students retrieved, false - only inactive, all students otherwise
+	 * @return array|null
+	 */
+	public function getStudentsByLv($studiensemester_kurzbz, $lehrveranstaltung_id, $active = null)
+	{
+		$qry = '
+			SELECT
+				DISTINCT ON (nachname, vorname, p.person_id)
+				vorname, nachname, b.uid, std.prestudent_id
+			FROM
+				campus.vw_student_lehrveranstaltung
+				JOIN public.tbl_benutzer b USING (uid)
+				JOIN public.tbl_person p USING (person_id)
+				LEFT JOIN public.tbl_student std ON (uid = student_uid)
+			WHERE
+				vw_student_lehrveranstaltung.studiensemester_kurzbz = ?
+			AND
+				vw_student_lehrveranstaltung.lehrveranstaltung_id = ?
+			';
+
+		if (is_bool($active))
+		{
+			if ($active === true)
+			{
+				$qry .= ' AND b.aktiv';
+			}
+			elseif ($active === false)
+			{
+				$qry .= ' AND b.aktiv = FALSE';
+			}
+		}
+
+		$qry.= ' ORDER BY 
+			nachname, vorname, p.person_id
+		';
+
+		return $this->execQuery($qry, [$studiensemester_kurzbz, $lehrveranstaltung_id]);
+	}
 }
