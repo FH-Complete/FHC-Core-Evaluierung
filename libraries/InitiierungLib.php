@@ -19,6 +19,11 @@ class InitiierungLib
 		$this->_ci =& get_instance();
 
 		$this->_ci->load->helper('hlp_sancho_helper');
+
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungLehrveranstaltung_model', 'LvevaluierungLehrveranstaltungModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungLehreinheit_model', 'LvevaluierungLehreinheitModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungStundenplan_model', 'LvevaluierungStundenplanModel');
 	}
 
 	/**
@@ -30,6 +35,20 @@ class InitiierungLib
 	public function groupByLeAndAddData($data, $lvevaluierung_lehrveranstaltung_id)
 	{
 		$grouped = [];
+
+		$lehreinheitIds = array_unique(array_column($data, 'lehreinheit_id'));
+
+		// Studenten aller Lehreinheiten in einer Query
+		$result = $this->_ci->LvevaluierungLehreinheitModel->getStudentsByLes($lehreinheitIds);
+		$studentenByLe = $this->groupByLe(hasData($result) ? getData($result) : [], 'lehreinheit_id');
+
+		// Stundenplantermine aller Lehreinheiten in einer Query
+		$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLes($lehreinheitIds);
+		$stundenplanByLe = $this->groupByLe(hasData($result) ? getData($result) : [], 'lehreinheit_id');
+
+		// war vorher pro Lehreinheit exakt derselbe Query (Parameter ist LV-Ebene, nicht LE-Ebene)
+		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
 
 		foreach ($data as $item)
 		{
@@ -47,22 +66,18 @@ class InitiierungLib
 				$grouped[$lehreinheitId]->lektoren = $this->groupLektorenByLe($data, $lehreinheitId);
 
 				// Add Studenten
-				$this->_ci->load->model('education/Lehreinheit_model', 'LehreinheitModel');
-				$result = $this->_ci->LehreinheitModel->getStudenten($item->lehreinheit_id);
-				$grouped[$lehreinheitId]->studenten = hasData($result) ? getData($result) : [];
+				$grouped[$lehreinheitId]->studenten = isset($studentenByLe[$lehreinheitId]) ? $studentenByLe[$lehreinheitId] : [];
 
 				// Add Stundenplantermine
-				$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungStundenplan_model', 'LvevaluierungStundenplanModel');
-				$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLe($item->lehreinheit_id);
-				$grouped[$lehreinheitId]->stundenplan = hasData($result) ? getData($result) : [];
+				$grouped[$lehreinheitId]->stundenplan = isset($stundenplanByLe[$lehreinheitId]) ? $stundenplanByLe[$lehreinheitId] : [];
 
 				// Add Studierende, that got mail by this or any other LE
-				$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
-				$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-				$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
-				$grouped[$lehreinheitId]->sentByAnyEvaluierungOfLv = array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehreinheitId) {
-					foreach ($grouped[$lehreinheitId]->studenten as $s) {
-						if ($s->prestudent_id === $pre->prestudent_id) {
+				$grouped[$lehreinheitId]->sentByAnyEvaluierungOfLv = array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehreinheitId)
+				{
+					foreach ($grouped[$lehreinheitId]->studenten as $s)
+					{
+						if ($s->prestudent_id === $pre->prestudent_id)
+						{
 							return $pre;
 						}
 					}
@@ -104,53 +119,43 @@ class InitiierungLib
 	 */
 	public function groupByLvAndAddData($data, $lvevaluierung_lehrveranstaltung_id, $lehrveranstaltung_id, $studiensemester_kurzbz)
 	{
-		$grouped = [];
+		$clone = clone $data[0];	// bei LV nur ein Datensatz
+		$clone->lehreinheit_id = null;
 
-		foreach ($data as $item)
+		// Group unique Gruppen
+		$clone->gruppen = $this->groupGruppenByLv($data);
+
+		// Group unique Lehrende
+		$clone->lektoren = $this->groupLektorenByLv($data);
+
+		// Add Students of LV
+		$result = $this->_ci->LvevaluierungLehrveranstaltungModel->getStudentsByLv(
+			$studiensemester_kurzbz,
+			$lehrveranstaltung_id,
+			true	// true = only active students
+		);
+		$clone->studenten = hasData($result) ? getData($result) : [];
+
+		// Add Stundenplantermine for LV
+		$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
+		$clone->stundenplan = hasData($result) ? getData($result) : [];
+
+		// Add Studierende, that got mail by this or any other LE
+		$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
+		$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
+		$clone->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($clone)
 		{
-			if (!isset($grouped[$lehrveranstaltung_id]))
+			foreach ($clone->studenten as $s)
 			{
-				$clone = clone $item;
-				$clone->lehreinheit_id = null;
-
-				$grouped[$lehrveranstaltung_id] = $clone;
-
-				// Group unique Gruppen
-				$grouped[$lehrveranstaltung_id]->gruppen = $this->groupGruppenByLv($data);
-
-				// Group unique Lehrende
-				$grouped[$lehrveranstaltung_id]->lektoren = $this->groupLektorenByLv($data);
-
-				// Add Students of LV
-				$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
-				$result = $this->_ci->LehrveranstaltungModel->getStudentsByLv(
-					$studiensemester_kurzbz,
-					$lehrveranstaltung_id,
-					true	// true = only active students
-				);
-				$grouped[$lehrveranstaltung_id]->studenten = hasData($result) ? getData($result) : [];
-
-				// Add Stundenplantermine for LV
-				$this->_ci->load->model('extensions/FHC-Core-Evaluierung/integration/LvevaluierungStundenplan_model', 'LvevaluierungStundenplanModel');
-				$result = $this->_ci->LvevaluierungStundenplanModel->getTermineByLv($lehrveranstaltung_id, $studiensemester_kurzbz);
-				$grouped[$lehrveranstaltung_id]->stundenplan = hasData($result) ? getData($result) : [];
-
-				// Add Studierende, that got mail by this or any other LE
-				$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungPrestudent_model', 'LvevaluierungPrestudentModel');
-				$result = $this->_ci->LvevaluierungPrestudentModel->getByLveLv($lvevaluierung_lehrveranstaltung_id);
-				$lvePrestudentenByLv = hasData($result) ? getData($result) : [];
-				$grouped[$lehrveranstaltung_id]->sentByAnyEvaluierungOfLv = array_values(array_filter($lvePrestudentenByLv, function ($pre) use ($grouped, $lehrveranstaltung_id) {
-					foreach ($grouped[$lehrveranstaltung_id]->studenten as $s) {
-						if ($s->prestudent_id === $pre->prestudent_id) {
-							return $pre;
-						}
-					}
-					return false;
-				}));
+				if ($s->prestudent_id === $pre->prestudent_id)
+				{
+					return $pre;
+				}
 			}
-		}
+			return false;
+		}));
 
-		$grouped = array_values($grouped);
+		$grouped = [$clone];
 
 		// Remove properties that were grouped in gruppen and lektoren
 		foreach ($grouped as $g)
@@ -168,6 +173,30 @@ class InitiierungLib
 				$g->gruppe_bezeichnung,
 				$g->direktinskription
 			);
+		}
+
+		return $grouped;
+	}
+
+	/**
+	 * Group Data nach Id (z.B. lehreinheit_id).
+	 *
+	 * @param array $data
+	 * @param string $key
+	 * @return array
+	 */
+	private function groupByLe($data, $key)
+	{
+		$grouped = [];
+
+		foreach ($data as $row)
+		{
+			if (!isset($grouped[$row->$key]))
+			{
+				$grouped[$row->$key] = [];
+			}
+
+			$grouped[$row->$key][] = $row;
 		}
 
 		return $grouped;

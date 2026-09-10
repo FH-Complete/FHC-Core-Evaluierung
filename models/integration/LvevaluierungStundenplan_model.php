@@ -49,6 +49,53 @@ class LvevaluierungStundenplan_model extends DB_Model
 		return $this->execQuery($qry, $params);
 	}
 
+	/**
+	 * Get filtered Stundenplantermine für mehrere Lehreinheiten.)
+	 *
+	 *
+	 * @param array $lehreinheitIds
+	 * @return array
+	 */
+	public function getTermineByLes($lehreinheitIds)
+	{
+		if (count($lehreinheitIds) === 0)
+		{
+			return success([]);
+		}
+
+		$this->load->config('extensions/FHC-Core-Evaluierung/initiierung');
+		$excludedLehrformen = $this->config->item('excludedLehrformen');
+
+		$params = [$lehreinheitIds];
+
+		$qry = '
+			SELECT 
+				le.lehreinheit_id,
+				datum
+			FROM 
+				lehre.vw_stundenplan
+				JOIN lehre.tbl_lehreinheit le ON 
+	   			    le.lehreinheit_id = lehre.vw_stundenplan.lehreinheit_id AND
+	   			    le.lehreinheit_id IN ?
+	';
+
+		if (is_array($excludedLehrformen) && !empty($excludedLehrformen))
+		{
+			$qry .= ' AND le.lehrform_kurzbz NOT IN ? ';
+
+			$params[] = $excludedLehrformen;
+		}
+
+		$qry .= '
+			GROUP BY
+					le.lehreinheit_id,
+					 datum
+			ORDER BY le.lehreinheit_id, datum ASC
+	';
+
+		return $this->execQuery($qry, $params);
+	}
+
 
 	/**
 	 * Get filtered Stundenplantermine for given Lehrveranstaltung of given Studiensemester.
