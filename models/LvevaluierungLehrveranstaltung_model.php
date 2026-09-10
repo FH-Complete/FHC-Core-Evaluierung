@@ -311,113 +311,128 @@ class LvevaluierungLehrveranstaltung_model extends DB_Model
 			  	WHERE
 					lvevaluierung_lehrveranstaltung_id = ?
 			),
-			lve AS (
-				SELECT DISTINCT
-					lvevaluierung_lehrveranstaltung.*, 
-					lv.lehrveranstaltung_id,
-					le.lehreinheit_id,
-					le.lehrform_kurzbz,
-					lv.bezeichnung,
-					lv.orgform_kurzbz,
-					lv.semester,
-					lv.studiengang_kz,
-					lema.mitarbeiter_uid,
-					lema.lehrfunktion_kurzbz,
-					concat(p.vorname, \' \', p.nachname) AS fullname,
-					p.vorname,
-					p.nachname,
-					legr.semester,
-					legr.verband,
-					legr.gruppe,
-					legr.gruppe_kurzbz,
-					gr.direktinskription,
-					CASE
-						-- normale Gruppe
-						WHEN legr.gruppe_kurzbz IS NULL THEN
-							COALESCE(
-								CONCAT(
-									UPPER(CONCAT(stg.typ, stg.kurzbz, \'-\')),
-									COALESCE(legr.semester::varchar, \'\'),
-									COALESCE(legr.verband::varchar, \'\'),
-									COALESCE(legr.gruppe, \'\')
-								),
-							 \'\'
-						)
-						-- Spezialgruppe
-						ELSE legr.gruppe_kurzbz
-					END AS gruppe_bezeichnung,
-					lv.kurzbz,
-					stg.kurzbzlang
-				FROM 
-					lehre.tbl_lehreinheit le 
-					JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
-					JOIN lehre.tbl_lehreinheitmitarbeiter lema USING (lehreinheit_id)
-					JOIN public.tbl_benutzer b ON b.uid = lema.mitarbeiter_uid
-					JOIN public.tbl_person p USING (person_id)
-					LEFT JOIN lehre.tbl_lehreinheitgruppe legr USING (lehreinheit_id)
-					LEFT JOIN public.tbl_gruppe gr USING (gruppe_kurzbz)
-					LEFT JOIN public.tbl_studiengang stg ON (legr.studiengang_kz = stg.studiengang_kz)
-					JOIN lvevaluierung_lehrveranstaltung 
+			
+			-- Lehreinheiten zur LV vorabfiltern
+			le_filtered AS (
+				SELECT
+					le.*
+				FROM
+					lehre.tbl_lehreinheit le
+					JOIN lvevaluierung_lehrveranstaltung
 						ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
 						AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
 				WHERE 1=1';
 
-			// Lehreinheiten, die nach dem Switch-Zeitfenster angelegt werden, werden von der Evaluierung ausgeschlossen,
-			// um die Konsistenz der Unterscheidung zwischen Gruppen- und Gesamt-LV sicherzustellen.
-			if (!is_null($zeitfensterEndedatum))
-			{
-				$qry .= ' AND le.insertamum <= ?::timestamp';
-				$params[] = $zeitfensterEndedatum;
-			}
 
-			if(!is_null($uid))
-			{
-				$params[]= $uid;
-				$qry.='
-						AND EXISTS (
-							SELECT
-								1
-							FROM
-								lehre.tbl_lehreinheit le2
-							JOIN lehre.tbl_lehreinheitmitarbeiter lema2 USING (lehreinheit_id)
-							WHERE
-								le2.lehrveranstaltung_id = lv.lehrveranstaltung_id
-								AND lema2.mitarbeiter_uid = ?
-						)';
-			}
+		// LEs ausschließen, die nach dem Zeitfenster 'typswitch' angelegt werden.
+		// Die Evaluierungslogik basiert auf der zum Zeitfensterende festgelegten Gruppen- bzw. Gesamt-LV.
+		if (!is_null($zeitfensterEndedatum))
+		{
+			$qry .= ' AND le.insertamum <= ?::timestamp';
+			$params[] = $zeitfensterEndedatum;
+		}
 
-			if (is_array($excludedLehrformen) && count($excludedLehrformen) > 0)
-			{
-				$qry .= ' AND le.lehrform_kurzbz NOT IN ? ';
-				$params[]= $excludedLehrformen;
-			}
+		// bestimmten Lehrformen ausschließen
+		if (is_array($excludedLehrformen) && count($excludedLehrformen) > 0)
+		{
+			$qry .= ' AND le.lehrform_kurzbz NOT IN ? ';
+			$params[] = $excludedLehrformen;
+		}
 
+		// auf zugeordneten Lektor einschränken
+		if (!is_null($uid))
+		{
+			$params[] = $uid;
 			$qry .= '
+				AND EXISTS (
+					SELECT
+						1
+					FROM
+						lehre.tbl_lehreinheit le2
+					JOIN lehre.tbl_lehreinheitmitarbeiter lema2 USING (lehreinheit_id)
+					WHERE
+						le2.lehrveranstaltung_id = le.lehrveranstaltung_id
+						AND lema2.mitarbeiter_uid = ?
+				)';
+		}
+
+		$qry.= ' 
+		 -- End CTE (le_filtered)
+        ),
+        lve AS (
+			SELECT DISTINCT
+				lvevaluierung_lehrveranstaltung.*, 
+				lv.lehrveranstaltung_id,
+				le.lehreinheit_id,
+				le.lehrform_kurzbz,
+				lv.bezeichnung,
+				lv.orgform_kurzbz,
+				lv.semester,
+				lv.studiengang_kz,
+				lema.mitarbeiter_uid,
+				lema.lehrfunktion_kurzbz,
+				concat(p.vorname, \' \', p.nachname) AS fullname,
+				p.vorname,
+				p.nachname,
+				legr.semester,
+				legr.verband,
+				legr.gruppe,
+				legr.gruppe_kurzbz,
+				gr.direktinskription,
+				CASE
+					-- normale Gruppe
+					WHEN legr.gruppe_kurzbz IS NULL THEN
+						COALESCE(
+							CONCAT(
+								UPPER(CONCAT(stg.typ, stg.kurzbz, \'-\')),
+								COALESCE(legr.semester::varchar, \'\'),
+								COALESCE(legr.verband::varchar, \'\'),
+								COALESCE(legr.gruppe, \'\')
+							),
+						 \'\'
+					)
+					-- Spezialgruppe
+					ELSE legr.gruppe_kurzbz
+				END AS gruppe_bezeichnung,
+				lv.kurzbz,
+				stg.kurzbzlang
+			FROM 
+				le_filtered le 
+				JOIN lehre.tbl_lehrveranstaltung lv USING (lehrveranstaltung_id)
+				JOIN lehre.tbl_lehreinheitmitarbeiter lema USING (lehreinheit_id)
+				JOIN public.tbl_benutzer b ON b.uid = lema.mitarbeiter_uid
+				JOIN public.tbl_person p USING (person_id)
+				LEFT JOIN lehre.tbl_lehreinheitgruppe legr USING (lehreinheit_id)
+				LEFT JOIN public.tbl_gruppe gr USING (gruppe_kurzbz)
+				LEFT JOIN public.tbl_studiengang stg ON (legr.studiengang_kz = stg.studiengang_kz)
+				JOIN lvevaluierung_lehrveranstaltung 
+					ON le.lehrveranstaltung_id = lvevaluierung_lehrveranstaltung.lehrveranstaltung_id
+					AND le.studiensemester_kurzbz = lvevaluierung_lehrveranstaltung.studiensemester_kurzbz
 			-- End CTE (lve)
 			)
 			
-			SELECT 
-				* 
-			FROM 
-				lve
-			';
+		SELECT 
+			* 
+		FROM 
+			lve
+		';
 
-			if(!is_null($uid))
-			{
-				$params[]= $uid;
-				$qry.='
+		if(!is_null($uid))
+		{
+			$params[]= $uid;
+			$qry.= '
 				ORDER BY
-			 		CASE WHEN mitarbeiter_uid = ? THEN 0 ELSE 1 END,
+					CASE WHEN mitarbeiter_uid = ? THEN 0 ELSE 1 END,
 					nachname
-				';
-			}
-			else
-			{
-				$qry.='
+			';
+		}
+		else
+		{
+			$qry.= '
 				ORDER BY
 					nachname
-				';
-			}
+			';
+		}
 
 		return $this->execQuery($qry, $params);
 	}
