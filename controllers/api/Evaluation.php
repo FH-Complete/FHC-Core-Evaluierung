@@ -283,6 +283,17 @@ class Evaluation extends FHCAPI_Controller
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
 
+			//----------------------------------------------------------------------------------------------------------
+			// TODO Auswertungsansicht VORÜBERGEHEND für STGL und KFL sperren.
+			if(!$isLektorOfLv || $role === 'stg' || $role === 'kf')
+			{
+				$isEvaluationViewOpen = false;
+
+				if (empty($isEvaluationViewOpenMsg))
+					$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
+			}
+			//----------------------------------------------------------------------------------------------------------
+
 			$response = [
 				'data' => $data,
 				'evaluationView' => [
@@ -439,6 +450,13 @@ class Evaluation extends FHCAPI_Controller
 				['maxDuration' => $durations ? max($durations) : 0]
 			);
 
+			//----------------------------------------------------------------------------------------------------------
+			// TODO Auswertungsansicht vorübergehend grundsätzlich sperren. Sperre später aufgehoben werden!!!
+			$isEvaluationViewOpen = false;
+			if (empty($isEvaluationViewOpenMsg))
+				$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
+			//----------------------------------------------------------------------------------------------------------
+
 			$response = [
 				'data' => $data,
 				'evaluationView' => [
@@ -569,6 +587,13 @@ class Evaluation extends FHCAPI_Controller
 				['countSubmitted' => $countSubmitted],
 				['ruecklaufquote' => $ruecklaufquote]
 			);
+
+			//----------------------------------------------------------------------------------------------------------
+			// TODO Auswertungsansicht vorübergehend grundsätzlich sperren. Sperre später aufgehoben werden!!!
+			$isEvaluationViewOpen = false;
+			if (empty($isEvaluationViewOpenMsg))
+				$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
+			//----------------------------------------------------------------------------------------------------------
 
 			$response = [
 				'data' => $data,

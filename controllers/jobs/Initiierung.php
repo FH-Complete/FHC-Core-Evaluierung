@@ -2697,16 +2697,12 @@ class Initiierung extends JOB_Controller
 	{
 		$this->logInfo('Start Job sendMalveStglAbschliessenReminder');
 
-		// Aktuelles Studiensemester
-		$result = $this->_ci->StudiensemesterModel->getAkt();
-
-		if (!hasData($result))
-		{
-			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
-			$this->_ci->StudiensemesterModel->addLimit(1);
-			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
-			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
-		}
+		// Studiensemester rückwirkend ermitteln, da die Erinnerungsmail fünf Wochen nach Ende des
+		// allgemeinen Evaluationszeitraums versendet wird und der Versand somit bereits im Folgesemester bzw. in den
+		// Semesterferien erfolgen kann.
+		$this->_ci->StudiensemesterModel->addLimit(1);
+		$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+		$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
 
 		if (!hasData($result))
 		{
@@ -2843,16 +2839,12 @@ class Initiierung extends JOB_Controller
 	{
 		$this->logInfo('Start Job sendMalveKflAbschliessenReminder');
 
-		// Aktuelles Studiensemester
-		$result = $this->_ci->StudiensemesterModel->getAkt();
-
-		if (!hasData($result))
-		{
-			// Fallback Sommerferien - Aktuelles Studiensemester rückwirkend ermitteln
-			$this->_ci->StudiensemesterModel->addLimit(1);
-			$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
-			$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
-		}
+		// Studiensemester rückwirkend ermitteln, da die Erinnerungsmail fünf Wochen nach Ende des
+		// allgemeinen Evaluationszeitraums versendet wird und der Versand somit bereits im Folgesemester bzw. in den
+		// Semesterferien erfolgen kann.
+		$this->_ci->StudiensemesterModel->addLimit(1);
+		$this->_ci->StudiensemesterModel->addOrder('ende', 'DESC');
+		$result = $this->_ci->StudiensemesterModel->loadWhere(['ende <' => 'NOW()']);
 
 		if (!hasData($result))
 		{
