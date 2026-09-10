@@ -204,6 +204,38 @@ class InitiierungLib
 
 	public function mergeEvaluierungenIntoData($data, $evaluierungen, $isAufgeteilt)
 	{
+		$uids = [];
+		foreach ($evaluierungen as $evaluierung)
+		{
+			if (isset($evaluierung->insertvon) && $evaluierung->insertvon !== null)
+			{
+				$uids[$evaluierung->insertvon] = true;
+			}
+			if (isset($evaluierung->updatevon) && $evaluierung->updatevon !== null)
+			{
+				$uids[$evaluierung->updatevon] = true;
+			}
+		}
+
+		$uids = array_keys($uids);
+
+		// Erst alle Namen für UIDs einholen
+		$fullNamesByUid = array();
+		if (count($uids) > 0)
+		{
+			$this->_ci->load->model('person/Person_model', 'PersonModel');
+			$this->_ci->PersonModel->addSelect('vorname, nachname, uid');
+			$this->_ci->PersonModel->addJoin('tbl_benutzer', 'person_id');
+			$this->_ci->db->where_in('uid', $uids);
+			$result = $this->_ci->PersonModel->loadWhere();
+
+			$personen = hasData($result) ? getData($result) : [];
+			foreach ($personen as $person)
+			{
+				$fullNamesByUid[$person->uid] = $person->vorname . ' ' . $person->nachname;
+			}
+		}
+
 		foreach ($data as &$item)
 		{
 			$item->lv_aufgeteilt = $isAufgeteilt;
@@ -242,13 +274,14 @@ class InitiierungLib
 
 				$item->insertvonFullName = '';
 				$item->updatevonFullName = '';
+
 				if ($evalMatch->insertvon || $evalMatch->updatevon)
 				{
-					$this->_ci->load->model('person/Person_model', 'PersonModel');
 					if ($evalMatch->insertvon !== 'system')
 					{
-						$result = $this->_ci->PersonModel->getFullName($evalMatch->insertvon);
-						$item->insertvonFullName = hasData($result) ? getData($result) : '';
+						$item->insertvonFullName = isset($fullNamesByUid[$evalMatch->insertvon])
+							? $fullNamesByUid[$evalMatch->insertvon]
+							: '';
 					}
 					else
 					{
@@ -257,8 +290,9 @@ class InitiierungLib
 
 					if ($evalMatch->updatevon)
 					{
-						$result = $this->_ci->PersonModel->getFullName($evalMatch->updatevon);
-						$item->updatevonFullName = hasData($result) ? getData($result) : '';
+						$item->updatevonFullName = isset($fullNamesByUid[$evalMatch->updatevon])
+							? $fullNamesByUid[$evalMatch->updatevon]
+							: '';
 					}
 				}
 			}
