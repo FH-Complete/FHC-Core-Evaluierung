@@ -77,7 +77,7 @@ export default {
 				<!-- Switch Sperre Infos -->	
 				<div 
 					v-if="canSwitchInfo.length > 0"
-					class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 mb-3"
+					class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 my-3"
 				>
 					<i class="fa fa-ban text-muted fa-lg"></i>
 					<span>{{canSwitchInfo.join(', ')}}</span>
