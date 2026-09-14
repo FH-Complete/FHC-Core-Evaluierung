@@ -119,7 +119,9 @@ class Initiierung extends FHCAPI_Controller
 		// Wir wollen die Daten und die editableChecks für die aktuelle Auswahl (Gruppenevaluierung) abfragen,
 		// und nicht das 'bestehendes' lveLv->lv_aufgeteilt aus der Datenbank.
 		$groupedByLe = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLe, $lves, $selectedLvAufgeteilt);
-		if (count($lves) > 0)
+
+		// Wenn startzeit bereits für eine Evaluierung gesetzt ist
+		if (count(array_filter(array_column($lves, 'startzeit'))) > 0)
 		{
 			$canSwitch = false;
 			$canSwitchInfo []= 'Wechsel nicht mehr möglich: Mindestens ein Evaluierungszeitfenster wurde bereits gespeichert';
@@ -204,7 +206,9 @@ class Initiierung extends FHCAPI_Controller
 		// Wir wollen die Daten und die editableChecks für die aktuelle Auswahl (Gesamt-LV) abfragen,
 		// und nicht das 'bestehendes' lveLv->lv_aufgeteilt aus der Datenbank...
 		$groupedByLv = $this->initiierunglib->mergeEvaluierungenIntoData($groupedByLv, $lves, $selectedLvAufgeteilt);
-		if (count($lves) > 0)
+
+		// Wenn startzeit bereits für eine Evaluierung gesetzt ist
+		if (count(array_filter(array_column($lves, 'startzeit'))) > 0)
 		{
 			$canSwitch = false;
 			$canSwitchInfo []= 'Wechsel nicht mehr möglich: Mindestens ein Evaluierungszeitfenster wurde bereits gespeichert';
