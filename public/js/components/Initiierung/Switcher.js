@@ -80,7 +80,7 @@ export default {
 					class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 my-3"
 				>
 					<i class="fa fa-ban text-muted fa-lg"></i>
-					<span>{{canSwitchInfo.join(', ')}}</span>
+					<span v-html="canSwitchInfo.join('<br>')"></span>
 				</div>
 			</div>
 			<!-- Evaluierungsebene wechseln -->
