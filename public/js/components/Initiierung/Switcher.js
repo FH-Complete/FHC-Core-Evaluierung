@@ -43,7 +43,7 @@ export default {
 			if (!this.canSwitch) return;
 
 			this.$api
-				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, this.selLveLv.lv_aufgeteilt))
+				.call(ApiInitiierung.updateLvAufgeteilt(this.selLveLv.lvevaluierung_lehrveranstaltung_id, this.previewLvAufgeteilt))
 				.then(() => {
 					this.selLveLv.lv_aufgeteilt =  this.previewLvAufgeteilt;
 					this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'))
