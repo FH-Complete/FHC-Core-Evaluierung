@@ -45,8 +45,10 @@ export default {
 					return this.$api.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
 				})
 				.then(result => {
-					this.malve.data = result.data.data;
-					this.malve.submit = result.data.submit;
+					if (result.data) {
+						this.malve.data = result.data.data;
+						this.malve.submit = result.data.submit;
+					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
@@ -513,8 +515,10 @@ export default {
 			this.$api
 				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
 				.then(result => {
-					this.malve.data = result.data.data;
-					this.malve.submit = result.data.submit;
+					if (result.data) {
+						this.malve.data = result.data.data;
+						this.malve.submit = result.data.submit;
+					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
@@ -527,8 +531,10 @@ export default {
 			this.$api
 				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
 				.then(result => {
-					this.malve.data = result.data.data;
-					this.malve.submit = result.data.submit;
+					if (result.data) {
+						this.malve.data = result.data.data;
+						this.malve.submit = result.data.submit;
+					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 
