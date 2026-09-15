@@ -299,12 +299,9 @@ class InitiierungLib
 			else
 			{
 				// Fallback Defaults
-				$now = new DateTime();
-				$ende = (clone $now)->modify('+3 days');
-
 				$item->lvevaluierung_id = null;
-				$item->startzeit        = $now->format('Y-m-d H:i:s');
-				$item->endezeit         = $ende->format('Y-m-d H:i:s');
+				$item->startzeit = null;
+				$item->endezeit = null;
 				$item->dauer            = null;
 				$item->codes_gemailt    = false;
 				$item->codes_ausgegeben = 0;

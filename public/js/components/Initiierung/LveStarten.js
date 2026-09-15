@@ -119,21 +119,6 @@ export default {
 							? data.groupedByLe
 							: data.groupedByLv;
 					this.loadedLvAufgeteilt = lv_aufgeteilt;
-
-					// If start- and endezeit is null, set default values
-					this.selLveLvDetails.forEach(item => {
-						// default startzeit: now
-						if (!item.startzeit) {
-							item.startzeit = DateHelper.formatToSqlTimestamp(new Date());
-						}
-						// default endezeit: now + 3 days
-						if (!item.endezeit) {
-							item.endezeit = DateHelper.formatToSqlTimestamp(
-								DateHelper.addDays(new Date(), 3)
-							);
-						}
-					});
-
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
