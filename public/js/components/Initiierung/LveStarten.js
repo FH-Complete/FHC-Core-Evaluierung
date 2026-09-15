@@ -119,6 +119,10 @@ export default {
 							? data.groupedByLe
 							: data.groupedByLv;
 					this.loadedLvAufgeteilt = lv_aufgeteilt;
+
+					this.selLveLvDetails.forEach(item => {
+						item.hasZeitfenster = item.startzeit !== null && item.endezeit !== null;
+					});
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},

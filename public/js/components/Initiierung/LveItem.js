@@ -108,16 +108,14 @@ export default {
 			return stundenplan.map(s => DateHelper.formatDate(s.datum)).join('<br>');
 		},
 		getSavedEvaluierungInfoString(lveLvDetail) {
-			const isUpdate = lveLvDetail.updateamum != null;
+			const isUpdate = !!lveLvDetail.updateamum;
+			const date = isUpdate ? lveLvDetail.updateamum : lveLvDetail.insertamum;
+			const person = isUpdate ? lveLvDetail.updatevonFullName : lveLvDetail.insertvonFullName;
+			const verb = isUpdate ? 'Geändert' : 'Gespeichert';
 
-			if (isUpdate) {
-				const lektor = lveLvDetail.updatevonFullName;
-				const date = lveLvDetail.updateamum;
+			if (!date) return '';   // kein echtes Datum vorhanden -> nichts anzeigen
 
-				return `Gespeichert am ${DateHelper.formatDate(date)} von ${lektor}`;
-			}
-
-			return '';
+			return `${verb} am ${DateHelper.formatDate(date)} von ${person}`;
 		},
 		openEvaluationByLve(lvevaluierung_id){
 			const url = this.$api.getUri() +
@@ -216,13 +214,13 @@ export default {
 								<button
 									type="submit"  
 									class="btn w-100 w-md-auto mb-3"
-									:class="lveLvDetail.lvevaluierung_id ? 'btn-outline-primary' : 'btn-primary'"
+									:class="lveLvDetail.hasZeitfenster ? 'btn-outline-primary' : 'btn-primary'"
 								>
-								 {{ lveLvDetail.lvevaluierung_id ? 'Zeitfenster ändern' : 'Zeitfenster speichern' }}
+								 {{ lveLvDetail.hasZeitfenster ? 'Zeitfenster ändern' : 'Zeitfenster speichern' }}
 							</button>
 							</div>
 							<div class="form-text mb-3">
-								<span v-if="lveLvDetail.insertamum">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
+								<span v-if="lveLvDetail.hasZeitfenster">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
 								<span v-else-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}
 								</span>
