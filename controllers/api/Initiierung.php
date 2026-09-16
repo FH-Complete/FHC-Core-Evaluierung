@@ -609,6 +609,7 @@ class Initiierung extends FHCAPI_Controller
 				if (!in_array($this->_uid, array_column($item->lektoren, 'mitarbeiter_uid'))) {
 					$isDisabledEvaluierung = true;
 					$isDisabledEvaluierungInfo = ['Bearbeitung nur durch Lehrende*n möglich'];
+					$isDisabledSendMailInfo[]= 'Bearbeitung nur durch Lehrende*n möglich';
 
 					// NOTE: verhindert dass LV-Leitung auf Auswertung einer Gruppe sehen kann, wenn nicht selbst Lektor
 					$isRenderedBtnAuswertung = false;
@@ -626,7 +627,7 @@ class Initiierung extends FHCAPI_Controller
 			}
 
 			// Button disable logic
-			$isDisabledSendMail = (!empty($isDisabledSendMailInfo) || !$lvevaluierung_id && !$item->codes_gemailt) && $isSentToAllStudents;
+			$isDisabledSendMail = !empty($isDisabledSendMailInfo) || (!$lvevaluierung_id && !$item->codes_gemailt && $isSentToAllStudents);
 
 			// If no issues collected to disable sending mails
 			if (empty($isDisabledSendMailInfo) && $lvevaluierung_id && !$item->codes_gemailt && count($sentByAnyEvaluierungOfLv) === 0)
