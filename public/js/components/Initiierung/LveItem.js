@@ -127,7 +127,7 @@ export default {
 	},
 	template: `
 	<!-- Border um alle Evaluierungen, ggf. mit badge 'Voranzeige' -->
-	<div class="border rounded-3 p-3 mb-3 position-relative" :class="{'border-primary bg-primary-subtle': isPreview,  'border-secondary-subtle': !isPreview}">
+	<div class="mb-3 position-relative" :class="{'border border-primary rounded-3 bg-primary-subtle p-3': isPreview,  '': !isPreview}">
 		<span class="badge bg-primary position-absolute top-0 start-0 translate-middle-y me-3" v-if="isPreview">Voranzeige</span>
 		<!-- Loop Evaluierungen -->
 		<div class="d-flex flex-wrap gap-3">
