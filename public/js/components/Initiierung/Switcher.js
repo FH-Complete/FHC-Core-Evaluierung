@@ -73,67 +73,68 @@ export default {
 						data-bs-html="true"
 						data-bs-custom-class="tooltip-left">
 					</i>
-				</span>
-				<!-- Switch Sperre Infos -->	
+				</span>	
+			</div>		
+			<div class="rounded-3" :class="{ 'alert alert-secondary p-3 mb-0': !canSwitch }">
 				<div 
-					v-if="canSwitchInfo.length > 0"
-					class="alert alert-secondary d-flex flex-wrap align-items-center gap-2 my-3"
+					v-if="!canSwitch && canSwitchInfo.length > 0"
+					class="d-flex flex-wrap align-items-center gap-2 mb-3"
 				>
-					<i class="fa fa-ban text-muted fa-lg"></i>
+				   <!-- <i class="fa fa-ban text-muted fa-lg"></i>-->
 					<span v-html="canSwitchInfo.join('<br>')"></span>
 				</div>
+				<!-- Evaluierungsebene wechseln -->
+				<fieldset :disabled="!canSwitch">
+					<!-- Radiobuttons -->
+					<div class="d-flex flex-wrap flex-md-nowrap gap-2 align-items-start">
+						<div class="flex-grow-1 flex-md-grow-0 d-flex flex-wrap gap-2 align-items-center">
+							<div class="form-check form-check-inline ps-0">
+								<form-input
+									label="Gesamt-LV evaluieren"
+									class="form-check-input"
+									type="radio"
+									:value="false"
+									v-model="previewLvAufgeteilt"
+									 @change="onSwitch"
+								>
+								</form-input>
+							</div>
+							<div class="form-check form-check-inline ps-0">
+								<form-input
+									label="LV auf Gruppenbasis evaluieren"
+									class="form-check-input"
+									type="radio"
+									:value="true"
+									v-model="previewLvAufgeteilt"
+									 @change="onSwitch"
+								>
+								</form-input>
+							</div>
+						</div>
+					</div><!--.div Radiobuttons-->
+					<!-- Voranzeige Alert-->
+					<div 
+						v-if="canSwitch && previewLvAufgeteilt !== selLveLv.lv_aufgeteilt"
+						class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mt-3 mb-0 text-primary fw-bold"
+					>
+						<span>Voranzeige: {{ previewLvAufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}
+							<i 
+								class="ms-2 fa fa-info-circle text-primary fa-lg" 
+								:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+								v-tooltip="previewLvAufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left">
+							</i>
+							Jetzt übernehmen und speichern?
+						</span>
+						   <div class="d-flex gap-2 ms-2">
+							  
+							  <button type="button" class="btn btn-primary" @click="updateLvAufgeteilt()">Evaluierungsebene speichern</button>
+							  <button type="button" class="btn btn-outline-primary" @click="cancelPreview()">Abbrechen</button>
+						   </div>
+					</div><!--.div Voranzeige Alert-->
+				</fieldset>	
 			</div>
-			<!-- Evaluierungsebene wechseln -->
-			<fieldset :disabled="!canSwitch">
-				<!-- Radiobuttons -->
-				<div class="d-flex flex-wrap flex-md-nowrap gap-2 align-items-start">
-					<div class="flex-grow-1 flex-md-grow-0 d-flex flex-wrap gap-2 align-items-center">
-						<div class="form-check form-check-inline ps-0">
-							<form-input
-								label="Gesamt-LV evaluieren"
-								class="form-check-input"
-								type="radio"
-								:value="false"
-								v-model="previewLvAufgeteilt"
-								 @change="onSwitch"
-							>
-							</form-input>
-						</div>
-						<div class="form-check form-check-inline ps-0">
-							<form-input
-								label="LV auf Gruppenbasis evaluieren"
-								class="form-check-input"
-								type="radio"
-								:value="true"
-								v-model="previewLvAufgeteilt"
-								 @change="onSwitch"
-							>
-							</form-input>
-						</div>
-					</div>
-				</div><!--.div Radiobuttons-->
-				<!-- Voranzeige Alert-->
-				<div 
-					v-if="canSwitch && previewLvAufgeteilt !== selLveLv.lv_aufgeteilt"
-					class="alert alert-primary d-flex flex-wrap align-items-center gap-2 mt-3 mb-0 text-primary fw-bold"
-				>
-					<span>Voranzeige: {{ previewLvAufgeteilt ? 'Gruppenbasis' : 'Gesamt-LV' }}
-						<i 
-							class="ms-2 fa fa-info-circle text-primary fa-lg" 
-							:title="selLveLv.lv_aufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-							v-tooltip="previewLvAufgeteilt ? infoEvaluierungByLe : infoEvaluierungByLv"
-							data-bs-html="true"
-							data-bs-custom-class="tooltip-left">
-						</i>
-						Jetzt übernehmen und speichern?
-					</span>
-					   <div class="d-flex gap-2 ms-2">
-						  
-						  <button type="button" class="btn btn-primary" @click="updateLvAufgeteilt()">Evaluierungsebene speichern</button>
-						  <button type="button" class="btn btn-outline-primary" @click="cancelPreview()">Abbrechen</button>
-					   </div>
-				</div><!--.div Voranzeige Alert-->
-			</fieldset>
 		</div><!--.card -->
 	</div>
 	`
