@@ -285,9 +285,11 @@ class Initiierung extends FHCAPI_Controller
 			'lvevaluierung_lehrveranstaltung_id' => $lvevaluierung_lehrveranstaltung_id
 		]);
 
-		if (hasData($result))
+		$lves = hasData($result) ? getData($result) : [];
+
+		if (count(array_filter(array_column($lves, 'startzeit'))) > 0)
 		{
-			$this->terminateWithError('Änderung nicht möglich. Mindestens eine Lvevaluierung ist bereits gespeichert worden.');
+			$this->terminateWithError('Wechsel nicht mehr möglich. Mindestens ein Evaluierungszeitfenster wurde bereits gespeichert');
 		}
 
 		// Get Lv Evaluierungen
