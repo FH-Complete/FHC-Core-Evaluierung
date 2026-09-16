@@ -1096,44 +1096,42 @@ class Initiierung extends JOB_Controller
 				else
 				{
 					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung
-					$result_lkt = $this->_ci->LehrveranstaltungModel->getLecturersByLv($studiensemester_kurzbz, $row->lehrveranstaltung_id);
-					if(isSuccess($result_lkt) && hasData($result_lkt))
+					$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($row->lehrveranstaltung_id, $row->studiensemester_kurzbz);
+					if (hasData($result))
 					{
-						$dataLektor = getData($result_lkt);
+						$lvLeitungen = getData($result);
 
-						foreach($dataLektor as $rowLektor)
+						foreach($lvLeitungen as $lvLeitung)
 						{
-							if($rowLektor->lvleiter)
+
+							if (!in_array($lvLeitung->mitarbeiter_uid, $gesamt_sent_users))
 							{
-								if(!in_array($rowLektor->uid, $gesamt_sent_users))
+								$gesamt_sent_users[] = $lvLeitung->mitarbeiter_uid;
+								//echo "\nGesamt Mail to ".$lvLeitung->mitarbeiter_uid;
+								$uid = $lvLeitung->mitarbeiter_uid;
+
+								$data = [
+									'vorname' => $lvLeitung->vorname,
+									'nachname' => $lvLeitung->nachname,
+									'link'=> $link
+								];
+
+								$mailSent = sendSanchoMail(
+									'LVE_LVL_TEXT_3',
+									$data,
+									$uid.'@'.DOMAIN,
+									'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
+									'sancho_header_lvevaluierung_rollout.jpg',
+									'sancho_footer_lvevaluierung_rollout.jpg'
+								);
+
+								if ($mailSent)
 								{
-									$gesamt_sent_users[] = $rowLektor->uid;
-									//echo "\nGesamt Mail to ".$rowLektor->uid;
-									$uid = $rowLektor->uid;
-
-									$data = [
-										'vorname' => $rowLektor->vorname,
-										'nachname' => $rowLektor->nachname,
-										'link'=> $link
-									];
-
-									$mailSent = sendSanchoMail(
-										'LVE_LVL_TEXT_3',
-										$data,
-										$uid.'@'.DOMAIN,
-										'LV-Evaluation auf Gesamt-Ebene – Evaluierungszeitfenster festlegen',
-										'sancho_header_lvevaluierung_rollout.jpg',
-										'sancho_footer_lvevaluierung_rollout.jpg'
-									);
-
-									if ($mailSent)
-									{
-										$this->logInfo('LVE_LVL_TEXT_3 to '. $uid);
-									}
-									else
-									{
-										$this->logError('Failed to send LVE_LVL_TEXT_3 to '. $uid);
-									}
+									$this->logInfo('LVE_LVL_TEXT_3 to '. $uid);
+								}
+								else
+								{
+									$this->logError('Failed to send LVE_LVL_TEXT_3 to '. $uid);
 								}
 							}
 						}
@@ -2347,7 +2345,16 @@ class Initiierung extends JOB_Controller
 				// Gesamt-LV
 				else
 				{
-					// Bei Gesamt Evaluierung ergeht Info an die LV Leitung UND auch an die Lehrenden
+					// Bei Gesamt Evaluierung ergeht Info an die zuletzt eingetragene LV Leitung
+					// LVL bekommt eigenes template, deshalb extra identifizieren
+					$lvLeitung = [];
+					$result = $this->_ci->LehrveranstaltungModel->getLvLeitung($lveLv->lehrveranstaltung_id, $studiensemester_kurzbz);
+					if (hasData($result))
+					{
+						$lvLeitung = getData($result)[0];
+					}
+
+					// ...UND auch an die Lehrenden
 					$result_lkt = $this->_ci->LehrveranstaltungModel->getLecturersByLv(
 						$studiensemester_kurzbz,
 						$lveLv->lehrveranstaltung_id
@@ -2360,8 +2367,9 @@ class Initiierung extends JOB_Controller
 						foreach ($dataLektor as $rowLektor)
 						{
 							// LV-Leitung: nur LVL Mail Template
-							if ($rowLektor->lvleiter)
+							if (!empty($lvLeitung) && $rowLektor->uid === $lvLeitung->mitarbeiter_uid)
 							{
+								// nur einmal pro LV-Leitung senden
 								if (!in_array($rowLektor->uid, $lvleitung_sent_users))
 								{
 									$lvleitung_sent_users[] = $rowLektor->uid;
