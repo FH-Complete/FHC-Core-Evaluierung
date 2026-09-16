@@ -131,9 +131,9 @@ export default {
 		<span class="badge bg-primary position-absolute top-0 start-0 translate-middle-y me-3" v-if="isPreview">Voranzeige</span>
 		<!-- Loop Evaluierungen -->
 		<div class="d-flex flex-wrap gap-3">
-			<div class="card evaluation-card-flex" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
-				<!-- Gruppen -->
-				<div class="card-body pb-0">
+			<div class="card evaluation-card-flex align-self-start" v-for="lveLvDetail in selLveLvDetails" :key="lveLvDetail.lehreinheit_id">
+				<div class="card-body pb-0 flex-grow-0">
+					<!-- Gruppen badge -->
 					<span
 						class="badge bg-secondary-subtle text-secondary p-2 me-2"
 						:title="getLeGruppenInfoString(lveLvDetail)"
@@ -141,41 +141,42 @@ export default {
 						data-bs-html="true"
 						data-bs-custom-class="tooltip-left"
 					>
-						Gruppen<i class="fa-solid fa-arrow-pointer ms-2"></i>
+						Gruppen<i class="fa-solid fa-info-circle ms-2"></i>
 					</span>
-	
+					<!-- Studierende badge -->
 					<span
-							class="badge bg-secondary-subtle text-secondary p-2 me-2" 
-							:title="getStudierendeString(lveLvDetail.studenten)"
-							v-tooltip="getStudierendeString(lveLvDetail.studenten)"
-							data-bs-html="true"
-							data-bs-custom-class="tooltip-left"
-						>
-							<span v-if="lveLvDetail.studenten && lveLvDetail.studenten.length > 0">
-								{{ lveLvDetail.studenten.length }}
-							</span>
-							Studierende<i class="fa-solid fa-arrow-pointer ms-2"></i>
+						class="badge bg-secondary-subtle text-secondary p-2 me-2" 
+						:title="getStudierendeString(lveLvDetail.studenten)"
+						v-tooltip="getStudierendeString(lveLvDetail.studenten)"
+						data-bs-html="true"
+						data-bs-custom-class="tooltip-left"
+					>
+						<span v-if="lveLvDetail.studenten && lveLvDetail.studenten.length > 0">
+							{{ lveLvDetail.studenten.length }}
 						</span>
-						<span
-							class="badge bg-secondary-subtle text-secondary p-2" 
-							:title="getStundenplanterminString(lveLvDetail.stundenplan)"
-							v-tooltip="getStundenplanterminString(lveLvDetail.stundenplan)" 				
-							data-bs-html="true"
-							data-bs-custom-class="tooltip-left"
-						>
-							LV-Plan<i class="fa-solid fa-arrow-pointer ms-2"></i> 
-						</span>
+						Studierende<i class="fa-solid fa-info-circle ms-2"></i>
+					</span>
+					<!-- LV-Plan badge -->
+					<span
+						class="badge bg-secondary-subtle text-secondary p-2" 
+						:title="getStundenplanterminString(lveLvDetail.stundenplan)"
+						v-tooltip="getStundenplanterminString(lveLvDetail.stundenplan)" 				
+						data-bs-html="true"
+						data-bs-custom-class="tooltip-left"
+					>
+						LV-Plan<i class="fa-solid fa-info-circle ms-2"></i> 
+					</span>
 				</div><!--.end card-body -->
 				<!-- Lehrende -->
-				<div class="card-body border-bottom">
+				<div class="card-body border-bottom flex-grow-0">
 					<i class="d-lg-none fa fa-graduation-cap me-2"></i>
 					<span class="d-none d-lg-inline me-2 fw-bold">{{ $p.t('lehre/lektorInnen') }}:</span>
 					<span v-html="getLektorenInfoString(lveLvDetail.lektoren)"></span>
 				</div><!--.end card body-->
 				<!-- LV-Evaluierungen -->
-				<div class="card-body pb-3 border-bottom">
+				<div class="card-body pb-3">
 					<!-- Zeitfenster -->
-					<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview" class="text-muted">
+					<fieldset :disabled="lveLvDetail.editableCheck.isDisabledEvaluierung || isPreview" class="text-muted mb-3">
 						<form-form @submit.prevent="saveOrUpdateLvevaluierung(lveLvDetail)">	
 							<div class="evaluation-data-table-flex flex-column gap-2">
 								<form-input 
@@ -213,14 +214,17 @@ export default {
 								</form-input>
 								<button
 									type="submit"  
-									class="btn w-100 w-md-auto mb-3"
+									class="btn w-100 w-md-auto mb-2"
 									:class="lveLvDetail.hasZeitfenster ? 'btn-outline-primary' : 'btn-primary'"
 								>
-								 {{ lveLvDetail.hasZeitfenster ? 'Zeitfenster ändern' : 'Zeitfenster speichern' }}
-							</button>
+								 	{{ lveLvDetail.hasZeitfenster ? 'Zeitfenster ändern' : 'Zeitfenster speichern' }}
+								</button>
 							</div>
 							<div class="form-text mb-3">
-								<span v-if="lveLvDetail.hasZeitfenster">{{getSavedEvaluierungInfoString(lveLvDetail)}}</span>
+								<span v-if="lveLvDetail.hasZeitfenster">
+							<!--		<i class="fa fa-lg fa-circle-check text-success me-2"></i>-->
+									{{getSavedEvaluierungInfoString(lveLvDetail)}}
+								</span>
 								<span v-else-if="lveLvDetail.editableCheck.isDisabledEvaluierungInfo.length > 0">
 									{{lveLvDetail.editableCheck.isDisabledEvaluierungInfo.join(', ')}}
 								</span>
@@ -232,44 +236,48 @@ export default {
 						v-if="lveLvDetail.editableCheck.isRenderedSendMail" 
 						:disabled="lveLvDetail.editableCheck.isDisabledSendMail || isPreview"
 					>
-						<div class="d-flex flex-column">
+						<div class="d-flex align-items-center mb-2">
 							<!-- Button -->
-							<button class="btn btn-primary mb-3" @click="onSendLinks(lveLvDetail)">
+							<button class="btn btn-primary flex-grow-1" @click="onSendLinks(lveLvDetail)">
 								Studierende zur LV-Evaluierung einladen
-							</button>	
-							<div class="form-text d-flex flex-wrap align-items-center gap-2 mb-3">
-								<!-- Loading spinner -->
-								<i class="fa-solid fa-spinner fa-pulse" v-if="isSendingMail"></i>
-								<!-- Text -->
-								 <template v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0">
-									<span v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0">
-									{{lveLvDetail.editableCheck.isDisabledSendMailInfo.join(', ')}}
-								 </span>
-									<span
-									   class="badge bg-secondary-subtle text-secondary p-2"
-									   :title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
-									   v-tooltip="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
-									   data-bs-html="true"
-									   data-bs-custom-class="tooltip-left"
-									>
-									   an {{lveLvDetail.codes_ausgegeben}} Studierende
-									   <i class="fa-solid fa-arrow-pointer ms-1"></i>
-									</span>
-								 </template>
-								 <i
-									class="fa fa-info-circle text-primary"
-									:title="infoStudierendenlink"
-									v-tooltip="infoStudierendenlink"
-									data-bs-html="true"
-									data-bs-custom-class="tooltip-left"
-								 ></i>
-							</div>
+							</button>
+							 <i
+								class="fa fa-lg fa-info-circle text-primary ms-3 flex-shrink-0"
+								:title="infoStudierendenlink"
+								v-tooltip="infoStudierendenlink"
+								data-bs-html="true"
+								data-bs-custom-class="tooltip-left"
+							 ></i>
+						 </div>	
+						<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+							<!-- Loading spinner -->
+							<i class="fa-solid fa-spinner fa-pulse" v-if="isSendingMail"></i>
+							<!-- Text -->
+							 <template v-if="lveLvDetail.sentByAnyEvaluierungOfLv.length > 0">
+						<!--	 	<i class="fa fa-lg fa-circle-check text-success me-2"></i>-->
+								<span v-if="lveLvDetail.editableCheck.isDisabledSendMailInfo.length > 0"
+									class="form-text ">
+								{{lveLvDetail.editableCheck.isDisabledSendMailInfo.join(', ')}}
+								</span>
+								<span
+								   class="badge bg-secondary-subtle text-secondary p-2 fw-bold"
+								   :title="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
+								   v-tooltip="lveLvDetail.sentByAnyEvaluierungOfLv.map(s => s.nachname + ' ' + s.vorname).join('<br>')"
+								   data-bs-html="true"
+								   data-bs-custom-class="tooltip-left"
+								>
+								  {{lveLvDetail.codes_ausgegeben}} Eingeladene <i class="fa-solid fa-info-circle ms-1"></i> 
+				<!--				   <i class="fa-solid fa-info-circle ms-1"></i>-->
+								</span>
+							 </template>
 						</div><!--.end d-flex -->
 					</fieldset>
-					<!-- Ergebnisse -->
+				</div><!--.end card-body -->
+				<div class="card-footer bg-light" v-if="lveLvDetail.codes_ausgegeben">
+				<!-- Ergebnisse -->
 					<button 
 						v-if="lveLvDetail.codes_ausgegeben"
-						class="btn btn-primary w-100 w-md-auto mb-3"
+						class="btn btn-primary w-100 w-md-auto mt-3 mb-2"
 						:disabled="lveLvDetail.editableCheck.isDisabledBtnAuswertung"
 						@click="openEvaluationByLve(lveLvDetail.lvevaluierung_id)"
 					>
@@ -278,7 +286,10 @@ export default {
 					<div class="form-text mb-3" v-if="lveLvDetail.codes_ausgegeben && lveLvDetail.editableCheck.isDisabledBtnAuswertungInfo.length > 0">
 					   {{lveLvDetail.editableCheck.isDisabledBtnAuswertungInfo.join(', ')}}
 					</div>
-				</div><!--.end card-body -->
+		<!--			<div class="form-text" v-if="lveLvDetail.editableCheck.isDisabledBtnAuswertung === false">
+						&lt;!&ndash;<i class="fa fa-lg fa-circle-check text-success me-2"></i> &ndash;&gt;Ergebnisse verfügbar
+					</div>-->
+</div>
 			</div><!--.end card-->
 		</div><!--.end d-flex -->
 	</div><!--.end border-->
