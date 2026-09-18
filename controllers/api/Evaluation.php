@@ -285,13 +285,13 @@ class Evaluation extends FHCAPI_Controller
 
 			//----------------------------------------------------------------------------------------------------------
 			// TODO Auswertungsansicht VORÜBERGEHEND für STGL und KFL sperren.
-			/*if(!$isLektorOfLv || $role === 'stg' || $role === 'kf')
+			if(!$isLektorOfLv || $role === 'stg' || $role === 'kf')
 			{
 				$isEvaluationViewOpen = false;
 
 				if (empty($isEvaluationViewOpenMsg))
 					$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
-			}*/
+			}
 			//----------------------------------------------------------------------------------------------------------
 
 			$response = [
@@ -452,10 +452,10 @@ class Evaluation extends FHCAPI_Controller
 
 			//----------------------------------------------------------------------------------------------------------
 			// TODO Auswertungsansicht vorübergehend grundsätzlich sperren. Sperre später aufgehoben werden!!!
-			/*$isEvaluationViewOpen = false;
+			$isEvaluationViewOpen = false;
 			if (empty($isEvaluationViewOpenMsg))
 				$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
-			*/
+			
 			//----------------------------------------------------------------------------------------------------------
 
 			$response = [
@@ -591,10 +591,10 @@ class Evaluation extends FHCAPI_Controller
 
 			//----------------------------------------------------------------------------------------------------------
 			// TODO Auswertungsansicht vorübergehend grundsätzlich sperren. Sperre später aufgehoben werden!!!
-			/*$isEvaluationViewOpen = false;
+			$isEvaluationViewOpen = false;
 			if (empty($isEvaluationViewOpenMsg))
 				$isEvaluationViewOpenMsg = ['Auswertungen noch nicht zur Ansicht freigegeben'];
-			*/
+			
 			//----------------------------------------------------------------------------------------------------------
 
 			$response = [
