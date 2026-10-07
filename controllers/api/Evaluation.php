@@ -111,7 +111,7 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_STG . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
-				'getMalveByKf' => [
+				'getMalveByOe' => [
 					self::BERECHTIGUNG_KF . ':r',
 					self::BERECHTIGUNG_ADMIN . ':r',
 				],
@@ -131,7 +131,7 @@ class Evaluation extends FHCAPI_Controller
 					self::BERECHTIGUNG_INIT . ':rw',
 					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
-				'saveMalveByKf' => [
+				'saveMalveByOe' => [
 					self::BERECHTIGUNG_KF . ':rw',
 					self::BERECHTIGUNG_ADMIN . ':rw',
 				],
@@ -151,6 +151,7 @@ class Evaluation extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungZeitfenster_model', 'LvevaluierungZeitfensterModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungReflexion_model', 'LvevaluierungReflexionModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
 		$this->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
 		$this->load->model('education/Lehreinheitmitarbeiter_model', 'LehreinheitmitarbeiterModel');
 		$this->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
@@ -2692,133 +2693,6 @@ class Evaluation extends FHCAPI_Controller
 		$this->terminateWithSuccess($data);
 	}
 
-	/**
-	 * Get MALVE by Studiengang and Studiensemester.
-	 *
-	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
-	 * @return void
-	 */
-	public function getMalveByStg()
-	{
-		$studiengang_kz = $this->input->get('studiengang_kz');
-		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
-		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
-
-		$malve = [
-			'data' => null,
-			'submit' => false,
-		];
-
-		// Prüfung ob es bereits eine MALVE gibt
-		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
-		$result = $this->StudiengangModel->load($studiengang_kz);
-
-		if (hasData($result))
-		{
-			$studiengang = getData($result)[0];
-
-			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
-			$result = $this->LvevaluierungMalveModel->loadWhere([
-				'oe_kurzbz' => $studiengang->oe_kurzbz,
-				'orgform_kurzbz' => $orgform_kurzbz,
-				'studiensemester_kurzbz' => $studiensemester_kurzbz
-			]);
-
-			$data = $this->getDataOrTerminateWithError($result);
-
-			// Malve gefunden
-			$malve['data'] = $data;
-		}
-
-		// Prüfung, ob MALVE abgeschlossen werden darf
-		$result = $this->LvevaluierungZeitfensterModel->loadWhere([
-			'typ' => 'mailreflexionen',
-			'studiensemester_kurzbz' => $studiensemester_kurzbz
-		]);
-
-		if (!hasData($result))
-		{
-			$this->terminateWithError('Kein Zeitfenster vorhanden');
-		}
-
-		$zeitfenster = getData($result)[0];
-		$zeitfensterEnde = new DateTime($zeitfenster->endedatum);
-
-		// MALVE-Button enablen wenn MALVE zeitlich abgeschlossen werden darf und nicht bereits eine MALVE existiert
-		if ((date('Y-m-d') >= $zeitfensterEnde->format('Y-m-d')) && empty($malve['data']))
-		{
-			$malve['submit'] = true;
-		}
-
-		$this->terminateWithSuccess($malve);
-	}
-
-	/**
-	 * Save MALVE by Studiengang and Studiensemester.
-	 *
-	 * Saving MALVE will give info that malve is 'abgeschlossen' for this STG.
-	 *
-	 * @return void
-	 */
-	public function saveMalveByStg()
-	{
-		$studiengang_kz = $this->input->post('studiengang_kz');
-		$orgform_kurzbz = $this->input->post('orgform_kurzbz');
-		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
-
-		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
-		$result = $this->StudiengangModel->load($studiengang_kz);
-
-		if (hasData($result))
-		{
-			$studiengang = getData($result)[0];
-
-			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
-
-			// Check if already exist
-			$result = $this->LvevaluierungMalveModel->loadWhere([
-				'oe_kurzbz' => $studiengang->oe_kurzbz,
-				'orgform_kurzbz' => $orgform_kurzbz,
-				'studiensemester_kurzbz' => $studiensemester_kurzbz
-			]);
-
-			// If not exist
-			if (!hasData($result))
-			{
-				// Insert
-				$result = $this->LvevaluierungMalveModel->insert([
-					'oe_kurzbz' => $studiengang->oe_kurzbz,
-					'orgform_kurzbz' => $orgform_kurzbz,
-					'studiensemester_kurzbz' => $studiensemester_kurzbz,
-					'insertvon' => $this->_uid
-				]);
-
-				if (isError($result))
-				{
-					$this->terminateWithError(getError($result));
-				}
-				else
-				{
-					$insertId = getData($result);
-
-					// Get new record
-					$record = $this->LvevaluierungMalveModel->load($insertId);
-
-					if (!hasData($record))
-					{
-						$this->terminateWithError('Inserted record not found');
-					}
-
-					$this->terminateWithSuccess(getData($record));
-				}
-			}
-		}
-		else
-		{
-			$this->terminateWithError('No Studiengang found to get MALVE data');
-		}
-	}
-
 	// -----------------------------------------------------------------------------------------------------------------
 	// Evaluation Kompetenzfeld
 	// -----------------------------------------------------------------------------------------------------------------
@@ -2963,22 +2837,38 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
-	 * Get MALVE by Kompetenzfeld and Studiensemester.
+	 * Update reviewed Evaluierungen for given Lehrveranstaltung, reviewed by Kompetenzfeldleitung.
+	 *
+	 * @return void
+	 */
+	public function updateReviewedLvInKf()
+	{
+		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
+		$isReviewed = $this->input->post('isReviewed');
+
+		$result = $this->LvevaluierungLehrveranstaltungModel->update(
+			$lvevaluierung_lehrveranstaltung_id,
+			['reviewed_kf' => $isReviewed]
+		);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	//------------------------------------------------------------------------------------------------------------------
+	// MALVE functions
+	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Get MALVE by Studiengang and Studiensemester.
 	 *
 	 * If malve is found, it has been set to 'abgeschlossen' for this STG.
 	 * @return void
 	 */
-	public function getMalveByKf()
+	public function getMalveByStg()
 	{
-		$oe_kurzbz = $this->input->get('oe_kurzbz');
+		$studiengang_kz = $this->input->get('studiengang_kz');
+		$orgform_kurzbz = $this->input->get('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
-
-		// Show Malve only for KFL users. Use Benutzerfunktion instead of Berechtigung_KF,
-		// because Berechtigung_KF is also assigned to Fachkoordinatoren.
-		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe_kurzbz);
-		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
-
-		if (!$isKFL && !$isBerechtigt_ADMIN) $this->terminateWithSuccess(null);
 
 		$malve = [
 			'data' => null,
@@ -2986,16 +2876,24 @@ class Evaluation extends FHCAPI_Controller
 		];
 
 		// Prüfung ob es bereits eine MALVE gibt
-		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
-		$result = $this->LvevaluierungMalveModel->loadWhere([
-			'oe_kurzbz' => $oe_kurzbz,
-			'studiensemester_kurzbz' => $studiensemester_kurzbz
-		]);
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
 
-		$data = $this->getDataOrTerminateWithError($result);
+		if (hasData($result))
+		{
+			$studiengang = getData($result)[0];
 
-		// Malve gefunden
-		$malve['data'] = $data;
+			$result = $this->LvevaluierungMalveModel->loadWhere([
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz
+			]);
+
+			$data = $this->getDataOrTerminateWithError($result);
+
+			// Malve gefunden
+			$malve['data'] = $data;
+		}
 
 		// Prüfung, ob MALVE abgeschlossen werden darf
 		$result = $this->LvevaluierungZeitfensterModel->loadWhere([
@@ -3021,37 +2919,29 @@ class Evaluation extends FHCAPI_Controller
 	}
 
 	/**
-	 * Save MALVE by Kompetenzfeld and Studiensemester.
+	 * Save MALVE by Studiengang and Studiensemester.
 	 *
-	 * Saving MALVE will give info that malve is 'abgeschlossen' for this Kompetenzfeld.
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this STG.
 	 *
 	 * @return void
 	 */
-	public function saveMalveByKF()
+	public function saveMalveByStg()
 	{
-		$oe_kurzbz = $this->input->post('oe_kurzbz');
+		$studiengang_kz = $this->input->post('studiengang_kz');
+		$orgform_kurzbz = $this->input->post('orgform_kurzbz');
 		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
 
-		$isBerechtigt_KF = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_KF);
-		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
-
-		if (!$isBerechtigt_KF && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
-
-		// Check if OE is Kompetenzfeld
-		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
-		$result = $this->OrganisationseinheitModel->loadWhere([
-			'oe_kurzbz' => $oe_kurzbz,
-			'organisationseinheittyp_kurzbz' => 'Kompetenzfeld',
-			'aktiv' => TRUE
-		]);
+		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$result = $this->StudiengangModel->load($studiengang_kz);
 
 		if (hasData($result))
 		{
-			$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungMalve_model', 'LvevaluierungMalveModel');
+			$studiengang = getData($result)[0];
 
-			// Check if MALVE already exist
+			// Check if already exist
 			$result = $this->LvevaluierungMalveModel->loadWhere([
-				'oe_kurzbz' => $oe_kurzbz,
+				'oe_kurzbz' => $studiengang->oe_kurzbz,
+				'orgform_kurzbz' => $orgform_kurzbz,
 				'studiensemester_kurzbz' => $studiensemester_kurzbz
 			]);
 
@@ -3060,7 +2950,8 @@ class Evaluation extends FHCAPI_Controller
 			{
 				// Insert
 				$result = $this->LvevaluierungMalveModel->insert([
-					'oe_kurzbz' => $oe_kurzbz,
+					'oe_kurzbz' => $studiengang->oe_kurzbz,
+					'orgform_kurzbz' => $orgform_kurzbz,
 					'studiensemester_kurzbz' => $studiensemester_kurzbz,
 					'insertvon' => $this->_uid
 				]);
@@ -3087,30 +2978,340 @@ class Evaluation extends FHCAPI_Controller
 		}
 		else
 		{
-			$this->terminateWithError('No Kompetenzfeld found to get MALVE data');
+			$this->terminateWithError('No Studiengang found to get MALVE data');
 		}
 	}
 
 	/**
-	 * Update reviewed Evaluierungen for given Lehrveranstaltung, reviewed by Kompetenzfeldleitung.
+	 * Liefert MALVE-Daten, Button-Status und Texte für ein Kompetenzfeld oder Fachgebiet.
+	 *
+	 * Bedeutung MALVE-Eintrag nach OE-Typ:
+	 * - Kompetenzfeld: KFL hat die MALVE abgeschlossen.
+	 * - Fachgebiet: FK hat das Fachgebiet geprüft. Das ist formal kein MALVE-Abschluss,
+	 * sondern Voraussetzung dafür, dass die KFL die MALVE des Kompetenzfelds abschließen kann.
 	 *
 	 * @return void
 	 */
-	public function updateReviewedLvInKf()
+	public function getMalveByOe()
 	{
-		$lvevaluierung_lehrveranstaltung_id = $this->input->post('lvevaluierung_lehrveranstaltung_id');
-		$isReviewed = $this->input->post('isReviewed');
+		$oe_kurzbz = $this->input->get('oe_kurzbz'); // kann Fachgebiet oder Kompetenzfeld sein
+		$studiensemester_kurzbz = $this->input->get('studiensemester_kurzbz');
 
-		$result = $this->LvevaluierungLehrveranstaltungModel->update(
-			$lvevaluierung_lehrveranstaltung_id,
-			['reviewed_kf' => $isReviewed]
-		);
+		// Get OE
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->OrganisationseinheitModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			"organisationseinheittyp_kurzbz IN ('Kompetenzfeld', 'Fachgebiet')" => null,
+			'aktiv' => TRUE
+		]);
+
 		$data = $this->getDataOrTerminateWithError($result);
+		$oe = $data[0];
 
-		$this->terminateWithSuccess($data);
+		// Get Malve nach OE
+		$this->terminateWithSuccess(
+			$oe->organisationseinheittyp_kurzbz === 'Fachgebiet'
+				? $this->getMalveFachgebiet($oe, $studiensemester_kurzbz)
+				: $this->getMalveKompetenzfeld($oe, $studiensemester_kurzbz)
+		);
 	}
 
-	//------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Save MALVE by Kompetenzfeld and Studiensemester.
+	 *
+	 * Saving MALVE will give info that malve is 'abgeschlossen' for this Kompetenzfeld.
+	 *
+	 * @return void
+	 */
+	public function saveMalveByOe()
+	{
+		$oe_kurzbz = $this->input->post('oe_kurzbz'); // kann Fachgebiet oder Kompetenzfeld sein
+		$studiensemester_kurzbz = $this->input->post('studiensemester_kurzbz');
+
+		// Get OE
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->OrganisationseinheitModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			"organisationseinheittyp_kurzbz IN ('Kompetenzfeld', 'Fachgebiet')" => null,
+			'aktiv' => TRUE
+		]);
+
+		$data = $this->getDataOrTerminateWithError($result);
+		$oe = $data[0];
+
+		// Malve speichern. Unterschiedliches Vorgehen für Fachgebiet und KF.
+		$this->terminateWithSuccess(
+			$oe->organisationseinheittyp_kurzbz === 'Fachgebiet'
+				? $this->saveMalveFachgebiet($oe, $studiensemester_kurzbz)
+				: $this->saveMalveKompetenzfeld($oe, $studiensemester_kurzbz)
+		);
+	}
+
+	/**
+	 * Liefert MALVE-Daten, Button-Status und Texte für ein Kompetenzfeld.
+	 *
+	 * MALVE kann abgeschlossen werden, wenn
+	 * - der allgemeine Evaluationszeitraum beendet ist,
+	 * - noch keine MALVE gespeichert wurde und
+	 * - bei vorhandenen Fachgebiet dieses vom Fachkoordinator geprüft wurde.
+	 *
+	 * @param $oe
+	 * @param $studiensemester_kurzbz
+	 * @return array|null
+	 * @throws DateMalformedStringException
+	 */
+	private function getMalveKompetenzfeld($oe, $studiensemester_kurzbz)
+	{
+		// KFL, Admin
+		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe->oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKFL && !$isBerechtigt_ADMIN) return null;
+
+		// Load Malve
+		$malve = $this->getLvevaluierungMalveOrFail($oe->oe_kurzbz, $studiensemester_kurzbz);
+
+		// Malve Zeitfenster offen?
+		$isZeitfensterOffen = $this->isMalveZeitfensterOffen($studiensemester_kurzbz);
+
+		// Wenn KF Fachgebiete hat, check ob Fachkoordinator diese approved hat
+		$hasFachgebiete = $this->hasFachgebiete($oe->oe_kurzbz);
+		$isApprovedByFK = $hasFachgebiete
+			? $this->LvevaluierungMalveModel->isApprovedByFK($oe->oe_kurzbz, $studiensemester_kurzbz)
+			: false;
+
+		// Status Texte (neben Button)
+		$statusText = null;
+		if (!empty($malve))
+		{
+			$statusText = 'MALVE-KFL abgeschlossen am ' . (new DateTime($malve[0]->insertamum))->format('d.m.Y');
+		}
+		elseif (!$isZeitfensterOffen)
+		{
+			$statusText = 'MALVE Abschluss erst nach Ende des allgemeinen Evaluationszeitraums möglich';
+		}
+		elseif ($hasFachgebiete && !$isApprovedByFK)
+		{
+			$statusText = 'Abschluss erst nach Prüfung durch Fachkoordinator möglich';
+		}
+
+		return [
+			'data' => $malve,
+			'submit' => $isZeitfensterOffen && empty($malve) && (!$hasFachgebiete || $isApprovedByFK),
+			'texts' => [
+				'btn' => 'MALVE-KFL abschließen',
+				'btnDone' => 'MALVE-KFL abgeschlossen',
+				'confirm' => 'Ich habe alle LV-Evaluierungen des Kompetenzfelds - ' . $oe->bezeichnung . ' - im '
+					. $studiensemester_kurzbz . ' geprüft. Notwendige Maßnahmen für die KF-Weiterentwicklung wurden abgeleitet.',
+				'status' => $statusText
+			]
+		];
+	}
+
+	/**
+	 *  Liefert MALVE-Daten, Button-Status und Texte für ein Fachgebiet.
+	 *
+	 * @param $oe
+	 * @param $studiensemester_kurzbz
+	 * @return array|null
+	 * @throws DateMalformedStringException
+	 */
+	private function getMalveFachgebiet($oe, $studiensemester_kurzbz)
+	{
+		// FK prüft, KFL und Admin nur Ansicht
+		$isFK = $this->evaluationlib->isFachkoordinator($this->_uid, $oe->oe_kurzbz);
+		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe->oe_parent_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		if (!$isFK && !$isKFL && !$isBerechtigt_ADMIN) return null;
+
+		// Load Malve
+		$malve = $this->getLvevaluierungMalveOrFail($oe->oe_kurzbz, $studiensemester_kurzbz);
+
+		// Malve Zeitfenster offen?
+		$isZeitfensterOffen = $this->isMalveZeitfensterOffen($studiensemester_kurzbz);
+
+		// Status Texte (neben Button)
+		$statusText = null;
+		if (!empty($malve))
+		{
+			$statusText = 'Fachgebiet geprüft am ' . (new DateTime($malve[0]->insertamum))->format('d.m.Y');
+		}
+		elseif (!$isZeitfensterOffen)
+		{
+			$statusText = 'Prüfung erst nach Ende des allgemeinen Evaluationszeitraums möglich';
+		}
+		elseif (!$isFK)
+		{
+			$statusText = 'Wird von Fachkoordinator geprüft';
+		}
+
+		return [
+			'data' => $malve,
+			'submit' => ($isFK || $isBerechtigt_ADMIN) && $isZeitfensterOffen && empty($malve),
+			'texts' => [
+				'btn' => 'Fachgebiet prüfen',
+				'btnDone' => 'Fachgebiet geprüft',
+				'confirm' => 'Ich habe alle LV-Evaluierungen des Fachgebiets - ' . $oe->bezeichnung . ' - im '
+					. $studiensemester_kurzbz . ' geprüft. Die Kompetenzfeldleitung wird per Mail informiert.',
+				'status' => $statusText
+			]
+		];
+	}
+
+	/**
+	 * Speichert Malve Abschluss für Kompetenzfeld.
+	 *
+	 * Bei vorhandenem untergeordneten Fachgebiet muss dieses erst vom Fachkoordinator geprüft worden sein.
+	 * Die Prüfung entspricht einem Eintrag in die Malve Tabelle mit OE des Fachgebiets.
+	 *
+	 * @param $oe
+	 * @param $studiensemester_kurzbz
+	 * @return array|null
+	 * @throws DateMalformedStringException
+	 */
+	private function saveMalveKompetenzfeld($oe, $studiensemester_kurzbz)
+	{
+		// KFL, Admin
+		$isKFL = $this->evaluationlib->isKFL($this->_uid, null, $oe->oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permission check
+		if (!$isKFL && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
+
+		// Bei Fachgebieten: Malve erst nach Prüfung durch FK
+		$hasFachgebiete = $this->hasFachgebiete($oe->oe_kurzbz);
+		$isApprovedByFK = $hasFachgebiete && $this->LvevaluierungMalveModel->isApprovedByFK($oe->oe_kurzbz, $studiensemester_kurzbz);
+
+		if ($hasFachgebiete && !$isApprovedByFK)
+			$this->terminateWithError('Abschluss erst nach Prüfung durch Fachkoordinator möglich');
+
+		// Malve speichern
+		$this->insertMalveOrFail($oe->oe_kurzbz, $studiensemester_kurzbz);
+
+		// Aktuellen Malve-Status inkl. Texte zurückgeben
+		return $this->getMalveKompetenzfeld($oe, $studiensemester_kurzbz);
+	}
+
+	/**
+	 * Speichert die Prüfung eines Fachgebiets.
+	 * Diese ist Voraussetzung, damit die Malve für das übergeordnete Kompetenzfeld vom KFL abgeschlossen werden kann.
+	 *
+	 * Die Prüfung entspricht technisch einem Eintrag in die Malve Tabelle mit OE des Fachgebiets.
+	 *
+	 * @param $oe
+	 * @param $studiensemester_kurzbz
+	 * @return array|null
+	 * @throws DateMalformedStringException
+	 */
+	private function saveMalveFachgebiet($oe, $studiensemester_kurzbz)
+	{
+		// Fachkoordinator, Admin
+		$isFK = $this->evaluationlib->isFachkoordinator($this->_uid, $oe->oe_kurzbz);
+		$isBerechtigt_ADMIN = $this->permissionlib->isBerechtigt(self::BERECHTIGUNG_ADMIN);
+
+		// Permisson check
+		if (!$isFK && !$isBerechtigt_ADMIN) $this->terminateWithError('Permission denied');
+
+		// Malve speichern
+		$this->insertMalveOrFail($oe->oe_kurzbz, $studiensemester_kurzbz);
+
+		// KFL des übergeordneten Kompetenzfelds per Mail informieren
+		$kfls = $this->evaluationlib->getKflByOe($oe->oe_parent_kurzbz);
+
+		$this->load->helper('hlp_sancho_helper');
+		foreach ($kfls as $kfl)
+		{
+			$data = [
+				'fachgebiet' => $oe->bezeichnung,
+				'studiensemester' => $studiensemester_kurzbz
+			];
+
+			// todo : Mail Text einholen
+//			sendSanchoMail(
+//				'LVE_KFL_TEXT_5',
+//				$data,
+//				$kfl->uid. '@'. DOMAIN,
+//				'LV-Evaluation: Fachgebiet '. $oe->bezeichnung. ' geprüft',
+//				'sancho_header_lvevaluierung_rollout.jpg',
+//				'sancho_footer_lvevaluierung_rollout.jpg'
+//			);
+		}
+
+		// Aktuellen Malve-Status inkl. Texte zurückgeben
+		return $this->getMalveFachgebiet($oe, $studiensemester_kurzbz);
+	}
+
+
+	/**
+	 * Prüft, ob die Malve abgeschlossen werden darf.
+	 *
+	 * @param $studiensemester_kurzbz
+	 * @return bool
+	 * @throws DateMalformedStringException
+	 */
+	private function isMalveZeitfensterOffen($studiensemester_kurzbz)
+	{
+		$zeitfenster = $this->getLvevaluierungZeitfensterOrFail('mailreflexionen', $studiensemester_kurzbz);
+
+		return date('Y-m-d') >= (new DateTime($zeitfenster->endedatum))->format('Y-m-d');
+	}
+
+	/**
+	 * Prüft, ob das Kompetenzfeld aktive Fachgebiete hat.
+	 */
+	private function hasFachgebiete($kf_oe_kurzbz)
+	{
+		$this->load->model('organisation/Organisationseinheit_model', 'OrganisationseinheitModel');
+		$result = $this->OrganisationseinheitModel->loadWhere([
+			'oe_parent_kurzbz' => $kf_oe_kurzbz,
+			'organisationseinheittyp_kurzbz' => 'Fachgebiet',
+			'aktiv' => true
+		]);
+
+		return hasData($result);
+	}
+
+	/**
+	 * Malve speichern, wenn das Zeitfenster dafür offen ist.
+	 *
+	 * @param $oe_kurzbz
+	 * @param $studiensemester_kurzbz
+	 * @return mixed
+	 * @throws DateMalformedStringException
+	 */
+	private function insertMalveOrFail($oe_kurzbz, $studiensemester_kurzbz)
+	{
+		// Exit, wenn allgemeiner Evaluierungszeitraum noch nicht vorbei ist
+		if (!$this->isMalveZeitfensterOffen($studiensemester_kurzbz))
+		{
+			$this->terminateWithError('Erst nach Ende des allgemeinen Evaluationszeitraums möglich');
+		}
+
+		// Exit, wenn Malve schon existiert
+		if (!empty($this->getLvevaluierungMalveOrFail($oe_kurzbz, $studiensemester_kurzbz)))
+		{
+			$this->terminateWithError('MALVE bereits gespeichert');
+		}
+
+		// Malve speichern
+		$result = $this->LvevaluierungMalveModel->insert([
+			'oe_kurzbz' => $oe_kurzbz,
+			'studiensemester_kurzbz' => $studiensemester_kurzbz,
+			'insertvon' => $this->_uid
+		]);
+		$insertId = $this->getDataOrTerminateWithError($result);
+
+		// Neue Malve laden
+		$result = $this->LvevaluierungMalveModel->load($insertId);
+
+		return $this->getDataOrTerminateWithError($result);
+	}
+
+//----------------------------------------------------------------------------------------------------------------------
+// END MALVE functions
+//----------------------------------------------------------------------------------------------------------------------
 
 	private function hasSetEvaluierungszeitraum($lve)
 	{
@@ -3398,6 +3599,20 @@ class Evaluation extends FHCAPI_Controller
 	 * @param $lvevaluierung_lehrveranstaltung_id
 	 * @return array
 	 */
+	public function getLvevaluierungMalveOrFail($oe_kurzbz, $studiensemester_kurzbz)
+	{
+		$result = $this->LvevaluierungMalveModel->loadWhere([
+			'oe_kurzbz' => $oe_kurzbz,
+			'studiensemester_kurzbz' => $studiensemester_kurzbz
+		]);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		return hasData($result) ? getData($result) : [];
+	}
 	public function getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id)
 	{
 		$result = $this->LvevaluierungCodeModel->getAbgeschlosseneEvaluierungenByLveLv($lvevaluierung_lehrveranstaltung_id);

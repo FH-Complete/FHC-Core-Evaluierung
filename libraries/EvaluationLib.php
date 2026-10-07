@@ -70,6 +70,21 @@ class EvaluationLib
 		return false;
 	}
 
+	public function isFachkoordinator($uid, $oe_kurzbz)
+	{
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+		$result = $this->_ci->BenutzerfunktionModel->getFachkoordinatorByUID($uid);
+
+		if (hasData($result))
+		{
+			$fachkoordinatoren = getData($result);
+
+			return in_array($oe_kurzbz, array_column($fachkoordinatoren, 'oe_kurzbz'));
+		}
+
+		return false;
+	}
+
 	public function isSTGL($uid, $lehrveranstaltung_id)
 	{
 		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
@@ -87,6 +102,19 @@ class EvaluationLib
 		}
 
 		return false;
+	}
+
+	public function getKflByOe($oe_kurzbz)
+	{
+		$this->_ci->load->model('person/Benutzerfunktion_model', 'BenutzerfunktionModel');
+		$result = $this->_ci->BenutzerfunktionModel->loadWhere("
+			oe_kurzbz = " . $this->_ci->db->escape($oe_kurzbz) . "
+			AND funktion_kurzbz = 'Leitung'
+			AND (datum_von IS NULL OR datum_von <= NOW())
+			AND (datum_bis IS NULL OR datum_bis >= NOW())
+		");
+
+		return hasData($result) ? getData($result) : [];
 	}
 
 	public function getLvLeitung($lehrveranstaltung_id, $studiensemester_kurzbz)

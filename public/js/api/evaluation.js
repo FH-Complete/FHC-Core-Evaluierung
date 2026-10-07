@@ -243,10 +243,10 @@ export default {
 			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getAuswertungHelpUrl',
 		}
 	},
-	getMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+	getMalveByOe(oe_kurzbz, studiensemester_kurzbz) {
 		return {
 			method: 'get',
-			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByKf',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/getMalveByOe',
 			params: {
 				oe_kurzbz: oe_kurzbz,
 				studiensemester_kurzbz: studiensemester_kurzbz
@@ -264,10 +264,10 @@ export default {
 			}
 		}
 	},
-	saveMalveByKf(oe_kurzbz, studiensemester_kurzbz) {
+	saveMalveByOe(oe_kurzbz, studiensemester_kurzbz) {
 		return {
 			method: 'post',
-			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByKf',
+			url: '/extensions/FHC-Core-Evaluierung/api/Evaluation/saveMalveByOe',
 			params: {
 				oe_kurzbz: oe_kurzbz,
 				studiensemester_kurzbz: studiensemester_kurzbz

@@ -20,37 +20,31 @@ export default {
 			table: null,
 			malve: {
 				data: null,
-				submit: false
+				submit: false,
+				texts: {}
 			},
 			templateTable: null,
 		}
 	},
 	created() {
 		this.$api
-				.call(ApiFhc.Studiensemester.getAll())
-				.then(result => this.lists.studiensemester = result.data)
-				.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
-				.then(result => {
-					// Selected Studiensemester
-					this.selStudiensemester = result.data[0].studiensemester_kurzbz;
+			.call(ApiFhc.Studiensemester.getAll())
+			.then(result => this.lists.studiensemester = result.data)
+			.then(() => this.$api.call(ApiFhc.Studiensemester.getAktNext()))
+			.then(result => {
+				// Selected Studiensemester
+				this.selStudiensemester = result.data[0].studiensemester_kurzbz;
 
-					// Dropdown Kompetenzfelder
-					return this.$api.call(ApiEvaluation.getEntitledKfs()) // todo studiensemester?
-				})
-				.then(result => {
-					this.lists.oes = result.data
-					this.selOeKurzbz = result.data[0]?.oe_kurzbz;
-
-					// MALVE Status
-					return this.$api.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
-				})
-				.then(result => {
-					if (result.data) {
-						this.malve.data = result.data.data;
-						this.malve.submit = result.data.submit;
-					}
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+				// Dropdown Kompetenzfelder
+				return this.$api.call(ApiEvaluation.getEntitledKfs()) // todo studiensemester?
+			})
+			.then(result => {
+				this.lists.oes = result.data
+				this.selOeKurzbz = result.data[0]?.oe_kurzbz;
+				// Set this.malve
+				return this.loadMalve();
+			})
+			.catch(error => this.$fhcAlert.handleSystemError(error));
 	},
 	computed: {
 		selOeFullName() {
@@ -63,8 +57,8 @@ export default {
 		site_url_opLvTemplateKvp() {
 			return this.$api.getUri() + 'extensions/FHC-Core-LVKVP/cis/Einmeldung/RedirectToOPByTplId/';
 		},
-		isDisabledSubmitMalveBtn() {
-			return !this.malve.submit;
+		isMalveDone() {
+			return this.malve.data?.length > 0;
 		},
 		tabulatorOptions() {
 			const self = this;
@@ -490,37 +484,23 @@ export default {
 				]
 			}
 		},
-		texts() {
-			return {
-				malveAbschliessenBtn: 'MALVE-KFL abschließen',
-				malveAbgeschlossenBtn:'MALVE-KFL abgeschlossen',
-				malveConfirm: `Ich habe alle LV-Evaluierungen des Kompetenzfelds - ${this.selOeFullName} - im ${this.selStudiensemester} geprüft. Notwendige Maßnahmen für die KF-Weiterentwicklung wurden abgeleitet.`,
-				malveAbgeschlossenTxt: this.malve.data !== null && this.malve.data[0]
-					? 'MALVE-KFL abgeschlossen am ' + this.DateHelper.formatDate(this.malve.data[0].insertamum)
-					: null,
-				malveAbschliessenBtnTooltip:
-					!this.isDisabledSubmitMalveBtn || this.malve.data?.length > 0
-						? null
-						: 'MALVE Abschluss erst nach Ende des allgemeinen Evaluationszeitraums möglich',
-			}
-		}
 	},
 	methods: {
+		loadMalve() {
+			return this.$api
+				.call(ApiEvaluation.getMalveByOe(this.selOeKurzbz, this.selStudiensemester))
+				.then(result => this.malve = result.data
+					? result.data
+					: {data: null, submit: false, texts: {}})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
 		onStudiensemesterChange() {
 			if (!this.selStudiensemester || !this.table || !this.templateTable) return;
 
 			this.table.replaceData();
 			this.templateTable.replaceData();
 
-			this.$api
-				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
-				.then(result => {
-					if (result.data) {
-						this.malve.data = result.data.data;
-						this.malve.submit = result.data.submit;
-					}
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+			this.loadMalve();
 		},
 		onOeChange() {
 			if (!this.selOeKurzbz || !this.selStudiensemester || !this.table || !this.templateTable) return;
@@ -528,16 +508,7 @@ export default {
 			this.table.replaceData();
 			this.templateTable.replaceData();
 
-			this.$api
-				.call(ApiEvaluation.getMalveByKf(this.selOeKurzbz, this.selStudiensemester))
-				.then(result => {
-					if (result.data) {
-						this.malve.data = result.data.data;
-						this.malve.submit = result.data.submit;
-					}
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
-
+			this.loadMalve();
 		},
 		openEvaluationByLveLv(lvevaluierung_lehrveranstaltung_id) {
 			const url = this.$api.getUri() +
@@ -563,22 +534,20 @@ export default {
 		async submitMalve() {
 			if (await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: this.texts.malveConfirm
+				message: this.malve.texts.confirm
 			}) === false
 			) {
 				return;
 			}
 
-			this.$api.call(ApiEvaluation.saveMalveByKf(this.selOeKurzbz, this.selStudiensemester))
+			this.$api.call(ApiEvaluation.saveMalveByOe(this.selOeKurzbz, this.selStudiensemester))
 				.then(result => {
 					if (result.data) {
-						this.malve.data = result.data;
-						this.malve.submit = false;
+						this.malve = result.data;
 						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
 					}
 				})
 				.catch(error => {
-					cell.restoreOldValue();
 					this.$fhcAlert.handleSystemError(error);
 				});
 		},
@@ -653,19 +622,20 @@ export default {
 				]">
 				<template v-slot:actions>
 				 	<div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
-				 		<span v-tooltip :title="texts.malveAbschliessenBtnTooltip" class="d-inline-block">
-							<button 
-								v-if="malve.data !== null"
-								class="btn"
-								:class="malve?.data?.length > 0 ? 'btn-success' : 'btn-primary'" 
-								@click="submitMalve" 
-								:disabled="isDisabledSubmitMalveBtn"
-								>
-								<i v-if="malve?.data?.length > 0" class="fa fa-circle-check fa-lg me-2"></i>
-								{{ malve.data.length > 0 ? texts.malveAbgeschlossenBtn : texts.malveAbschliessenBtn }}
-							</button>
+						<button 
+							v-if="malve.data !== null"
+							class="btn col-12 col-md-auto"
+							:class="isMalveDone ? 'btn-success' : 'btn-primary'" 
+							@click="submitMalve" 
+							:disabled="!malve.submit"
+							>
+							<i v-if="isMalveDone" class="fa fa-circle-check fa-lg me-2"></i>
+							{{ isMalveDone ? malve.texts.btnDone : malve.texts.btn }}
+						</button>
+						<span v-if="malve.texts.status" :class="isMalveDone ? 'text-success' : 'text-muted'">
+							<i class="fa fa-lg me-1" :class="isMalveDone ? 'fa-circle-check' : 'fa-circle-info'"></i>
+								{{ malve.texts.status }}
 						</span>
-						<span v-if="malve.data !== null && malve.data.length > 0" class="text-success ms-2"><i class="fa fa-circle-check fa-lg text-success me-2"></i>{{ texts.malveAbgeschlossenTxt }}</span>
 					</div>
 				</template>
 			</core-filter-cmpt>
