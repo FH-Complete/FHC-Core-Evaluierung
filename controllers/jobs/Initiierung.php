@@ -2546,8 +2546,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$stgl['to'],
 						'Maßnahmenableitung der LV-Evaluation (MALVE-STGL) bis '. $malve_enddatum->format('d.m.Y'),
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
@@ -2667,8 +2667,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$leitung['to'],
 						'Maßnahmenableitung der LV-Evaluation (MALVE-KFL) bis ' . $malve_enddatum->format('d.m.Y'),
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
@@ -2809,8 +2809,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$stgl['to'],
 						$subject,
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
@@ -2946,8 +2946,8 @@ class Initiierung extends JOB_Controller
 						$data,
 						$leitung['to'],
 						$subject,
-						'sancho_header_lvevaluierung.jpg',
-						'sancho_footer_lvevaluierung.jpg'
+						'sancho_header_lvevaluierung_rollout.jpg',
+						'sancho_footer_lvevaluierung_rollout.jpg'
 					);
 
 					if ($mailSent)
