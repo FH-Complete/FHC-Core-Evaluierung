@@ -80,8 +80,10 @@ export default {
 					v-if="!canSwitch && canSwitchInfo.length > 0"
 					class="d-flex flex-wrap align-items-center gap-2 mb-3"
 				>
-				   <!-- <i class="fa fa-ban text-muted fa-lg"></i>-->
-					<span v-html="canSwitchInfo.join('<br>')"></span>
+				    <span v-if="canSwitchInfo.length === 1">{{ canSwitchInfo[0] }}</span>
+					<ul v-else class="mb-0 ps-3">
+						<li v-for="(info, index) in canSwitchInfo" :key="index">{{ info }}</li>
+					</ul>
 				</div>
 				<!-- Evaluierungsebene wechseln -->
 				<fieldset :disabled="!canSwitch">
