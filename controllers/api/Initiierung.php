@@ -546,7 +546,7 @@ class Initiierung extends FHCAPI_Controller
 			$isDisabledEvaluierung = false;
 
 			// Status für Mailversand
-			$isRenderedSendMail = true;
+			$isRenderedSendMail = $hasStartAndEndezeit;
 			$isDisabledSendMail = false;
 			$isDisabledSendMailInfo = [];
 
