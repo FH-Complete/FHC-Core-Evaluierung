@@ -77,7 +77,7 @@ class Evaluierung extends FHCAPI_Controller
 		$fragebogen_id = $this->input->get('fragebogen_id');
 
 		// Get Fragebogengruppen
-		$result = $this->LvevaluierungFragebogenGruppeModel->getFragebogengruppeByFragebogen($fragebogen_id);
+		$result = $this->LvevaluierungFragebogenGruppeModel->getByFragebogen($fragebogen_id);
 		$fragebogengruppen = hasData($result) ? getData($result) : [];
 
 		// Result array

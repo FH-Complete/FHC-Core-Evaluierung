@@ -30,4 +30,25 @@ class LvevaluierungFragebogenFrageAntwort_model extends DB_Model
 			'lvevaluierung_frage_id' => $lvevaluierung_frage_id
 		]);
 	}
+
+	/**
+	 * Antworten mehrerer Fragen (Bezeichnung: 1 = DE, 2 = EN).
+	 */
+	public function getAntwortenByFragen($frageIds)
+	{
+		$qry = '
+			SELECT
+				lvevaluierung_frage_antwort_id,
+				lvevaluierung_frage_id,
+				wert,
+				sort,
+				bezeichnung[(1)] AS bezeichnung_de,
+				bezeichnung[(2)] AS bezeichnung_en
+			FROM extension.tbl_lvevaluierung_fragebogen_frage_antwort
+			WHERE lvevaluierung_frage_id IN ?
+			ORDER BY lvevaluierung_frage_id, sort
+		';
+
+		return $this->execQuery($qry, [$frageIds]);
+	}
 }

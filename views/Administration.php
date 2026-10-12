@@ -9,6 +9,9 @@ $includesArray = array(
 	'primevue3' => true,
 	'navigationcomponent' => true,
 	'filtercomponent' => true,
+	'customJSModules' => array(
+		'public/extensions/FHC-Core-Evaluierung/js/apps/Administration.js'
+	),
 	'customCSSs' => array(
 	    'public/css/components/vue-datepicker.css',
         'public/css/components/primevue.css',
@@ -19,8 +22,6 @@ $includesArray = array(
 $this->load->view('templates/FHC-Header', $includesArray);
 ?>
 
-<div id="main">
-	Extension LV Evaluierung
-</div>
+<div id="lve-evaluierung-admin"></div>
 
 <?php $this->load->view('templates/FHC-Footer', $includesArray); ?>

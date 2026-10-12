@@ -17,12 +17,19 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 	 * @param $fragebogen_id
 	 * @return mixed
 	 */
-	public function getFragebogengruppeByFragebogen($fragebogen_id)
+	public function getByFragebogen($fragebogen_id)
 	{
 		$this->addSelect('
-			*, 
+			lvevaluierung_fragebogen_gruppe_id,
+			typ,
+			style,
+			sort,
+			bezeichnung[(1)] AS bezeichnung_de,
+			bezeichnung[(2)] AS bezeichnung_en,
 			bezeichnung[('. $this->evaluierunglib->getLanguageIndex(). ')] AS bezeichnung_by_language
 		');
+
+		$this->addOrder('sort');
 
 		return $this->loadWhere([
 			'fragebogen_id' => $fragebogen_id

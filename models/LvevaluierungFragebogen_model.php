@@ -136,4 +136,58 @@ class LvevaluierungFragebogen_model extends DB_Model
 
 		return $this->execQuery($qry, $params);
 	}
+
+	/**
+	 * Alle Fragebögen inkl. Info, ob bereits beantwortet.
+	 */
+	public function getFrageboegen()
+	{
+		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
+		$langIndex = $this->evaluierunglib->getLanguageIndex();
+
+		$qry = '
+			SELECT
+				fb.fragebogen_id,
+				fb.bezeichnung[(' . $langIndex . ')] AS bezeichnung_by_language,
+				fb.gueltig_von,
+				fb.gueltig_bis,
+				EXISTS (
+					SELECT 1
+					FROM extension.tbl_lvevaluierung lve
+					JOIN extension.tbl_lvevaluierung_code code USING (lvevaluierung_id)
+					JOIN extension.tbl_lvevaluierung_antwort antw USING (lvevaluierung_code_id)
+					WHERE lve.fragebogen_id = fb.fragebogen_id
+				) AS "hasAntworten"
+			FROM extension.tbl_lvevaluierung_fragebogen fb
+			ORDER BY fb.gueltig_von DESC, fb.fragebogen_id DESC
+		';
+
+		return $this->execQuery($qry);
+	}
+
+	/**
+	 * Fragebogen für Admin-Editor inkl. Info, ob bereits beantwortet (Bezeichnung: 1 = DE, 2 = EN).
+	 */
+	public function getFragebogen($fragebogen_id)
+	{
+		$qry = '
+			SELECT
+				fb.fragebogen_id,
+				fb.bezeichnung[(1)] AS bezeichnung_de,
+				fb.bezeichnung[(2)] AS bezeichnung_en,
+				fb.gueltig_von,
+				fb.gueltig_bis,
+				EXISTS (
+					SELECT 1
+					FROM extension.tbl_lvevaluierung lve
+					JOIN extension.tbl_lvevaluierung_code code USING (lvevaluierung_id)
+					JOIN extension.tbl_lvevaluierung_antwort antw USING (lvevaluierung_code_id)
+					WHERE lve.fragebogen_id = fb.fragebogen_id
+				) AS "hasAntworten"
+			FROM extension.tbl_lvevaluierung_fragebogen fb
+			WHERE fb.fragebogen_id = ?
+		';
+
+		return $this->execQuery($qry, [$fragebogen_id]);
+	}
 }
