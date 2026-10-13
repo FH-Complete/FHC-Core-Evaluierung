@@ -3,6 +3,7 @@ import FormValidation from "../../../../../js/components/Form/Validation.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenBasis from "./FragebogenBasis.js";
+import FragebogenVorschau from "./FragebogenVorschau.js";
 
 export default {
 	name: "FragebogenEditor",
@@ -10,6 +11,7 @@ export default {
 		FormForm,
 		FormValidation,
 		FragebogenBasis,
+		FragebogenVorschau,
 	},
 	data() {
 		return {
@@ -132,6 +134,11 @@ export default {
 					</button>
 				</div>
 			</form-form>
+			
+				<!-- Live Vorschau -->
+			<aside class="col-lg-5 h-100 border-start bg-body-tertiary">
+				<fragebogen-vorschau :fragebogen="fragebogen" :sel-gruppe-key="selGruppeKey"></fragebogen-vorschau>
+			</aside>
 		</div>
 	</div>
 	`
