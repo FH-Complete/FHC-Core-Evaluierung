@@ -13,5 +13,25 @@ export default {
 			url: URL + 'getFragebogen',
 			params: {fragebogen_id}
 		};
-	}
+	},
+	getOrganisationseinheiten() {
+		return {
+			method: 'get',
+			url: URL + 'getOrganisationseinheiten'
+		};
+	},
+	getStudienplaene(studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: URL + 'getStudienplaene',
+			params: {studiensemester_kurzbz}
+		};
+	},
+	searchLehrveranstaltungen(query, studiensemester_kurzbz) {
+		return {
+			method: 'get',
+			url: URL + 'searchLehrveranstaltungen',
+			params: {query, studiensemester_kurzbz}
+		};
+	},
 };

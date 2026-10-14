@@ -4,6 +4,7 @@ import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenBasis from "./FragebogenBasis.js";
 import FragebogenVorschau from "./FragebogenVorschau.js";
+import FragebogenZuordnung from "./FragebogenZuordnung.js";
 
 export default {
 	name: "FragebogenEditor",
@@ -12,10 +13,11 @@ export default {
 		FormValidation,
 		FragebogenBasis,
 		FragebogenVorschau,
+		FragebogenZuordnung
 	},
 	data() {
 		return {
-			steps: ['Basisdaten'],
+			steps: ['Basisdaten', 'Zuordnung'],
 			step: 0,
 			mode: 'neu',				// neu | edit | copy
 			basisFragebogenId: null,	// Gewählter Fragebogen bei edit/copy
@@ -123,6 +125,10 @@ export default {
 						@change-mode="onChangeMode"
 						@change-basis="onChangeBasis"
 					></fragebogen-basis>
+					<fragebogen-zuordnung
+						v-else-if="step === 1"
+						:zuordnungen="fragebogen.zuordnungen"
+					></fragebogen-zuordnung>
 				</keep-alive>
 				<!-- Buttons: Weiter und Zurück -->
 				<div class="d-flex justify-content-between mt-auto">
