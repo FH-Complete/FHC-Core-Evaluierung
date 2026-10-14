@@ -16,9 +16,9 @@ export default {
 	data() {
 		return {
 			modes: [
-				{value: 'neu', label: 'Neu erstellen'},
-				{value: 'edit', label: 'Bestehenden bearbeiten'},
-				{value: 'copy', label: 'Bestehenden kopieren'}
+				{value: 'neu', label: 'Neu erstellen', icon: 'fa-plus'},
+				{value: 'edit', label: 'Bestehenden bearbeiten', icon: 'fa-edit'},
+				{value: 'copy', label: 'Bestehenden kopieren', icon: 'fa-copy'}
 			]
 		}
 	},
@@ -53,11 +53,13 @@ export default {
 	<section class="d-flex flex-column gap-4">
 		<h2 class="h4 mb-0">Basisdaten</h2>
 
-		<div class="row g-3">
-			<div v-for="m in modes" :key="m.value" class="col-md-4">
+		<div class="d-flex flex-wrap gap-2">
+			<template v-for="m in modes" :key="m.value">
 				<input type="radio" class="btn-check" name="fbMode" :id="'fbMode-' + m.value" :value="m.value" v-model="selMode">
-				<label class="btn btn-outline-primary w-100" :for="'fbMode-' + m.value">{{ m.label }}</label>
-			</div>
+				<label class="btn btn-outline-primary" :for="'fbMode-' + m.value">
+					<i class="fa-solid me-2" :class="m.icon"></i>{{ m.label }}
+				</label>
+			</template>
 		</div>
 
 		<div v-if="mode !== 'neu'">
