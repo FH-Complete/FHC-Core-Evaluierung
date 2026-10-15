@@ -16,9 +16,9 @@ export default {
 	data() {
 		return {
 			modes: [
-				{value: 'neu', label: 'Neu erstellen', icon: 'fa-plus'},
-				{value: 'edit', label: 'Bestehenden bearbeiten', icon: 'fa-edit'},
-				{value: 'copy', label: 'Bestehenden kopieren', icon: 'fa-copy'}
+				{value: 'neu', label: 'Neuer Fragebogen', icon: 'fa-plus'},
+				{value: 'edit', label: 'Fragebogen bearbeiten', icon: 'fa-edit'},
+				{value: 'copy', label: 'Fragebogen kopieren', icon: 'fa-copy'}
 			]
 		}
 	},
