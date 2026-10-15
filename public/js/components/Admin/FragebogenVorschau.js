@@ -56,17 +56,19 @@ export default {
 				</div>
 			</div>
 
-			<div
-				v-for="gruppe in fragebogen.gruppen"
-				:key="gruppe._key"
-				class="card"
-				:class="{ 'border-primary border-2': gruppe._key === selGruppeKey }"
-			>
-				<div class="card-header d-flex align-items-center fw-bold">
-					<span class="flex-grow-1">{{ getBezeichnung(gruppe) }}</span>
-					<i v-if="gruppe.typ === GRUPPE_TYP.GROUP" class="fa-solid fa-chevron-down text-secondary" title="Aufklappbar"></i>
-				</div>
-				<div v-for="(frage, index) in gruppe.fragen" :key="frage._key" class="card-body border-top">
+			<template v-for="gruppe in fragebogen.gruppen" :key="gruppe._key">
+				<!-- Nur Überschrift -->
+				<h3 v-if="gruppe.typ === GRUPPE_TYP.LABEL" class="h6 mb-0" :class="{ 'text-primary': gruppe._key === selGruppeKey }">
+					{{ getBezeichnung(gruppe) }}
+				</h3>
+			
+				<!-- Accordion / Card -->
+				<div v-else class="card" :class="{ 'border-primary border-2': gruppe._key === selGruppeKey }">
+					<div class="card-header d-flex align-items-center fw-bold">
+						<span class="flex-grow-1">{{ getBezeichnung(gruppe) }}</span>
+						<i v-if="gruppe.typ === GRUPPE_TYP.GROUP" class="fa-solid fa-chevron-down text-secondary" title="Aufklappbar"></i>
+					</div>
+					<div v-for="(frage, index) in gruppe.fragen" :key="frage._key" class="card-body border-top">
 					<div class="fw-medium mb-2">
 						{{ index + 1 }}. {{ getBezeichnung(frage) }}<span v-if="frage.verpflichtend" class="text-danger"> *</span>
 					</div>
@@ -84,8 +86,8 @@ export default {
 						</div>
 					</div>
 				</div>
-			</div>
-
+				</div>
+			</template>
 			<div class="d-flex justify-content-between align-items-center">
 				<span class="small text-secondary">{{ isDe ? '* Pflichtfrage' : '* Required' }}</span>
 				<button type="button" class="btn btn-primary" disabled>{{ isDe ? 'Absenden' : 'Submit' }}</button>

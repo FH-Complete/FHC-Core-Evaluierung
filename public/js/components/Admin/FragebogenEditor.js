@@ -5,6 +5,7 @@ import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenBasis from "./FragebogenBasis.js";
 import FragebogenVorschau from "./FragebogenVorschau.js";
 import FragebogenZuordnung from "./FragebogenZuordnung.js";
+import FragebogenAufbau from "./FragebogenAufbau.js";
 
 export default {
 	name: "FragebogenEditor",
@@ -13,11 +14,12 @@ export default {
 		FormValidation,
 		FragebogenBasis,
 		FragebogenVorschau,
-		FragebogenZuordnung
+		FragebogenZuordnung,
+		FragebogenAufbau,
 	},
 	data() {
 		return {
-			steps: ['Basisdaten', 'Zuordnung'],
+			steps: ['Basisdaten', 'Zuordnung', 'Aufbau'],
 			step: 0,
 			mode: 'neu',				// neu | edit | copy
 			basisFragebogenId: null,	// Gewählter Fragebogen bei edit/copy
@@ -89,8 +91,7 @@ export default {
 	template: `
 	<div class="fragebogen-editor container-fluid d-flex flex-column vh-100 p-0">
 		<h1 class="h2 px-3 mb-0 fhc-page-header mb-3">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
-
-		<!-- Schritte als Reiter -->
+		<!-- Steps als Reiter -->
 		<nav class="d-flex flex-wrap align-items-center gap-3 px-3 py-2 bg-white border-bottom flex-shrink-0" aria-label="Schritte">
 			<button
 				v-for="(label, index) in steps"
@@ -110,9 +111,8 @@ export default {
 				<span>{{ fragebogen.zuordnungen.length }} Zuordnungen</span>
 			</div>-->
 		</nav>
-
+		<!-- Editor: Formular sammelt alle Eingaben der einzelnen steps -->
 		<div class="row g-0 flex-grow-1 overflow-hidden">
-			<!-- Editor: Formular sammelt alle Eingaben der einzelnen steps -->
 			<form-form ref="form" class="col-lg-7 h-100 overflow-auto p-4 d-flex flex-column gap-4">
 				<keep-alive>
 					<fragebogen-basis
@@ -129,6 +129,12 @@ export default {
 						v-else-if="step === 1"
 						:zuordnungen="fragebogen.zuordnungen"
 					></fragebogen-zuordnung>
+					<fragebogen-aufbau
+						v-else-if="step === 2"
+						:gruppen="fragebogen.gruppen"
+						:is-locked="isLocked"
+						v-model:sel-gruppe-key="selGruppeKey"
+					></fragebogen-aufbau>
 				</keep-alive>
 				<!-- Buttons: Weiter und Zurück -->
 				<div class="d-flex justify-content-between mt-auto">

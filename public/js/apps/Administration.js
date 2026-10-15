@@ -1,6 +1,7 @@
 import FragebogenEditor from "../components/Admin/FragebogenEditor.js";
 import Phrasen from "../../../../js/plugins/Phrasen.js";
 import tooltip from "../../../../js/directives/tooltip.js";
+import draggable from "../../../../js/directives/draggable.js";
 import DateHelper from "../helpers/DateHelper.js";
 
 const ciPath = FHC_JS_DATA_STORAGE_OBJECT.app_root.replace(/(https:|)(^|\/\/)(.*?\/)/g, '') + FHC_JS_DATA_STORAGE_OBJECT.ci_router;
@@ -27,4 +28,5 @@ app
 	.use(primevue.config.default, {zIndex: {overlay: 9999}})
 	.use(Phrasen)
 	.directive('tooltip', tooltip)
+	.directive('draggable', draggable)
 	.mount('#lve-evaluierung-admin');

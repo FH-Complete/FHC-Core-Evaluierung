@@ -63,19 +63,11 @@ export default {
 			placeholder_en: '',
 			verpflichtend: isSingle,
 			gesperrt: false,
-			anzahlFrageboegen: 0,
-			antworten: isSingle ? this.antwortVorlage('skala5') : []
+			anzahlAndere: 0,
+			antworten: isSingle ? this.defaultAntworten() : []
 		};
 	},
-	antwortVorlage(vorlage) {
-		if (vorlage === 'janein') {
-			return [
-				{bezeichnung_de: 'Ja', bezeichnung_en: 'Yes', wert: 1},
-				{bezeichnung_de: 'Nein', bezeichnung_en: 'No', wert: 2}
-			];
-		}
-		if (vorlage === 'leer') return [];
-
+	defaultAntworten() {
 		return [
 			{bezeichnung_de: 'Trifft voll zu', bezeichnung_en: 'Strongly agree', wert: 1},
 			{bezeichnung_de: 'Trifft eher zu', bezeichnung_en: 'Agree', wert: 2},
@@ -89,7 +81,12 @@ export default {
 		fragebogen.gruppen.forEach(gruppe => {
 			gruppe._key = this.newKey();
 			if (isCopy) gruppe.lvevaluierung_fragebogen_gruppe_id = null;
-			gruppe.fragen.forEach(frage => frage._key = this.newKey());
+
+			gruppe.fragen.forEach(frage => {
+				frage._key = this.newKey();
+				// Andere Fragebögen mit dieser Frage: Beim Kopieren zählt das Original mit, beim Bearbeiten nicht der eigene
+				frage.anzahlAndere = isCopy ? frage.anzahlFrageboegen : frage.anzahlFrageboegen - 1;
+			});
 		});
 
 		if (isCopy) {
