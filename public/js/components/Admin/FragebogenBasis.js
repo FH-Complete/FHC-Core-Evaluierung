@@ -67,7 +67,7 @@ export default {
 				<form-input
 					type="select"
 					label="Bestehender Fragebogen"
-					name="basis_fragebogen_id"
+					name="fragebogen_id"
 					v-model="selBasis"
 					bs-feedback
 				>
