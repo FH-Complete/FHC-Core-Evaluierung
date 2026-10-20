@@ -142,15 +142,23 @@ class LvevaluierungFragebogen_model extends DB_Model
 	 */
 	public function getFrageboegen()
 	{
-		$this->load->library('extensions/FHC-Core-Evaluierung/EvaluierungLib');
-		$langIndex = $this->evaluierunglib->getLanguageIndex();
-
 		$qry = '
 			SELECT
 				fb.fragebogen_id,
-				fb.bezeichnung[(' . $langIndex . ')] AS bezeichnung_by_language,
+				fb.bezeichnung[(1)] AS bezeichnung_de,
+				fb.bezeichnung[(2)] AS bezeichnung_en,
 				fb.gueltig_von,
 				fb.gueltig_bis,
+				(
+					SELECT COUNT(*)
+					FROM extension.tbl_lvevaluierung_fragebogen_zuordnung zo
+					WHERE zo.fragebogen_id = fb.fragebogen_id
+				) AS "anzahlZuordnungen",
+				EXISTS (
+					SELECT 1
+					FROM extension.tbl_lvevaluierung lve
+					WHERE lve.fragebogen_id = fb.fragebogen_id
+				) AS "isVerwendet",
 				EXISTS (
 					SELECT 1
 					FROM extension.tbl_lvevaluierung lve
@@ -189,5 +197,50 @@ class LvevaluierungFragebogen_model extends DB_Model
 		';
 
 		return $this->execQuery($qry, [$fragebogen_id]);
+	}
+
+	/**
+	 * Insert Fragebogen. Bezeichnung als text[] (1 = DE, 2 = EN).
+	 *
+	 * @return mixed
+	 */
+	public function insertFragebogen($bezeichnung_de, $bezeichnung_en, $gueltig_von, $gueltig_bis, $insertvon)
+	{
+		$qry = '
+			INSERT INTO extension.tbl_lvevaluierung_fragebogen (
+				bezeichnung,
+			    gueltig_von,
+			    gueltig_bis, 
+			    insertvon
+			)
+			VALUES (ARRAY[?, ?], ?, ?, ?)
+			RETURNING fragebogen_id
+		';
+
+		// trim: CI erkennt RETURNING nur ohne führende Leerzeichen
+		return $this->execQuery(trim($qry), [$bezeichnung_de, $bezeichnung_en, $gueltig_von, $gueltig_bis, $insertvon]);
+	}
+
+	/**
+	 * Update Fragebogen. Bezeichnung als text[] (1 = DE, 2 = EN).
+	 *
+	 * @return mixed
+	 */
+	public function updateFragebogen($fragebogen_id, $bezeichnung_de, $bezeichnung_en, $gueltig_von, $gueltig_bis, $updatevon)
+	{
+		$qry = '
+			UPDATE 
+			    extension.tbl_lvevaluierung_fragebogen
+			SET 
+			    bezeichnung = ARRAY[?, ?], 
+			    gueltig_von = ?, 
+			    gueltig_bis = ?, 
+			    updateamum = NOW(), 
+			    updatevon = ?
+			WHERE 
+			    fragebogen_id = ?
+		';
+
+		return $this->execQuery($qry, [$bezeichnung_de, $bezeichnung_en, $gueltig_von, $gueltig_bis, $updatevon, $fragebogen_id]);
 	}
 }

@@ -34,4 +34,26 @@ export default {
 			params: {query, studiensemester_kurzbz}
 		};
 	},
+	insertFragebogen(fragebogen) {
+		return {
+			method: 'post',
+			url: URL + 'insertFragebogen',
+			params: fragebogen
+		};
+	},
+	updateFragebogen(fragebogen) {
+		return {
+			method: 'post',
+			url: URL + 'updateFragebogen',
+			params: fragebogen
+		};
+	},
+	// fragebogen_id = Vorlage
+	copyFragebogen(fragebogen) {
+		return {
+			method: 'post',
+			url: URL + 'copyFragebogen',
+			params: fragebogen
+		};
+	},
 };

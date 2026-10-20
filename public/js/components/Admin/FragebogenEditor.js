@@ -176,7 +176,12 @@ export default {
 
 			if (button.dataset.action === 'edit') this.openFragebogen(fb.fragebogen_id, 'edit');
 			if (button.dataset.action === 'copy') this.openFragebogen(fb.fragebogen_id, 'copy');
-		}
+		},
+		// Nach dem Speichern: Tabelle neu laden, gespeicherten Fragebogen bearbeiten
+		onSaved(fragebogen_id) {
+			this.$refs.fbTable.reloadTable();
+			this.openFragebogen(fragebogen_id, 'edit');
+		},
 	},
 	template: `
 	<div class="fragebogen-editor container-fluid">
@@ -226,6 +231,7 @@ export default {
 						:fragebogen="fragebogen"
 						:mode="mode"
 						:is-locked="isLocked"
+						@saved="onSaved"
 					></fragebogen-basis>
 					<fragebogen-zuordnung
 						v-else-if="tab === 'zuordnung'"

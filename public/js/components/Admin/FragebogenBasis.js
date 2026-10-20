@@ -1,5 +1,6 @@
 import FormForm from "../../../../../js/components/Form/Form.js";
 import FormInput from "../../../../../js/components/Form/Input.js";
+import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 
 export default {
 	name: "FragebogenBasis",
@@ -12,10 +13,11 @@ export default {
 		mode: {type: String, required: true},		// edit | copy | neu
 		isLocked: Boolean
 	},
-	emits: ['save'],
+	emits: ['saved'],
 	data() {
 		return {
-			form: {}	// Basisdaten im Formular
+			form: {},	// Basisdaten im Formular
+			isSaving: false,	// Doppelklick: nicht zweimal anlegen
 		}
 	},
 	computed: {
@@ -66,10 +68,27 @@ export default {
 				gueltig_von: fb.gueltig_von,
 				gueltig_bis: fb.gueltig_bis
 			};
+		},
+		save() {
+			const apiCalls = {
+				neu: ApiAdminFragebogen.insertFragebogen,
+				edit: ApiAdminFragebogen.updateFragebogen,
+				copy: ApiAdminFragebogen.copyFragebogen
+			};
+
+			this.isSaving = true;
+			this.$refs.form
+					.call(apiCalls[this.mode](this.form))
+					.then(result => {
+						this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+						this.$emit('saved', result.data);
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error))
+					.finally(() => this.isSaving = false);
 		}
 	},
 	template: `
-	<form-form ref="form" class="d-flex flex-column gap-3" @submit.prevent>
+	<form-form ref="form" class="d-flex flex-column gap-3" @submit.prevent="save">
 	<!--	<div v-if="isDisabled" class="alert alert-warning mb-0">
 			Bereits beantwortet – nur noch <strong>Gültig bis</strong> änderbar. Für Änderungen am Inhalt <strong>Kopieren</strong>.
 		</div>-->
@@ -133,7 +152,7 @@ export default {
 		</div>
 
 		<div class="d-flex justify-content-end gap-2">
-			<button type="button" class="btn btn-primary" @click="$emit('save', form)">
+			<button type="button" class="btn btn-primary" :disabled="isSaving" @click="save">
 				<i class="fa-solid fa-floppy-disk me-2"></i>Speichern
 			</button>
 		</div>

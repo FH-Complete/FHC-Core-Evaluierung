@@ -14,6 +14,9 @@ class Fragebogen extends FHCAPI_Controller
 			'getOrganisationseinheiten' => self::BERECHTIGUNG_ADMIN . ':r',
 			'getStudienplaene' => self::BERECHTIGUNG_ADMIN . ':r',
 			'searchLehrveranstaltungen' => self::BERECHTIGUNG_ADMIN . ':r',
+			'insertFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'updateFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'copyFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
@@ -136,5 +139,155 @@ class Fragebogen extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
+	}
+
+	/**
+	 * Insert Fragebogen (Basisdaten).
+	 *
+	 * @return void
+	 */
+	public function insertFragebogen()
+	{
+		$data = $this->input->post();
+
+		$this->_validateFragebogenData($data);
+
+		$result = $this->LvevaluierungFragebogenModel->insertFragebogen(
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$data['gueltig_von'],
+			$this->_getGueltigBis($data),
+			getAuthUid()
+		);
+		$fragebogen = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($fragebogen[0]->fragebogen_id);
+	}
+
+	/**
+	 * Update Fragebogen (Basisdaten).
+	 * Bereits beantwortet: nur Gültig bis änderbar.
+	 *
+	 * @return void
+	 */
+	public function updateFragebogen()
+	{
+		$data = $this->input->post();
+		$fragebogen = $this->_getFragebogenOrFail($this->input->post('fragebogen_id'));
+
+		// Bereits beantwortet: gespeicherte Werte beibehalten, nur Gültig bis übernehmen
+		if ($fragebogen->hasAntworten)
+		{
+			$data['bezeichnung_de'] = $fragebogen->bezeichnung_de;
+			$data['bezeichnung_en'] = $fragebogen->bezeichnung_en;
+			$data['gueltig_von'] = $fragebogen->gueltig_von;
+		}
+
+		$this->_validateFragebogenData($data);
+
+		$result = $this->LvevaluierungFragebogenModel->updateFragebogen(
+			$fragebogen->fragebogen_id,
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$data['gueltig_von'],
+			$this->_getGueltigBis($data),
+			getAuthUid()
+		);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($fragebogen->fragebogen_id);
+	}
+
+	/**
+	 * Copy Fragebogen: Gruppen und Fragen, ohne Zuordnungen.
+	 * Gepostete fragebogen_id ist die Vorlage.
+	 *
+	 * @return void
+	 */
+	public function copyFragebogen()
+	{
+		$data = $this->input->post();
+		$vorlage = $this->_getFragebogenOrFail($this->input->post('fragebogen_id'));
+
+		$this->_validateFragebogenData($data);
+
+		$data['gueltig_bis'] = $this->_getGueltigBis($data);
+
+		$result = $this->fragebogenlib->copyFragebogen($vorlage->fragebogen_id, $data);
+		$fragebogen_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($fragebogen_id);
+	}
+
+	/**
+	 * Check if Gültig bis is after Gültig von. (Leer = unbefristet)
+	 */
+	public function checkGueltigBisAfterGueltigVon($gueltig_bis, $gueltig_von)
+	{
+		if (!$gueltig_bis) return true;
+
+		return $gueltig_bis >= $gueltig_von;
+	}
+
+	// Checks and Validations
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Fragebogen laden, sonst mit Fehler abbrechen.
+	 *
+	 * @param $fragebogen_id
+	 * @return object    Fragebogen inkl. hasAntworten
+	 */
+	private function _getFragebogenOrFail($fragebogen_id)
+	{
+		$result = $this->LvevaluierungFragebogenModel->getFragebogen($fragebogen_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if (empty($data))
+		{
+			$this->terminateWithError('Fragebogen nicht gefunden');
+		}
+
+		return $data[0];
+	}
+
+	/**
+	 * Leeres Gültig bis als NULL speichern (= unbefristet).
+	 *
+	 * @param $data
+	 * @return mixed
+	 */
+	private function _getGueltigBis($data)
+	{
+		return !empty($data['gueltig_bis']) ? $data['gueltig_bis'] : null;
+	}
+
+	/**
+	 * Validates posted Basisdaten of Fragebogen.
+	 *
+	 * @param $data
+	 * @return void
+	 */
+	private function _validateFragebogenData($data)
+	{
+		$gueltig_von = isset($data['gueltig_von']) ? $data['gueltig_von'] : '';
+
+		$this->load->library('form_validation');
+
+		$this->form_validation->set_data($data);
+		$this->form_validation->set_rules('bezeichnung_de', 'Bezeichnung (DE)', 'required');
+		$this->form_validation->set_rules('bezeichnung_en', 'Bezeichnung (EN)', 'required');
+		$this->form_validation->set_rules('gueltig_von', 'Gültig von', 'required');
+		$this->form_validation->set_rules(
+			'gueltig_bis',
+			'Gültig bis',
+			'callback_checkGueltigBisAfterGueltigVon[' . $gueltig_von . ']',
+			['checkGueltigBisAfterGueltigVon' => $this->p->t('ui', 'datumEndeVorDatumStart')]
+		);
+
+		// On error
+		if ($this->form_validation->run() == false)
+		{
+			$this->terminateWithValidationErrors($this->form_validation->error_array());
+		}
 	}
 }

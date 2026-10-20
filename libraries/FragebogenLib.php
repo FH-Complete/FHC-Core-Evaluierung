@@ -18,6 +18,7 @@ class FragebogenLib
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
 		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrageAntwort_model', 'LvevaluierungFragebogenFrageAntwortModel');
+		$this->_ci->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppeFrage_model', 'LvevaluierungFragebogenGruppeFrageModel');
 	}
 
 	/**
@@ -75,5 +76,66 @@ class FragebogenLib
 		$fragebogen->gruppen = $gruppen;
 
 		return success($fragebogen);
+	}
+
+	/**
+	 * Fragebogen kopieren: Gruppen werden neu angelegt, Fragen bleiben verknüpft (n:m). Ohne Zuordnungen.
+	 *
+	 * @param $vorlage_id
+	 * @param $data    Basisdaten der Kopie
+	 * @return mixed    ID des neuen Fragebogens
+	 */
+	public function copyFragebogen($vorlage_id, $data)
+	{
+		// Gruppen der Vorlage
+		$result = $this->_ci->LvevaluierungFragebogenGruppeModel->getByFragebogen($vorlage_id);
+		if (isError($result)) return $result;
+		$gruppen = hasData($result) ? getData($result) : [];
+
+		$this->_ci->db->trans_begin();
+
+		// Neuen Fragebogen anlegen
+		$result = $this->_ci->LvevaluierungFragebogenModel->insertFragebogen(
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$data['gueltig_von'],
+			$data['gueltig_bis'],
+			getAuthUid()
+		);
+
+		if (!isError($result))
+		{
+			$fragebogen_id = getData($result)[0]->fragebogen_id;
+
+			// Gruppen neu anlegen (gehören genau einem Fragebogen), Fragen samt Antworten mit gleicher ID zuordnen
+			foreach ($gruppen as $gruppe)
+			{
+				$result = $this->_ci->LvevaluierungFragebogenGruppeModel->insertGruppe(
+					$fragebogen_id,
+					$gruppe->typ,
+					$gruppe->bezeichnung_de,
+					$gruppe->bezeichnung_en,
+					$gruppe->style,
+					$gruppe->sort
+				);
+				if (isError($result)) break;
+
+				$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->copyFragen(
+					$gruppe->lvevaluierung_fragebogen_gruppe_id,
+					getData($result)[0]->lvevaluierung_fragebogen_gruppe_id
+				);
+				if (isError($result)) break;
+			}
+		}
+
+		// Bei Fehler alles zurücknehmen
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Fragebogen konnte nicht kopiert werden');
+		}
+
+		$this->_ci->db->trans_commit();
+		return success($fragebogen_id);
 	}
 }
