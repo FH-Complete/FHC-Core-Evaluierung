@@ -3,7 +3,6 @@ import FormValidation from "../../../../../js/components/Form/Validation.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenBasis from "./FragebogenBasis.js";
-import FragebogenVorschau from "./FragebogenVorschau.js";
 import FragebogenZuordnung from "./FragebogenZuordnung.js";
 import FragebogenAufbau from "./FragebogenAufbau.js";
 
@@ -13,7 +12,6 @@ export default {
 		FormForm,
 		FormValidation,
 		FragebogenBasis,
-		FragebogenVorschau,
 		FragebogenZuordnung,
 		FragebogenAufbau,
 	},
@@ -25,7 +23,7 @@ export default {
 			basisFragebogenId: null,	// Gewählter Fragebogen bei edit/copy
 			frageboegen: [],			// Dropdown bestehende Fragebögen
 			fragebogen: FragebogenHelper.newFragebogen(),
-			selGruppeKey: null			// Ausgewählte Gruppe (Aufbau und Vorschau)
+			selGruppeKey: null			// Ausgewählte Gruppe im Aufbau
 		}
 	},
 	created() {
@@ -113,7 +111,7 @@ export default {
 		</nav>
 		<!-- Editor: Formular sammelt alle Eingaben der einzelnen steps -->
 		<div class="row g-0 flex-grow-1 overflow-hidden">
-			<form-form ref="form" class="col-lg-7 h-100 overflow-auto p-4 d-flex flex-column gap-4">
+			<form-form ref="form" class="col-lg-12 h-100 overflow-auto p-4 d-flex flex-column gap-4">
 				<keep-alive>
 					<fragebogen-basis
 						v-if="step === 0"
@@ -146,11 +144,6 @@ export default {
 					</button>
 				</div>
 			</form-form>
-			
-				<!-- Live Vorschau -->
-			<aside class="col-lg-5 h-100 border-start bg-body-tertiary">
-				<fragebogen-vorschau :fragebogen="fragebogen" :sel-gruppe-key="selGruppeKey"></fragebogen-vorschau>
-			</aside>
 		</div>
 	</div>
 	`
