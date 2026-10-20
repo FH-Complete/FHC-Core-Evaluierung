@@ -10,14 +10,13 @@ export default {
 	},
 	props: {
 		gruppen: {type: Array, required: true},
-		isLocked: Boolean,
-		selGruppeKey: {default: null}
+		isLocked: Boolean
 	},
-	emits: ['update:selGruppeKey'],
 	data() {
 		return {
 			FRAGE_TYP: FragebogenHelper.FRAGE_TYP,
 			GRUPPE_TYP: FragebogenHelper.GRUPPE_TYP,
+			selGruppeKey: null,		// Aufgeklappte Gruppe, initial alle zu
 			dragGruppeIndex: null,
 			overGruppeIndex: null,
 			dragFrageIndex: null,
@@ -25,13 +24,14 @@ export default {
 		}
 	},
 	methods: {
-		selectGruppe(gruppe) {
-			this.$emit('update:selGruppeKey', gruppe._key);
+		// Gruppe auf- oder zuklappen
+		toggleGruppe(gruppe) {
+			this.selGruppeKey = this.selGruppeKey === gruppe._key ? null : gruppe._key;
 		},
 		addGruppe() {
 			const gruppe = FragebogenHelper.newGruppe(this.gruppen.length + 1);
 			this.gruppen.push(gruppe);
-			this.selectGruppe(gruppe);
+			this.selGruppeKey = gruppe._key;
 		},
 		async deleteGruppe(index) {
 			if (!await this.$fhcAlert.confirm({
@@ -87,7 +87,7 @@ export default {
 			FragebogenHelper.moveItem(this.gruppen, this.dragGruppeIndex, index);
 			this.resetDrag();
 		},
-		// Drag & Drop Fragen innerhalb der ausgewählten Gruppe
+		// Drag & Drop Fragen innerhalb der aufgeklappten Gruppe
 		onDragStartFrage(e, index) {
 			e.dataTransfer.effectAllowed = 'move';
 			e.dataTransfer.setData('text/plain', index);
@@ -104,7 +104,6 @@ export default {
 			this.resetDrag();
 		},
 		resetDrag() {
-			console.log('resetDrag');
 			this.dragGruppeIndex = null;
 			this.overGruppeIndex = null;
 			this.dragFrageIndex = null;
@@ -113,26 +112,23 @@ export default {
 	},
 	template: `
 	<section class="d-flex flex-column gap-3">
-		<div class="d-flex flex-wrap align-items-center gap-3">
-			<div class="flex-grow-1">
-				<h2 class="h4 mb-1">Aufbau</h2>
-		<!--		<p class="small text-secondary mb-0">Gruppen und Fragen per Drag &amp; Drop sortieren, Details im Dialog.</p>-->
-			</div>
+	<!--	<div v-if="isLocked" class="alert alert-warning mb-0">
+			Bereits beantwortet – Aufbau nur lesbar. Für Änderungen <strong>Kopieren</strong>.
+		</div>-->
+
+		<!-- Neue Gruppe: oberhalb der ersten Gruppe -->
+		<div>
 			<button type="button" class="btn btn-primary" :disabled="isLocked" @click="addGruppe">
 				<i class="fa-solid fa-plus me-2"></i>Gruppe
 			</button>
 		</div>
 
-		<div v-if="isLocked" class="alert alert-warning mb-0">
-			Bereits beantwortet – Aufbau nur lesbar. Für Änderungen <strong>Bestehenden kopieren</strong>.
-		</div>
 		<!-- Fragengruppen -->
 		<div
 			v-for="(gruppe, gIndex) in gruppen"
 			:key="gruppe._key"
 			class="card"
 			:class="{
-				'border-primary shadow-sm': gruppe._key === selGruppeKey,
 				'bg-primary-subtle': gIndex === overGruppeIndex && gIndex !== dragGruppeIndex,
 				'opacity-50': gIndex === dragGruppeIndex
 			}"
@@ -151,18 +147,18 @@ export default {
 					type="button"
 					class="btn btn-link text-body text-decoration-none text-start fw-semibold flex-grow-1 p-0"
 					:aria-expanded="gruppe._key === selGruppeKey"
-					@click="selectGruppe(gruppe)"
+					@click="toggleGruppe(gruppe)"
 				>
+					<i class="fa-solid fa-fw me-1" :class="gruppe._key === selGruppeKey ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
 					{{ gruppe.bezeichnung_de || '[Gruppenbezeichnung fehlt]' }}
-				<!--	<span class="small fw-normal text-secondary">· {{ gruppe.bezeichnung_en || '—' }}</span>-->
 				</button>
-				<span  v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="badge text-bg-light border">{{ gruppe.fragen.length }} Fragen</span>
+				<span v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="badge text-bg-light border">{{ gruppe.fragen.length }} Fragen</span>
 				<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Gruppe löschen" @click="deleteGruppe(gIndex)">
 					<i class="fa-solid fa-xmark"></i>
 				</button>
 			</div>
 
-			<!-- Ausgewählte Gruppe: Felder und Fragen -->
+			<!-- Aufgeklappte Gruppe: Felder und Fragen -->
 			<template v-if="gruppe._key === selGruppeKey">
 				<fieldset class="card-body bg-body-tertiary row g-2 m-0" :disabled="isLocked">
 					<div class="col-md-4">
@@ -181,18 +177,22 @@ export default {
 								title="Fragengruppe (einklappbar): Fragen in einer Card, einklappbar. Fragengruppe (fix): Fragen in einer Card, nicht einklappbar - immer angezeigt. Nur Überschrift: wird nur als Überschrift angezeigt, ohne Fragen."
 							></i>
 						</span>
-						<form-input type="select" name="gruppe_typ" aria-label="Typ" v-model="gruppe.typ" @change="changeTyp(gruppe, $event)" bs-feedback>
+						<form-input type="select" class="w-auto" name="gruppe_typ" aria-label="Typ" v-model="gruppe.typ" @change="changeTyp(gruppe, $event)" bs-feedback>
 							<option :value="GRUPPE_TYP.GROUP">Fragengruppe (einklappbar)</option>
 							<option :value="GRUPPE_TYP.CARD">Fragengruppe (fix)</option>
 							<option :value="GRUPPE_TYP.LABEL">Nur Überschrift</option>
 						</form-input>
 					</div>
-				<!--	<div class="col-md-3">
-						<form-input label="Style" name="gruppe_style" v-model.trim="gruppe.style" placeholder="optional" bs-feedback></form-input>
-					</div>-->
 				</fieldset>
+
 				<!-- Fragen -->
 				<ul v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="list-group list-group-flush">
+					<!-- Neue Frage: oberhalb der ersten Frage -->
+					<li class="list-group-item">
+						<button type="button" class="btn btn-sm btn-primary" :disabled="isLocked" @click="addFrage(gruppe)">
+							<i class="fa-solid fa-plus me-1"></i>Frage
+						</button>
+					</li>
 					<li
 						v-for="(frage, fIndex) in gruppe.fragen"
 						:key="frage._key"
@@ -218,11 +218,6 @@ export default {
 						</button>
 						<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Frage entfernen" @click="deleteFrage(gruppe, fIndex)">
 							<i class="fa-solid fa-xmark"></i>
-						</button>
-					</li>
-					<li class="list-group-item">
-						<button type="button" class="btn btn-sm btn-primary" :disabled="isLocked" @click="addFrage(gruppe)">
-							<i class="fa-solid fa-plus me-1"></i>Frage
 						</button>
 					</li>
 				</ul>

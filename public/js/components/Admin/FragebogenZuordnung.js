@@ -9,7 +9,8 @@ export default {
 		FormInput
 	},
 	props: {
-		zuordnungen: {type: Array, required: true}
+		zuordnungen: {type: Array, required: true},
+		isLocked: Boolean	// Bereits beantwortet: Zuordnungen nur ergänzbar
 	},
 	data() {
 		return {
@@ -119,6 +120,10 @@ export default {
 
 			this.selItem = null;
 		},
+		// nur neu ergänzte Zuordnungen entfernbar
+		canRemove(zuordnung) {
+			return !this.isLocked || !zuordnung.lvevaluierung_fragebogen_zuordnung_id;
+		},
 		removeZuordnung(zuordnung) {
 			this.zuordnungen.splice(this.zuordnungen.indexOf(zuordnung), 1);
 		},
@@ -137,57 +142,55 @@ export default {
 	},
 	template: `
 	<section class="d-flex flex-column gap-3">
-		<h2 class="h4 mb-0">Zuordnung</h2>
-		<!-- Auswahl OE, Studienplan, LV (radio buttons) -->
-		<div class="d-flex flex-wrap gap-2">
-			<div v-for="e in ebenen" :key="e.value">
-				<input type="radio" class="btn-check" name="fbEbene" :id="'fbEbene-' + e.value" :value="e.value" v-model="selEbene">
-				<label class="btn btn-outline-primary" :for="'fbEbene-' + e.value">{{ e.label }}</label>
+<!--		<div v-if="isLocked" class="alert alert-warning mb-0">
+			Bereits beantwortet – Zuordnungen können nur noch ergänzt werden.
+		</div>-->
+		<!-- Auswahl OE, Studienplan, LV -->
+		<div>
+			<div v-for="e in ebenen" :key="e.value" class="form-check form-check-inline">
+				<input type="radio" class="form-check-input" name="fbEbene" :id="'fbEbene-' + e.value" :value="e.value" v-model="selEbene">
+				<label class="form-check-label" :for="'fbEbene-' + e.value">{{ e.label }}</label>
 			</div>
 		</div>
-		<!-- Eingabefelder (form) -->
-		<div class="card">
-			<div class="card-body">
-				<div class="row g-2 align-items-end">
-					<!-- Studiensemester: nur bei Studienplan und LV -->
-					<div v-if="showStudiensemester" class="col-md-3">
-						<form-input
-							type="select"
-							label="Studiensemester"
-							name="studiensemester_kurzbz"
-							v-model="selStudiensemester"
-							bs-feedback
-						>
-							<option
-								v-for="studSem in lists.studiensemester"
-								:key="studSem.studiensemester_kurzbz"
-								:value="studSem.studiensemester_kurzbz"
-							>
-								{{ studSem.studiensemester_kurzbz }}
-							</option>
-						</form-input>
-					</div>
-					<div class="col">
-						<form-input
-							type="autocomplete"
-							v-model="selItem"
-							name="zuordnungen"
-							:label="selEbeneObj.label"
-							option-label="label"
-							:suggestions="suggestions"
-							@complete="search"
-							:dropdown="selEbene !== 'lv'"
-							forceSelection
-							bs-feedback
-						></form-input>
-					</div>
-					<div class="col-auto">
-						<button type="button" class="btn btn-primary" :disabled="!selItem" @click="addZuordnung">
-							<i class="fa-solid fa-plus me-2"></i>Zuordnen
-						</button>
-					</div>
-				</div>
-				<div class="form-text"></div>
+		<!-- Eingabefelder -->
+		<div class="row g-2 align-items-end">
+			<!-- Studiensemester: nur bei Studienplan und LV -->
+			<div v-if="showStudiensemester" class="col-auto">
+				<form-input
+					type="select"
+					class="w-auto"
+					label="Studiensemester"
+					name="studiensemester_kurzbz"
+					v-model="selStudiensemester"
+					bs-feedback
+				>
+					<option
+						v-for="studSem in lists.studiensemester"
+						:key="studSem.studiensemester_kurzbz"
+						:value="studSem.studiensemester_kurzbz"
+					>
+						{{ studSem.studiensemester_kurzbz }}
+					</option>
+				</form-input>
+			</div>
+			<div class="col">
+				<form-input
+					type="autocomplete"
+					v-model="selItem"
+					name="zuordnungen"
+					:label="selEbeneObj.label"
+					option-label="label"
+					:suggestions="suggestions"
+					@complete="search"
+					:dropdown="selEbene !== 'lv'"
+					forceSelection
+					bs-feedback
+				></form-input>
+			</div>
+			<div class="col-auto">
+				<button type="button" class="btn btn-primary" :disabled="!selItem" @click="addZuordnung">
+					<i class="fa-solid fa-plus me-2"></i>Zuordnen
+				</button>
 			</div>
 		</div>
 		<!-- Anzeige der Auswahl (badges) -->
@@ -198,14 +201,13 @@ export default {
 				class="badge text-bg-primary d-inline-flex align-items-center gap-2 fs-6 fw-normal"
 			>
 				{{ z.label }}
-				<button type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="removeZuordnung(z)"></button>
-			</span>
+			<button v-if="canRemove(z)" type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="removeZuordnung(z)"></button>			</span>
 		</div>
 		<!-- Info zu Auswahl (alert) -->
-		<div class="alert alert-info mb-0">
+<!--		<div class="alert alert-info mb-0">
 			Der Fragebogen gilt für <strong>alle</strong> gewählten Zuordnungen.<br>
 			Hat eine LV mehrere passende Fragebögen, wird der genauere herangezogen: <strong>LV vor Studienplan vor OE</strong>.
-		</div>
+		</div>-->
 	</section>
 	`
 }

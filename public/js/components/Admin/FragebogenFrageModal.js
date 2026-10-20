@@ -56,11 +56,9 @@ export default {
 			<fieldset class="d-flex flex-column gap-3" :disabled="isReadonly">
 				<div>
 					<span class="form-label fw-semibold d-block">Fragetyp</span>
-					<div class="btn-group" role="group" aria-label="Fragetyp">
-						<template v-for="t in typen" :key="t.value">
-							<input type="radio" class="btn-check" name="frageTyp" :id="'frageTyp-' + t.value" :checked="frage.typ === t.value" @change="changeTyp(t.value)">
-							<label class="btn btn-outline-primary" :for="'frageTyp-' + t.value">{{ t.label }}</label>
-						</template>
+					<div v-for="t in typen" :key="t.value" class="form-check form-check-inline">
+						<input type="radio" class="form-check-input" name="frageTyp" :id="'frageTyp-' + t.value" :checked="frage.typ === t.value" @change="changeTyp(t.value)">
+						<label class="form-check-label" :for="'frageTyp-' + t.value">{{ t.label }}</label>
 					</div>
 				</div>
 
