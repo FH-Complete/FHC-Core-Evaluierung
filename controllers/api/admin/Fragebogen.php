@@ -17,6 +17,7 @@ class Fragebogen extends FHCAPI_Controller
 			'insertFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'updateFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'copyFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'deleteFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
@@ -217,6 +218,30 @@ class Fragebogen extends FHCAPI_Controller
 		$fragebogen_id = $this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($fragebogen_id);
+	}
+
+	/**
+	 * Delete Fragebogen, nur wenn in keiner Evaluierung verwendet.
+	 *
+	 * @return void
+	 */
+	public function deleteFragebogen()
+	{
+		$fragebogen_id = $this->input->post('fragebogen_id');
+
+		$fragebogen = $this->_getFragebogenOrFail($fragebogen_id);
+
+		// Exit, wenn Fragebogen schon zu Evaluierung(en) zugeordnet ist
+		if ($fragebogen->isVerwendet)
+		{
+			$this->terminateWithError('Fragebogen wird bereits in einer Evaluierung verwendet und kann nicht gelöscht werden');
+		}
+
+		// Fragebogen löschen
+		$result = $this->fragebogenlib->deleteFragebogen($fragebogen->fragebogen_id);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($fragebogen->fragebogen_id);
 	}
 
 	/**

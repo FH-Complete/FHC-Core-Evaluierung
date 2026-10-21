@@ -74,4 +74,32 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 
 		return $this->execQuery($qry, [$fragebogen_id]);
 	}
+
+	/**
+	 * Fragen löschen, die keiner (anderen) Gruppe mehr zugeordnet und nie beantwortet wurden.
+	 *
+	 * @param $frageIds
+	 * @return mixed
+	 */
+	public function deleteUnbenutzteFragen($frageIds)
+	{
+		$qry = '
+			DELETE FROM 
+				   extension.tbl_lvevaluierung_fragebogen_frage fr
+			WHERE 
+			    fr.lvevaluierung_frage_id IN ?
+			AND NOT EXISTS (
+				SELECT 1
+				FROM extension.tbl_lvevaluierung_fragebogen_gruppe_frage grfr
+				WHERE grfr.lvevaluierung_frage_id = fr.lvevaluierung_frage_id
+			)
+			AND NOT EXISTS (
+				SELECT 1
+				FROM extension.tbl_lvevaluierung_antwort antw
+				WHERE antw.lvevaluierung_frage_id = fr.lvevaluierung_frage_id
+			)
+		';
+
+		return $this->execQuery($qry, [$frageIds]);
+	}
 }

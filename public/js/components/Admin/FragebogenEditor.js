@@ -176,11 +176,32 @@ export default {
 
 			if (button.dataset.action === 'edit') this.openFragebogen(fb.fragebogen_id, 'edit');
 			if (button.dataset.action === 'copy') this.openFragebogen(fb.fragebogen_id, 'copy');
+			if (button.dataset.action === 'delete') this.deleteFragebogen(fb);
 		},
 		// Nach dem Speichern: Tabelle neu laden, gespeicherten Fragebogen bearbeiten
 		onSaved(fragebogen_id) {
 			this.$refs.fbTable.reloadTable();
 			this.openFragebogen(fragebogen_id, 'edit');
+		},
+		async deleteFragebogen(fb) {
+			if (!await this.$fhcAlert.confirm({
+				header: 'Bitte bestätigen Sie:',
+				message: 'Fragebogen „' + fb.bezeichnung_de + '“ inkl. Zuordnungen und Aufbau löschen?'
+			})) return;
+
+			this.$api
+					.call(ApiAdminFragebogen.deleteFragebogen(fb.fragebogen_id))
+				.then(() => {
+					this.$fhcAlert.alertSuccess('Fragebogen gelöscht');
+					this.$refs.fbTable.reloadTable();
+
+					// Geöffneter Fragebogen (oder Kopiervorlage) gelöscht: Bearbeitung schließen
+					if (this.fragebogen?.fragebogen_id === fb.fragebogen_id) {
+						this.mode = null;
+						this.fragebogen = null;
+					}
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 	},
 	template: `

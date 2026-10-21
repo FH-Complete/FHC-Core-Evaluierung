@@ -56,4 +56,11 @@ export default {
 			params: fragebogen
 		};
 	},
+	deleteFragebogen(fragebogen_id) {
+		return {
+			method: 'post',
+			url: URL + 'deleteFragebogen',
+			params: {fragebogen_id}
+		};
+	},
 };

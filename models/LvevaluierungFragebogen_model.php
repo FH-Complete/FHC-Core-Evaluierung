@@ -188,6 +188,11 @@ class LvevaluierungFragebogen_model extends DB_Model
 				EXISTS (
 					SELECT 1
 					FROM extension.tbl_lvevaluierung lve
+					WHERE lve.fragebogen_id = fb.fragebogen_id
+				) AS "isVerwendet",
+				EXISTS (
+					SELECT 1
+					FROM extension.tbl_lvevaluierung lve
 					JOIN extension.tbl_lvevaluierung_code code USING (lvevaluierung_id)
 					JOIN extension.tbl_lvevaluierung_antwort antw USING (lvevaluierung_code_id)
 					WHERE lve.fragebogen_id = fb.fragebogen_id

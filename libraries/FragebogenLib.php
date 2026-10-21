@@ -138,4 +138,43 @@ class FragebogenLib
 		$this->_ci->db->trans_commit();
 		return success($fragebogen_id);
 	}
+
+	/**
+	 * Fragebogen löschen. Zuordnungen, Gruppen und Gruppe-Frage per Cascade.
+	 * Fragen, die danach keiner Gruppe mehr zugeordnet und unbeantwortet sind, werden mitgelöscht.
+	 *
+	 * @param $fragebogen_id
+	 * @return mixed
+	 */
+	public function deleteFragebogen($fragebogen_id)
+	{
+		// Fragen merken, bevor Gruppe-Frage per Cascade gelöscht wird
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->getFragenForEditor($fragebogen_id);
+		if (isError($result)) return $result;
+		$frageIds = hasData($result)
+			? array_values(array_unique(array_column(getData($result), 'lvevaluierung_frage_id')))
+			: [];
+
+		$this->_ci->db->trans_begin();
+
+		// Fragebogen löschen
+		$result = $this->_ci->LvevaluierungFragebogenModel->delete($fragebogen_id);
+
+		// Wenn Fragen vorhanden
+		if (!isError($result) && !empty($frageIds))
+		{
+			// Fragen löschen, die keiner Gruppe zugeordnet sind und nie beantwortet wurden.
+			$result = $this->_ci->LvevaluierungFragebogenFrageModel->deleteUnbenutzteFragen($frageIds);
+		}
+
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Fragebogen konnte nicht gelöscht werden');
+		}
+
+		$this->_ci->db->trans_commit();
+
+		return success($fragebogen_id);
+	}
 }
