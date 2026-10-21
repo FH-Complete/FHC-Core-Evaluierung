@@ -149,8 +149,10 @@ export default {
 		// Aktionen: Bearbeiten, Kopieren, Löschen. Gesperrt mit Erklärung im Tooltip.
 		getActionButtons(fb) {
 			const titleEdit = fb.hasAntworten
-				? 'Bereits beantwortet – nur Gültig bis und neue Zuordnungen änderbar'
-				: 'Bearbeiten';
+					? 'Bereits beantwortet – nur Gültig bis änderbar'
+					: fb.isVerwendet
+						? 'In Evaluierung verwendet – Zuordnungen nicht mehr änderbar'
+						: 'Bearbeiten';
 			const titleDelete = fb.isVerwendet
 				? 'Wird bereits in einer Evaluierung verwendet und kann nicht gelöscht werden'
 				: 'Löschen';
@@ -245,6 +247,7 @@ export default {
 					</button>
 				</li>
 			</ul>
+			<!-- Components -->
 			<div class="border border-top-0 rounded-bottom p-3 mb-4">
 				<keep-alive>
 					<fragebogen-basis
@@ -257,7 +260,9 @@ export default {
 					<fragebogen-zuordnung
 						v-else-if="tab === 'zuordnung'"
 						:zuordnungen="fragebogen.zuordnungen"
-						:is-locked="isLocked"
+						:is-verwendet="fragebogen.isVerwendet"
+						:fragebogen-id="fragebogen.fragebogen_id"
+						@changed="$refs.fbTable.reloadTable()"
 					></fragebogen-zuordnung>
 					<fragebogen-aufbau
 						v-else-if="tab === 'aufbau'"

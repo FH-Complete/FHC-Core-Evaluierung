@@ -63,4 +63,18 @@ export default {
 			params: {fragebogen_id}
 		};
 	},
+	insertZuordnung(zuordnung) {
+		return {
+			method: 'post',
+			url: URL + 'insertZuordnung',
+			params: zuordnung
+		};
+	},
+	deleteZuordnung(lvevaluierung_fragebogen_zuordnung_id) {
+		return {
+			method: 'post',
+			url: URL + 'deleteZuordnung',
+			params: {lvevaluierung_fragebogen_zuordnung_id}
+		};
+	},
 };

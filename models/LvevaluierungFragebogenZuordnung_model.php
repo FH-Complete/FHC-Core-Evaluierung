@@ -22,7 +22,7 @@ class LvevaluierungFragebogenZuordnung_model extends DB_Model
 				fbzo.lehrveranstaltung_id,
 				CASE
 					WHEN fbzo.lehrveranstaltung_id IS NOT NULL THEN 'lv'
-					WHEN fbzo.studienplan_id IS NOT NULL THEN 'stp'
+					WHEN fbzo.studienplan_id IS NOT NULL THEN 'stpl'
 					ELSE 'oe'
 				END AS ebene,
 				COALESCE(

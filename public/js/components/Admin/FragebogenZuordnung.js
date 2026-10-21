@@ -9,9 +9,11 @@ export default {
 		FormInput
 	},
 	props: {
+		fragebogenId: {required: true},
 		zuordnungen: {type: Array, required: true},
-		isLocked: Boolean	// Bereits beantwortet: Zuordnungen nur ergänzbar
+		isVerwendet: Boolean	// FB ist min. einer Evaluierung zugeordnet: Zuordnungen nur lesbar
 	},
+	emits: ['changed'],
 	data() {
 		return {
 			ebenen: [
@@ -106,26 +108,43 @@ export default {
 			this.suggestions = this.lists[this.selEbene].filter(item => item.label.toLowerCase().includes(query));
 		},
 		addZuordnung() {
-			const exists = this.zuordnungen.some(z => z.ebene === this.selEbene && this.getZuordnungId(z) === this.selItem.id);
+			const exists = this.zuordnungen.some(z =>
+					z.ebene === this.selEbene && this.getZuordnungId(z) === this.selItem.id
+			);
 
-			if (!exists) {
-				this.zuordnungen.push({
-					ebene: this.selEbene,
-					oe_kurzbz: this.selEbene === 'oe' ? this.selItem.id : null,
-					studienplan_id: this.selEbene === 'stpl' ? this.selItem.id : null,
-					lehrveranstaltung_id: this.selEbene === 'lv' ? this.selItem.id : null,
-					label: this.selItem.label
-				});
+			if (exists) {
+				this.selItem = null;
+				return;
 			}
 
-			this.selItem = null;
-		},
-		// nur neu ergänzte Zuordnungen entfernbar
-		canRemove(zuordnung) {
-			return !this.isLocked || !zuordnung.lvevaluierung_fragebogen_zuordnung_id;
+			const zuordnung = {
+				ebene: this.selEbene,
+				oe_kurzbz: this.selEbene === 'oe' ? this.selItem.id : null,
+				studienplan_id: this.selEbene === 'stpl' ? this.selItem.id : null,
+				lehrveranstaltung_id: this.selEbene === 'lv' ? this.selItem.id : null,
+				label: this.selItem.label
+			};
+
+			this.$api
+				.call(ApiFragebogen.insertZuordnung({...zuordnung, fragebogen_id: this.fragebogenId}))
+				.then(result => {
+					zuordnung.lvevaluierung_fragebogen_zuordnung_id = result.data;
+					this.zuordnungen.push(zuordnung);
+					this.selItem = null;
+					this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
+					this.$emit('changed');
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		removeZuordnung(zuordnung) {
-			this.zuordnungen.splice(this.zuordnungen.indexOf(zuordnung), 1);
+			this.$api
+				.call(ApiFragebogen.deleteZuordnung(zuordnung.lvevaluierung_fragebogen_zuordnung_id))
+				.then(() => {
+					this.zuordnungen.splice(this.zuordnungen.indexOf(zuordnung), 1);
+					this.$fhcAlert.alertSuccess('Zuordnung entfernt');
+					this.$emit('changed');
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		getZuordnungId(zuordnung) {
 			return zuordnung.oe_kurzbz || zuordnung.studienplan_id || zuordnung.lehrveranstaltung_id;
@@ -142,18 +161,20 @@ export default {
 	},
 	template: `
 	<section class="d-flex flex-column gap-3">
-<!--		<div v-if="isLocked" class="alert alert-warning mb-0">
-			Bereits beantwortet – Zuordnungen können nur noch ergänzt werden.
+		<!--<div v-if="isVerwendet" class="alert alert-warning mb-0">
+			Fragebogen bereits in Verwendung – Für Änderungen <strong>Fragebogen kopieren</strong>.
 		</div>-->
-		<!-- Auswahl OE, Studienplan, LV -->
-		<div>
-			<div v-for="e in ebenen" :key="e.value" class="form-check form-check-inline">
-				<input type="radio" class="form-check-input" name="fbEbene" :id="'fbEbene-' + e.value" :value="e.value" v-model="selEbene">
-				<label class="form-check-label" :for="'fbEbene-' + e.value">{{ e.label }}</label>
+		<!-- Auswahl und Eingabe gesperrt, sobald Fragebogen in einer Evaluierung verwendet -->
+		<fieldset class="d-flex flex-column gap-3" :disabled="isVerwendet">
+			<!-- Auswahl OE, Studienplan, LV -->
+			<div>
+				<div v-for="e in ebenen" :key="e.value" class="form-check form-check-inline">
+					<input type="radio" class="form-check-input" name="fbEbene" :id="'fbEbene-' + e.value" :value="e.value" v-model="selEbene">
+					<label class="form-check-label" :for="'fbEbene-' + e.value">{{ e.label }}</label>
+				</div>
 			</div>
-		</div>
-		<!-- Eingabefelder -->
-		<div class="row g-2 align-items-end">
+			<!-- Eingabefelder -->
+			<div class="row g-2 align-items-end">
 			<!-- Studiensemester: nur bei Studienplan und LV -->
 			<div v-if="showStudiensemester" class="col-auto">
 				<form-input
@@ -189,21 +210,20 @@ export default {
 			</div>
 			<div class="col-auto">
 				<button type="button" class="btn btn-primary" :disabled="!selItem" @click="addZuordnung">
-					<i class="fa-solid fa-plus me-2"></i>Zuordnen
+					Zuordnung speichern
 				</button>
 			</div>
 		</div>
+		</fieldset>
 		<!-- Anzeige der Auswahl (badges) -->
 		<div class="d-flex flex-wrap gap-2">
 			<span
 				v-for="z in sortedZuordnungen"
-				:key="z.ebene + '-' + getZuordnungId(z)"
+				:key="z.lvevaluierung_fragebogen_zuordnung_id"
 				class="badge text-bg-primary d-inline-flex align-items-center gap-2 fs-6 fw-normal"
 			>
 				{{ z.label }}
-			<button v-if="canRemove(z)" type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="removeZuordnung(z)"></button>			</span>
-		</div>
-		<!-- Info zu Auswahl (alert) -->
+			<button v-if="!isVerwendet" type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="removeZuordnung(z)"></button>		<!-- Info zu Auswahl (alert) -->
 <!--		<div class="alert alert-info mb-0">
 			Der Fragebogen gilt für <strong>alle</strong> gewählten Zuordnungen.<br>
 			Hat eine LV mehrere passende Fragebögen, wird der genauere herangezogen: <strong>LV vor Studienplan vor OE</strong>.

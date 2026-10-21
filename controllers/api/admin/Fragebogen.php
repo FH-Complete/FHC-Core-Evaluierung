@@ -18,6 +18,8 @@ class Fragebogen extends FHCAPI_Controller
 			'updateFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'copyFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'deleteFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'insertZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'deleteZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
@@ -244,6 +246,65 @@ class Fragebogen extends FHCAPI_Controller
 		$this->terminateWithSuccess($fragebogen->fragebogen_id);
 	}
 
+	// Zuordnungen
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Insert Zuordnung zu OE, Studienplan oder LV. Nur solange Fragebogen in keiner Evaluierung verwendet.
+	 *
+	 * @return void
+	 */
+	public function insertZuordnung()
+	{
+		$fragebogen = $this->_checkFragebogenNotVerwendet($this->input->post('fragebogen_id'));
+
+		$zuordnung = [
+			'fragebogen_id' => $fragebogen->fragebogen_id,
+			'oe_kurzbz' => $this->input->post('oe_kurzbz'),
+			'studienplan_id' => $this->input->post('studienplan_id'),
+			'lehrveranstaltung_id' => $this->input->post('lehrveranstaltung_id')
+		];
+
+		// Genau eine Ebene: OE, Studienplan oder LV
+		$ebenen = array_filter([$zuordnung['oe_kurzbz'], $zuordnung['studienplan_id'], $zuordnung['lehrveranstaltung_id']]);
+
+		if (count($ebenen) !== 1)
+		{
+			$this->terminateWithError('Ungültige Zuordnung');
+		}
+
+		// Nicht doppelt zuordnen
+		$result = $this->LvevaluierungFragebogenZuordnungModel->loadWhere($zuordnung);
+
+		if (hasData($result))
+		{
+			$this->terminateWithError('Zuordnung bereits vorhanden');
+		}
+
+		$result = $this->LvevaluierungFragebogenZuordnungModel->insert($zuordnung);
+		$zuordnung_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($zuordnung_id);
+	}
+
+	/**
+	 * Delete Zuordnung. Nur solange Fragebogen in keiner Evaluierung verwendet.
+	 *
+	 * @return void
+	 */
+	public function deleteZuordnung()
+	{
+		$zuordnung = $this->_getZuordnungOrFail($this->input->post('lvevaluierung_fragebogen_zuordnung_id'));
+		$this->_checkFragebogenNotVerwendet($zuordnung->fragebogen_id);
+
+		$result = $this->LvevaluierungFragebogenZuordnungModel->delete($zuordnung->lvevaluierung_fragebogen_zuordnung_id);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($zuordnung->lvevaluierung_fragebogen_zuordnung_id);
+	}
+
+	// Checks and Validations
+	// -----------------------------------------------------------------------------------------------------------------
+
 	/**
 	 * Check if Gültig bis is after Gültig von. (Leer = unbefristet)
 	 */
@@ -254,8 +315,6 @@ class Fragebogen extends FHCAPI_Controller
 		return $gueltig_bis >= $gueltig_von;
 	}
 
-	// Checks and Validations
-	// -----------------------------------------------------------------------------------------------------------------
 	/**
 	 * Fragebogen laden, sonst mit Fehler abbrechen.
 	 *
@@ -314,5 +373,47 @@ class Fragebogen extends FHCAPI_Controller
 		{
 			$this->terminateWithValidationErrors($this->form_validation->error_array());
 		}
+	}
+
+	/**
+	 * Zuordnung laden, sonst mit Fehler abbrechen.
+	 *
+	 * @param $zuordnung_id
+	 * @return object
+	 */
+	private function _getZuordnungOrFail($zuordnung_id)
+	{
+		if (!$zuordnung_id)
+		{
+			$this->terminateWithError('Missing Zuordnung ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenZuordnungModel->load($zuordnung_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if (empty($data))
+		{
+			$this->terminateWithError('Zuordnung nicht gefunden');
+		}
+
+		return $data[0];
+	}
+
+	/**
+	 * Fragebogen laden und abbrechen, wenn bereits in einer Evaluierung verwendet.
+	 *
+	 * @param $fragebogen_id
+	 * @return object    Fragebogen
+	 */
+	private function _checkFragebogenNotVerwendet($fragebogen_id)
+	{
+		$fragebogen = $this->_getFragebogenOrFail($fragebogen_id);
+
+		if ($fragebogen->isVerwendet)
+		{
+			$this->terminateWithError('Fragebogen wird bereits in einer Evaluierung verwendet. Für neue Zuordnungen bitte kopieren.');
+		}
+
+		return $fragebogen;
 	}
 }
