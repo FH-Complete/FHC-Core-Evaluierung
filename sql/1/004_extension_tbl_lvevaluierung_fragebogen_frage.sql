@@ -45,3 +45,8 @@ COMMENT ON COLUMN extension.tbl_lvevaluierung_fragebogen_frage.placeholder IS 'O
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
+-- Sequence hinter höchste ID setzen (Daten wurden direkt mit fixen IDs eingefügt)
+SELECT setval('extension.seq_tbl_lvevaluierung_fragebogen_frage_lvevaluierung_frage_id',
+    (SELECT max(lvevaluierung_frage_id) FROM extension.tbl_lvevaluierung_fragebogen_frage),
+    true
+);

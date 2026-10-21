@@ -51,3 +51,9 @@ END $$;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_fragebogen TO vilesci;
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_fragebogen TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_fragebogen_fragebogen_id TO vilesci;
+
+-- Sequence hinter höchste ID setzen (Daten wurden direkt mit fixen IDs eingefügt)
+SELECT setval('extension.seq_tbl_lvevaluierung_fragebogen_fragebogen_id',
+    (SELECT max(fragebogen_id) FROM extension.tbl_lvevaluierung_fragebogen),
+    true
+);

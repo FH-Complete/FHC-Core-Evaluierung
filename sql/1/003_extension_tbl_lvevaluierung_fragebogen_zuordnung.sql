@@ -43,3 +43,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE extension.tbl_lvevaluierung_frageb
 GRANT SELECT ON TABLE extension.tbl_lvevaluierung_fragebogen_zuordnung TO web;
 GRANT SELECT, UPDATE ON extension.seq_tbl_lvevaluierung_fragebogen_zuordnung_lvevaluierung_fragebogen_zuordnung_id TO vilesci;
 
+-- Sequence hinter höchste ID setzen (Daten wurden direkt mit fixen IDs eingefügt)
+SELECT setval('extension.seq_tbl_lvevaluierung_fragebogen_zuordnung_lvevaluierung_fragebogen_zuordnung_id',
+  (SELECT max(lvevaluierung_fragebogen_zuordnung_id) FROM extension.tbl_lvevaluierung_fragebogen_zuordnung),
+  true
+);
