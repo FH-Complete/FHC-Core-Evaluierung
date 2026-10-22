@@ -266,7 +266,6 @@ export default {
 					></fragebogen-zuordnung>
 					<fragebogen-aufbau
 						v-else-if="tab === 'aufbau'"
-						:gruppen="fragebogen.gruppen"
 						:is-locked="isLocked"
 						:fragebogen-id="fragebogen.fragebogen_id"
 					></fragebogen-aufbau>

@@ -1,218 +1,350 @@
+import {CoreFilterCmpt} from "../../../../../js/components/filter/Filter.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenGruppeModal from "./FragebogenGruppeModal.js";
-import FragebogenFrageModal from "./FragebogenFrageModal.js";
 
 export default {
 	name: "FragebogenAufbau",
 	components: {
-		FragebogenGruppeModal,
-		FragebogenFrageModal
+		CoreFilterCmpt,
+		FragebogenGruppeModal
 	},
 	props: {
-		fragebogenId: {required: true},
-		gruppen: {type: Array, required: true},
-		isLocked: Boolean
+		fragebogenId: {default: null},	// null: noch kein Fragebogen gewählt
+		isLocked: Boolean				// Bereits beantwortet: Aufbau nur lesbar
 	},
 	data() {
 		return {
-			FRAGE_TYP: FragebogenHelper.FRAGE_TYP,
-			GRUPPE_TYP: FragebogenHelper.GRUPPE_TYP,
-			selGruppeKey: null,		// Aufgeklappte Gruppe, initial alle zu
-			dragGruppeIndex: null,
-			overGruppeIndex: null,
-			dragFrageIndex: null,
-			overFrageIndex: null
+			gruppen: [],		// Alle Gruppen, aktive zuerst nach Sort
+			selGruppeId: null	// Gruppe, deren Fragen angezeigt werden
+		}
+	},
+	computed: {
+		aktivIds() {
+			return this.gruppen
+				.filter(gruppe => gruppe.aktiv)
+				.map(gruppe => gruppe.lvevaluierung_fragebogen_gruppe_id);
+		},
+		selGruppe() {
+			return this.gruppen.find(gruppe => gruppe.lvevaluierung_fragebogen_gruppe_id === this.selGruppeId);
+		},
+		gruppenEvents() {
+			return [{event: 'rowClick', handler: this.onGruppeRowClick}];
+		},
+		gruppenOptions() {
+			return {
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.fragebogenId) return Promise.resolve({data: []});
+
+					return this.$api.call(ApiAdminFragebogen.getGruppen(this.fragebogenId));
+				},
+				ajaxResponse: (url, params, response) => {
+					this.gruppen = response.data;
+					// Angezeigte Gruppe nicht mehr vorhanden: Fragen ausblenden
+					if (!this.selGruppe) this.selGruppeId = null;
+					return response.data;
+				},
+				placeholder: 'Bitte zuerst einen Fragebogen anklicken.',
+				// Gruppe, deren Fragen angezeigt werden, markieren
+				rowFormatter: row => row.getElement().classList.toggle(
+					'tabulator-selected',
+					row.getData().lvevaluierung_fragebogen_gruppe_id === this.selGruppeId
+				),
+				layout: 'fitColumns',
+				maxHeight: '50vh',
+				selectable: false,
+				index: 'lvevaluierung_fragebogen_gruppe_id',
+				columnDefaults: {
+					headerTooltip: true,
+					headerWordWrap: true
+				},
+				columns: [
+					{
+						title: 'Sort',
+						field: 'sort',
+						formatter: cell => this.getSortHtml(cell.getData()),
+						cellClick: (e, cell) => this.onGruppeAction(e, cell.getData()),
+						sorterParams: {alignEmptyValues: 'bottom'},
+						width: 90
+					},
+					{
+						title: 'Im Fragebogen',
+						field: 'aktiv',
+						formatter: cell => this.getAktivHtml(cell.getData()),
+						cellClick: (e, cell) => this.onAktivClick(e, cell.getData()),
+						headerFilter: 'tickCross',
+						headerFilterParams: {tristate: true},
+						hozAlign: 'center',
+						width: 100
+					},
+					{
+						title: 'Bezeichnung DE',
+						field: 'bezeichnung_de',
+						headerFilter: 'input',
+						tooltip: true,
+						minWidth: 100
+					},
+					{
+						title: 'Bezeichnung EN',
+						field: 'bezeichnung_en',
+						headerFilter: 'input',
+						tooltip: true,
+						minWidth: 100
+					},
+					{
+						title: 'Typ',
+						field: 'typ',
+						headerFilter: 'input',
+						width: 80
+					},
+					{
+						title: 'Fragen',
+						field: 'anzahlFragen',
+						hozAlign: 'right',
+						width: 80
+					},
+					{
+						title: 'Aktionen',
+						formatter: cell => this.getAktionenHtml(cell.getData()),
+						cellClick: (e, cell) => this.onGruppeAction(e, cell.getData()),
+						headerSort: false,
+						hozAlign: 'center',
+						width: 100
+					}
+				]
+			};
+		},
+		fragenOptions() {
+			return {
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.selGruppeId) return Promise.resolve({data: []});
+
+					return this.$api.call(ApiAdminFragebogen.getFragen(this.selGruppeId));
+				},
+				ajaxResponse: (url, params, response) => response.data,
+				placeholder: 'Bitte zuerst eine Gruppe anklicken.',
+				layout: 'fitColumns',
+				maxHeight: '50vh',
+				selectable: false,
+				index: 'lvevaluierung_frage_id',
+				columnDefaults: {
+					headerTooltip: true,
+					headerWordWrap: true
+				},
+				columns: [
+					{
+						title: 'In Gruppe',
+						field: 'aktiv',
+						formatter: 'tickCross',
+						formatterParams: {
+							tickElement: '<i class="fa-solid fa-check"></i>',
+							crossElement: false
+						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {tristate: true},
+						hozAlign: 'center',
+						width: 90
+					},
+					{
+						title: 'Frage DE',
+						field: 'bezeichnung_de',
+						headerFilter: 'input',
+						tooltip: true,
+						minWidth: 100
+					},
+					{
+						title: 'Frage EN',
+						field: 'bezeichnung_en',
+						headerFilter: 'input',
+						tooltip: true,
+						minWidth: 100
+					},
+					{
+						title: 'Typ',
+						field: 'typ',
+						headerFilter: 'input',
+						width: 130
+					}
+				]
+			};
+		}
+	},
+	watch: {
+		// Anderer Fragebogen: Gruppen neu laden, Fragen leeren
+		fragebogenId() {
+			this.selGruppeId = null;
+			this.$refs.gruppenTable.reloadTable();
+		},
+		// Markierung aktualisieren und Fragen der gewählten Gruppe laden
+		selGruppeId() {
+			this.$refs.gruppenTable.tabulator.getRows().forEach(row => row.reformat());
+			this.$refs.fragenTable.reloadTable();
 		}
 	},
 	methods: {
-		// Gruppe auf- oder zuklappen
+		// Sort-Nummer mit Pfeilen, tauscht mit der benachbarten aktiven Gruppe
+		getSortHtml(gruppe) {
+			const index = this.aktivIds.indexOf(gruppe.lvevaluierung_fragebogen_gruppe_id);
+			if (index < 0) return '';
+
+			return `
+				<div class="d-flex align-items-center gap-1">
+					<span class="me-1">${index + 1}</span>
+					<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-action="up" title="Nach oben" aria-label="Nach oben" ${this.isLocked || index === 0 ? 'disabled' : ''}>
+						<i class="fa-solid fa-chevron-up"></i>
+					</button>
+					<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-action="down" title="Nach unten" aria-label="Nach unten" ${this.isLocked || index === this.aktivIds.length - 1 ? 'disabled' : ''}>
+						<i class="fa-solid fa-chevron-down"></i>
+					</button>
+				</div>`;
+		},
+		// Neue Gruppen (nur hier) werden gelöscht statt entfernt
+		getAktivHtml(gruppe) {
+			const isNeu = gruppe.aktiv && !gruppe.inAnderenFrageboegen;
+			let title = gruppe.aktiv ? 'Aus diesem Fragebogen entfernen' : 'In diesem Fragebogen verwenden';
+			if (isNeu) title = 'Neue Gruppe, nur in diesem Fragebogen – zum Entfernen löschen';
+			if (this.isLocked) title = 'Bereits beantwortet – nicht änderbar';
+
+			return `
+				<div class="form-check form-switch d-flex justify-content-center m-0" title="${title}">
+					<input class="form-check-input" type="checkbox" role="switch" aria-label="${title}" ${gruppe.aktiv ? 'checked' : ''} ${this.isLocked || isNeu ? 'disabled' : ''}>
+				</div>`;
+		},
+		getAktionenHtml(gruppe) {
+			const canDelete = !this.isLocked && gruppe.aktiv && !gruppe.inAnderenFrageboegen;
+			let titleDelete = 'Gruppe löschen';
+			if (!gruppe.aktiv) titleDelete = 'Bestehende Gruppe – nicht löschbar';
+			else if (gruppe.inAnderenFrageboegen) titleDelete = 'Bestehende Gruppe – über „Im Fragebogen“ entfernen';
+			if (this.isLocked) titleDelete = 'Bereits beantwortet – nicht löschbar';
+
+			return `
+				<div class="d-flex justify-content-center gap-1">
+					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" title="Gruppe bearbeiten" aria-label="Gruppe bearbeiten">
+						<i class="fa-solid fa-pen"></i>
+					</button>
+					<span title="${titleDelete}">
+						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Gruppe löschen" ${canDelete ? '' : 'disabled'}>
+							<i class="fa-solid fa-xmark"></i>
+						</button>
+					</span>
+				</div>`;
+		},
+		onGruppeAction(e, gruppe) {
+			const button = e.target.closest('button');
+			if (!button || button.disabled) return;
+
+			const action = button.dataset.action;
+			if (action === 'up') this.moveGruppe(gruppe, -1);
+			if (action === 'down') this.moveGruppe(gruppe, 1);
+			if (action === 'edit') this.$refs.gruppeModal.open(gruppe, this.getNurLesenGrund(gruppe));
+			if (action === 'delete') this.deleteGruppe(gruppe);
+		},
+		onAktivClick(e, gruppe) {
+			const input = e.target.closest('input');
+			if (!input || input.disabled) return;
+
+			this.toggleGruppe(gruppe);
+		},
+		// Zeilenklick zeigt die Fragen der Gruppe, nicht bei Buttons und Schaltern; label hat keine Fragen
+		onGruppeRowClick(e, row) {
+			const gruppe = row.getData();
+			if (e.target.closest('button, input') || gruppe.typ === FragebogenHelper.GRUPPE_TYP.LABEL) return;
+
+			this.selGruppeId = gruppe.lvevaluierung_fragebogen_gruppe_id;
+		},
+		// Nur ansehen: beantwortet oder bestehende Gruppe
+		getNurLesenGrund(gruppe) {
+			if (this.isLocked) return 'Bereits beantwortet – nur Ansicht.';
+			if (!gruppe.aktiv || gruppe.inAnderenFrageboegen) return 'Bestehende Gruppe (auch in anderen Fragebögen) – Bezeichnung und Typ nicht änderbar.';
+			return null;
+		},
+		// Schalter: Gruppe samt Fragen übernehmen bzw. aus diesem Fragebogen entfernen
 		toggleGruppe(gruppe) {
-			this.selGruppeKey = this.selGruppeKey === gruppe._key ? null : gruppe._key;
+			const gruppe_id = gruppe.lvevaluierung_fragebogen_gruppe_id;
+			const apiCall = gruppe.aktiv
+				? ApiAdminFragebogen.deleteGruppe(gruppe_id)
+				: ApiAdminFragebogen.uebernehmenGruppe(this.fragebogenId, gruppe_id);
+
+			this.$api
+				.call(apiCall)
+				.then(result => {
+					// Angezeigte Gruppe: zur übernommenen wechseln
+					if (gruppe_id === this.selGruppeId) this.selGruppeId = gruppe.aktiv ? null : result.data;
+					this.$refs.gruppenTable.reloadTable();
+				})
+				.catch(error => {
+					this.$refs.gruppenTable.reloadTable();	// Schalter zurücksetzen
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
-		// Nach Speichern im Modal: Gruppe aktualisieren oder neu anhängen und aufklappen
-		onSavedGruppe(saved) {
-			const gruppe = this.gruppen.find(g => g.lvevaluierung_fragebogen_gruppe_id === saved.lvevaluierung_fragebogen_gruppe_id);
+		// Mit benachbarter aktiver Gruppe tauschen, im Hintergrund speichern
+		moveGruppe(gruppe, schritt) {
+			const gruppe_id = gruppe.lvevaluierung_fragebogen_gruppe_id;
+			const ids = this.aktivIds.filter(id => id !== gruppe_id);
+			ids.splice(this.aktivIds.indexOf(gruppe_id) + schritt, 0, gruppe_id);
 
-			if (gruppe) {
-				Object.assign(gruppe, saved);
-				return;
-			}
-
-			const neu = Object.assign(FragebogenHelper.newGruppe(this.gruppen.length + 1), saved);
-			this.gruppen.push(neu);
-			this.selGruppeKey = neu._key;
+			this.$api
+				.call(ApiAdminFragebogen.sortGruppen(this.fragebogenId, ids))
+				.then(() => this.$refs.gruppenTable.reloadTable())
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		async deleteGruppe(index) {
-			const gruppe = this.gruppen[index];
-
+		async deleteGruppe(gruppe) {
 			if (!await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ inkl. Fragen entfernen?'
+				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ löschen? Fragen, die sonst nirgends verwendet werden, werden mitgelöscht.'
 			})) return;
 
 			this.$api
 				.call(ApiAdminFragebogen.deleteGruppe(gruppe.lvevaluierung_fragebogen_gruppe_id))
 				.then(() => {
-					this.gruppen.splice(this.gruppen.indexOf(gruppe), 1);
 					this.$fhcAlert.alertSuccess('Gruppe gelöscht');
+					this.$refs.gruppenTable.reloadTable();
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
-		},
-		addFrage(gruppe) {
-			const frage = FragebogenHelper.newFrage(gruppe.fragen.length + 1);
-			gruppe.fragen.push(frage);
-			this.$refs.frageModal.open(frage);
-		},
-		editFrage(frage) {
-			this.$refs.frageModal.open(frage);
-		},
-		deleteFrage(gruppe, index) {
-			gruppe.fragen.splice(index, 1);
-		},
-		// Drag & Drop
-		// ---------------------------------------------------------------------------------
-		// Drag & Drop Gruppen (Kopfzeile = Griff)
-		onDragStartGruppe(e, index) {
-			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData('text/plain', index);	// Firefox startet Drag nur mit Daten
-			setTimeout(() => this.dragGruppeIndex = index);
-		},
-		onDragOverGruppe(e, index) {
-			if (this.dragGruppeIndex === null) return;
-			e.preventDefault();
-			this.overGruppeIndex = index;
-		},
-		onDropGruppe(index) {
-			const from = this.dragGruppeIndex;
-			this.resetDrag();
-			if (from === null || from === index) return;
-
-			FragebogenHelper.moveItem(this.gruppen, from, index);
-
-			// Reihenfolge sofort speichern, bei Fehler zurückschieben
-			this.$api
-				.call(ApiAdminFragebogen.sortGruppen(this.fragebogenId, this.gruppen.map(g => g.lvevaluierung_fragebogen_gruppe_id)))
-				.catch(error => {
-					FragebogenHelper.moveItem(this.gruppen, index, from);
-					this.$fhcAlert.handleSystemError(error);
-				});
-		},
-		// Drag & Drop Fragen innerhalb der aufgeklappten Gruppe
-		onDragStartFrage(e, index) {
-			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData('text/plain', index);
-			setTimeout(() => this.dragFrageIndex = index);
-		},
-		onDragOverFrage(e, index) {
-			if (this.dragFrageIndex === null) return;
-			e.preventDefault();
-			this.overFrageIndex = index;
-		},
-		onDropFrage(gruppe, index) {
-			if (this.dragFrageIndex === null) return;
-			FragebogenHelper.moveItem(gruppe.fragen, this.dragFrageIndex, index);
-			this.resetDrag();
-		},
-		resetDrag() {
-			this.dragGruppeIndex = null;
-			this.overGruppeIndex = null;
-			this.dragFrageIndex = null;
-			this.overFrageIndex = null;
 		}
 	},
 	template: `
-	<section class="d-flex flex-column gap-3">
-	<!--	<div v-if="isLocked" class="alert alert-warning mb-0">
-			Bereits beantwortet – Aufbau nur lesbar. Für Änderungen <strong>Kopieren</strong>.
-		</div>-->
-
-		<!-- Neue Gruppe: oberhalb der ersten Gruppe -->
-		<div>
-			<button type="button" class="btn btn-primary" :disabled="isLocked" @click="$refs.gruppeModal.open(null)">
-				<i class="fa-solid fa-plus me-2"></i>Gruppe
-			</button>
+	<div class="d-flex flex-column gap-3">
+		<div v-if="isLocked" class="alert alert-warning mb-0">
+			Bereits beantwortet – Aufbau nur lesbar. Für Änderungen einen neuen Fragebogen anlegen und die Gruppen übernehmen.
 		</div>
 
-		<!-- Fragengruppen -->
-		<div
-			v-for="(gruppe, gIndex) in gruppen"
-			:key="gruppe._key"
-			class="card"
-			:class="{
-				'border-primary shadow-sm': gruppe._key === selGruppeKey,
-				'bg-primary-subtle': gIndex === overGruppeIndex && gIndex !== dragGruppeIndex,
-				'opacity-50': gIndex === dragGruppeIndex
-			}"
-			@dragover="onDragOverGruppe($event, gIndex)"
-			@drop.prevent="onDropGruppe(gIndex)"
-		>
-			<!-- Fragengruppe Kopfzeile: Griff zum Sortieren -->
-			<div
-				class="card-header d-flex align-items-center gap-2 bg-white"
-				:draggable="!isLocked"
-				@dragstart="onDragStartGruppe($event, gIndex)"
-				@dragend="resetDrag"
-			>
-				<i v-if="!isLocked" class="fa-solid fa-grip-vertical text-secondary" title="Ziehen zum Sortieren"></i>
-				<button
-					type="button"
-					class="btn btn-link text-body text-decoration-none text-start fw-semibold flex-grow-1 p-0"
-					:aria-expanded="gruppe._key === selGruppeKey"
-					@click="toggleGruppe(gruppe)"
-				>
-					<i class="fa-solid fa-fw me-1" :class="gruppe._key === selGruppeKey ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-					{{ gruppe.bezeichnung_de || '[Gruppenbezeichnung fehlt]' }}
-				</button>
-				<span v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="badge text-bg-light border">{{ gruppe.fragen.length }} Fragen</span>
-				<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Gruppe bearbeiten" @click="$refs.gruppeModal.open(gruppe)">
-					<i class="fa-solid fa-pen"></i>
-				</button>
-				<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Gruppe löschen" @click="deleteGruppe(gIndex)">
-					<i class="fa-solid fa-xmark"></i>
-				</button>
+		<!-- ab lg nebeneinander, darunter untereinander -->
+		<div class="row g-4">
+			<div class="col-lg-6">
+				<h3 class="h5">Gruppen</h3>
+				<core-filter-cmpt
+					ref="gruppenTable"
+					uniqueId="tabFragebogenGruppen"
+					table-only
+					:side-menu="false"
+					new-btn-show
+					new-btn-label="Gruppe"
+					:new-btn-disabled="isLocked || !fragebogenId"
+					:tabulator-options="gruppenOptions"
+					:tabulator-events="gruppenEvents"
+					@click:new="$refs.gruppeModal.open(null, null)"
+				></core-filter-cmpt>
 			</div>
-
-			<!-- Aufgeklappte Gruppe: Fragen (Überschrift hat keine) -->
-			<ul v-if="gruppe._key === selGruppeKey && gruppe.typ !== GRUPPE_TYP.LABEL" class="list-group list-group-flush">
-				<!-- Neue Frage: oberhalb der ersten Frage -->
-				<li class="list-group-item">
-					<button type="button" class="btn btn-sm btn-primary" :disabled="isLocked" @click="addFrage(gruppe)">
-						<i class="fa-solid fa-plus me-1"></i>Frage
-					</button>
-				</li>
-				<li
-					v-for="(frage, fIndex) in gruppe.fragen"
-					:key="frage._key"
-					class="list-group-item d-flex align-items-center gap-2"
-					:class="{
-						'list-group-item-primary': fIndex === overFrageIndex && fIndex !== dragFrageIndex,
-						'opacity-50': fIndex === dragFrageIndex
-					}"
-					:draggable="!isLocked"
-					@dragstart="onDragStartFrage($event, fIndex)"
-					@dragover="onDragOverFrage($event, fIndex)"
-					@drop.prevent="onDropFrage(gruppe, fIndex)"
-					@dragend="resetDrag"
-				>
-					<i v-if="!isLocked" class="fa-solid fa-grip-vertical text-secondary" title="Ziehen zum Sortieren"></i>
-					<span class="flex-grow-1">{{ frage.bezeichnung_de || '[ohne Text]' }}</span>
-					<span class="badge bg-primary-subtle text-primary-emphasis">
-						{{ frage.typ === FRAGE_TYP.TEXT ? 'Freitext' : 'Single Response' }}
-					</span>
-					<span v-if="frage.verpflichtend" class="badge bg-warning-subtle text-warning-emphasis">Pflicht</span>
-					<button type="button" class="btn btn-sm btn-outline-secondary" @click="editFrage(frage)">
-						<i class="fa-solid" :class="isLocked ? 'fa-eye' : 'fa-pen'"></i>
-					</button>
-					<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Frage entfernen" @click="deleteFrage(gruppe, fIndex)">
-						<i class="fa-solid fa-xmark"></i>
-					</button>
-				</li>
-			</ul>
+			<div class="col-lg-6">
+				<h3 class="h5">Fragen<small v-if="selGruppe" class="fw-normal text-secondary"> | {{ selGruppe.bezeichnung_de }}</small></h3>
+				<core-filter-cmpt
+					ref="fragenTable"
+					uniqueId="tabFragebogenFragen"
+					table-only
+					:side-menu="false"
+					:tabulator-options="fragenOptions"
+				></core-filter-cmpt>
+			</div>
 		</div>
 
-		<fragebogen-gruppe-modal ref="gruppeModal" :fragebogen-id="fragebogenId" @saved="onSavedGruppe"></fragebogen-gruppe-modal>
-		<fragebogen-frage-modal ref="frageModal" :is-locked="isLocked"></fragebogen-frage-modal>
-	</section>
+		<fragebogen-gruppe-modal
+			ref="gruppeModal"
+			:fragebogen-id="fragebogenId"
+			@saved="$refs.gruppenTable.reloadTable()"
+		></fragebogen-gruppe-modal>
+	</div>
 	`
 }

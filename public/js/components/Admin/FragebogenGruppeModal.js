@@ -18,29 +18,34 @@ export default {
 	data() {
 		return {
 			GRUPPE_TYP: FragebogenHelper.GRUPPE_TYP,
-			gruppe: {},			// Formulardaten, gespeichert erst mit Speichern
-			hasFragen: false,	// Überschrift nur ohne Fragen möglich
+			gruppe: {},
+			hasFragen: false,		// label nur ohne Fragen möglich
+			nurLesenGrund: null,	// Gesetzt: nur ansehen, Speichern gesperrt
 			isSaving: false
 		}
 	},
 	methods: {
-		// Ohne Gruppe: neue Gruppe anlegen
-		open(gruppe) {
-			this.gruppe = {
-				lvevaluierung_fragebogen_gruppe_id: gruppe ? gruppe.lvevaluierung_fragebogen_gruppe_id : null,
-				typ: gruppe ? gruppe.typ : this.GRUPPE_TYP.GROUP,
-				bezeichnung_de: gruppe ? gruppe.bezeichnung_de : '',
-				bezeichnung_en: gruppe ? gruppe.bezeichnung_en : ''
-			};
-			this.hasFragen = !!gruppe && gruppe.fragen.length > 0;
+		// Gruppe aus der Tabelle oder null für neu
+		open(gruppe, nurLesenGrund) {
+			this.gruppe = gruppe
+				? {
+					lvevaluierung_fragebogen_gruppe_id: gruppe.lvevaluierung_fragebogen_gruppe_id,
+					typ: gruppe.typ,
+					bezeichnung_de: gruppe.bezeichnung_de,
+					bezeichnung_en: gruppe.bezeichnung_en
+				}
+				: {lvevaluierung_fragebogen_gruppe_id: null, typ: this.GRUPPE_TYP.GROUP, bezeichnung_de: '', bezeichnung_en: ''};
+			this.hasFragen = !!gruppe && gruppe.anzahlFragen > 0;
+			this.nurLesenGrund = nurLesenGrund;
 
 			this.$refs.form.clearValidation();
 			this.$refs.modal.show();
 		},
 		save() {
-			const apiCall = this.gruppe.lvevaluierung_fragebogen_gruppe_id
-				? ApiAdminFragebogen.updateGruppe(this.gruppe)
-				: ApiAdminFragebogen.insertGruppe({...this.gruppe, fragebogen_id: this.fragebogenId});
+			const gruppe = {...this.gruppe, fragebogen_id: this.fragebogenId};
+			const apiCall = gruppe.lvevaluierung_fragebogen_gruppe_id
+				? ApiAdminFragebogen.updateGruppe(gruppe)
+				: ApiAdminFragebogen.insertGruppe(gruppe);
 
 			this.isSaving = true;
 			this.$refs.form
@@ -48,7 +53,7 @@ export default {
 				.then(result => {
 					this.$fhcAlert.alertSuccess(this.$p.t('ui', 'gespeichert'));
 					this.$refs.modal.hide();
-					this.$emit('saved', {...this.gruppe, lvevaluierung_fragebogen_gruppe_id: result.data});
+					this.$emit('saved', result.data);
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error))
 				.finally(() => this.isSaving = false);
@@ -58,36 +63,43 @@ export default {
 	<bs-modal ref="modal" dialog-class="modal-lg">
 		<template #title>{{ gruppe.lvevaluierung_fragebogen_gruppe_id ? 'Gruppe bearbeiten' : 'Neue Gruppe' }}</template>
 
-		<form-form ref="form" class="row g-3" @submit.prevent="save">
-			<div class="col-md-6">
-				<form-input label="Bezeichnung (DE) *" name="bezeichnung_de" v-model.trim="gruppe.bezeichnung_de" bs-feedback></form-input>
-			</div>
-			<div class="col-md-6">
-				<form-input label="Bezeichnung (EN) *" name="bezeichnung_en" v-model.trim="gruppe.bezeichnung_en" bs-feedback></form-input>
-			</div>
-			<div class="col-12">
-				<!-- Eigenes Label wegen Info-Icon -->
-				<span class="form-label d-block">
-					Typ
-					<i
-						class="fa-solid fa-circle-info text-secondary ms-1"
-						v-tooltip
-						title="Fragengruppe (einklappbar): Fragen sind in einer einklappbaren Fragengruppe. Fragengruppe (fix): Fragen dieser Gruppe werden immer angezeigt. Nur Überschrift: wird nur als Überschrift verwendet, ohne Fragen."
-					></i>
-				</span>
-				<form-input type="select" class="w-auto" name="typ" aria-label="Typ" v-model="gruppe.typ" bs-feedback>
-					<option :value="GRUPPE_TYP.GROUP">Fragengruppe (einklappbar)</option>
-					<option :value="GRUPPE_TYP.CARD">Fragengruppe (fix)</option>
-					<option :value="GRUPPE_TYP.LABEL" :disabled="hasFragen">Nur Überschrift</option>
-				</form-input>
-				<div v-if="hasFragen" class="form-text">Nur Überschrift ist erst ohne Fragen möglich.</div>
-			</div>
+		<div v-if="nurLesenGrund" class="alert alert-warning">{{ nurLesenGrund }}</div>
+
+		<form-form ref="form" @submit.prevent="save">
+			<fieldset class="row g-3" :disabled="!!nurLesenGrund">
+				<div class="col-md-6">
+					<form-input label="Bezeichnung (DE) *" name="bezeichnung_de" v-model.trim="gruppe.bezeichnung_de" bs-feedback></form-input>
+				</div>
+				<div class="col-md-6">
+					<form-input label="Bezeichnung (EN) *" name="bezeichnung_en" v-model.trim="gruppe.bezeichnung_en" bs-feedback></form-input>
+				</div>
+				<div class="col-12">
+					<span class="form-label d-block">
+						Typ
+						<i
+							class="fa-solid fa-circle-info text-secondary ms-1"
+							v-tooltip
+							title="group: Fragen in einer Card, einklappbar. card: Fragen in einer Card, immer angezeigt. label: nur Überschrift, ohne Fragen."
+						></i>
+					</span>
+					<form-input type="select" name="typ" aria-label="Typ" class="w-auto" v-model="gruppe.typ" bs-feedback>
+						<option
+							v-for="typ in GRUPPE_TYP"
+							:key="typ"
+							:value="typ"
+							:disabled="typ === GRUPPE_TYP.LABEL && hasFragen"
+						>{{ typ }}</option>
+					</form-input>
+				</div>
+			</fieldset>
 		</form-form>
 
 		<template #footer>
-			<button type="button" class="btn btn-primary" :disabled="isSaving" @click="save">
-				<i class="fa-solid fa-floppy-disk me-2"></i>Speichern
-			</button>
+			<span :title="nurLesenGrund">
+				<button type="button" class="btn btn-primary" :disabled="!!nurLesenGrund || isSaving" @click="save">
+					<i class="fa-solid fa-floppy-disk me-2"></i>Speichern
+				</button>
+			</span>
 		</template>
 	</bs-modal>
 	`

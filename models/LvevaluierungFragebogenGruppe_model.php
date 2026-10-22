@@ -375,4 +375,120 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 
 		return $this->execQuery($qry, $params);
 	}
+
+	/**
+	 * Alle Gruppen für den Aufbau, je Bezeichnung DE und Typ eine Zeile: die eigene (aktiv), sonst die neueste.
+	 * inAnderenFrageboegen: gleiche Gruppe gibt es auch in einem anderen Fragebogen.
+	 *
+	 * @param $fragebogen_id
+	 * @return mixed
+	 */
+	public function getAlleGruppen($fragebogen_id)
+	{
+		$qry = '
+			SELECT 
+			    *
+			FROM (
+				SELECT DISTINCT ON (gr.bezeichnung[(1)], gr.typ)
+					gr.lvevaluierung_fragebogen_gruppe_id,
+					gr.typ,
+					gr.bezeichnung[(1)] AS bezeichnung_de,
+					gr.bezeichnung[(2)] AS bezeichnung_en,
+					CASE WHEN gr.fragebogen_id = ? THEN gr.sort END AS sort,
+					gr.fragebogen_id = ? AS aktiv,
+					COUNT(*) FILTER (WHERE gr.fragebogen_id <> ?) OVER (PARTITION BY gr.bezeichnung[(1)], gr.typ) > 0 AS "inAnderenFrageboegen",
+					(
+						SELECT COUNT(*)
+						FROM extension.tbl_lvevaluierung_fragebogen_gruppe_frage grfr
+						WHERE grfr.lvevaluierung_fragebogen_gruppe_id = gr.lvevaluierung_fragebogen_gruppe_id
+					) AS "anzahlFragen"
+				FROM 
+				    extension.tbl_lvevaluierung_fragebogen_gruppe gr
+				ORDER BY 
+				    gr.bezeichnung[(1)], 
+				    gr.typ, gr.fragebogen_id = ? DESC, 
+				    gr.lvevaluierung_fragebogen_gruppe_id DESC
+			) g
+			ORDER BY 
+			    g.aktiv DESC, 
+			    g.sort, 
+			    g.bezeichnung_de
+		';
+
+		return $this->execQuery($qry, [$fragebogen_id, $fragebogen_id, $fragebogen_id, $fragebogen_id]);
+	}
+
+	/**
+	 * Prüft, ob es die Gruppe (gleiche Bezeichnung DE und Typ) auch in einem anderen Fragebogen gibt.
+	 *
+	 * @param $gruppe_id
+	 * @return mixed
+	 */
+	public function isInAnderenFrageboegen($gruppe_id)
+	{
+		$qry = '
+			SELECT EXISTS (
+				SELECT 1
+				FROM extension.tbl_lvevaluierung_fragebogen_gruppe gr
+				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe andere
+					ON andere.bezeichnung[(1)] = gr.bezeichnung[(1)]
+					AND andere.typ = gr.typ
+					AND andere.fragebogen_id <> gr.fragebogen_id
+				WHERE gr.lvevaluierung_fragebogen_gruppe_id = ?
+			) AS "inAnderenFrageboegen"
+		';
+
+		return $this->execQuery($qry, [$gruppe_id]);
+	}
+
+	/**
+	 * Insert Fragebogengruppe. Bezeichnung als text[] (1 = DE, 2 = EN).
+	 *
+	 * @return mixed
+	 */
+	public function insertGruppe($fragebogen_id, $typ, $bezeichnung_de, $bezeichnung_en, $style, $sort)
+	{
+		$qry = '
+			INSERT INTO extension.tbl_lvevaluierung_fragebogen_gruppe (
+				fragebogen_id,
+			   	typ, 
+			   	bezeichnung, 
+			   	style, 
+		   		sort
+			)
+			VALUES (?, ?, ARRAY[?, ?], ?, ?)
+			RETURNING lvevaluierung_fragebogen_gruppe_id
+		';
+
+		// trim: CI erkennt RETURNING nur ohne führende Leerzeichen
+		return $this->execQuery(trim($qry), [$fragebogen_id, $typ, $bezeichnung_de, $bezeichnung_en, $style, $sort]);
+	}
+
+	/**
+	 * Update Fragebogengruppe. Bezeichnung als text[] (1 = DE, 2 = EN).
+	 *
+	 * @param $gruppe_id
+	 * @param $typ
+	 * @param $bezeichnung_de
+	 * @param $bezeichnung_en
+	 * @param $style
+	 * @param $sort
+	 * @return mixed
+	 */
+	public function updateGruppe($gruppe_id, $typ, $bezeichnung_de, $bezeichnung_en, $style, $sort)
+	{
+		$qry = '
+			UPDATE 
+			    extension.tbl_lvevaluierung_fragebogen_gruppe
+			SET 
+			    typ = ?, 
+			    bezeichnung = ARRAY[?, ?], 
+			    style = ?, 
+			    sort = ?
+			WHERE 
+			    lvevaluierung_fragebogen_gruppe_id = ?
+		';
+
+		return $this->execQuery($qry, [$typ, $bezeichnung_de, $bezeichnung_en, $style, $sort, $gruppe_id]);
+	}
 }

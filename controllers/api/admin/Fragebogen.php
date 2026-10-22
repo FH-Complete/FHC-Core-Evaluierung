@@ -25,6 +25,9 @@ class Fragebogen extends FHCAPI_Controller
 			'updateGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'deleteGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'sortGruppen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'getGruppen' => self::BERECHTIGUNG_ADMIN . ':r',
+			'getFragen' => self::BERECHTIGUNG_ADMIN . ':r',
+			'uebernehmenGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
@@ -32,6 +35,7 @@ class Fragebogen extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenZuordnung_model', 'LvevaluierungFragebogenZuordnungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
 
 		// Load language phrases
 		$this->loadPhrases([
@@ -311,6 +315,76 @@ class Fragebogen extends FHCAPI_Controller
 	// Gruppen
 	// -----------------------------------------------------------------------------------------------------------------
 	/**
+	 * Alle Gruppen für den Aufbau, aktiv = in diesem Fragebogen.
+	 *
+	 * @return void
+	 */
+	public function getGruppen()
+	{
+		$fragebogen_id = $this->input->get('fragebogen_id');
+
+		if (!$fragebogen_id)
+		{
+			$this->terminateWithError('Missing Fragebogen ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenGruppeModel->getAlleGruppen($fragebogen_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
+	}
+
+	/**
+	 * Alle Fragen für den Aufbau, aktiv = in der Gruppe.
+	 *
+	 * @return void
+	 */
+	public function getFragen()
+	{
+		$gruppe_id = $this->input->get('lvevaluierung_fragebogen_gruppe_id');
+
+		if (!$gruppe_id)
+		{
+			$this->terminateWithError('Missing Gruppe ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenFrageModel->getAlleFragen($gruppe_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
+	}
+
+	/**
+	 * Gruppe eines anderen Fragebogens übernehmen (Aktiv einschalten).
+	 *
+	 * @return void
+	 */
+	public function uebernehmenGruppe()
+	{
+		$fragebogen_id = $this->input->post('fragebogen_id');
+		$this->_checkFragebogenNotLocked($fragebogen_id);
+
+		$vorlage = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+
+		if ((int)$vorlage->fragebogen_id === (int)$fragebogen_id)
+		{
+			$this->terminateWithError('Gruppe ist bereits in diesem Fragebogen');
+		}
+
+		$result = $this->fragebogenlib->uebernehmenGruppe($fragebogen_id, $vorlage);
+		$gruppe_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($gruppe_id);
+	}
+	/**
 	 * Insert Gruppe am Ende des Fragebogens.
 	 *
 	 * @return void
@@ -338,6 +412,7 @@ class Fragebogen extends FHCAPI_Controller
 		$data = $this->input->post();
 		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
 		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+		$this->_checkGruppeNurHier($gruppe->lvevaluierung_fragebogen_gruppe_id);
 
 		$this->_validateGruppeData($data);
 
@@ -581,6 +656,24 @@ class Fragebogen extends FHCAPI_Controller
 		if ($this->form_validation->run() == false)
 		{
 			$this->terminateWithValidationErrors($this->form_validation->error_array());
+		}
+	}
+
+	/**
+	 * Bestehende Gruppen (auch in anderen Fragebögen) sind nicht änderbar.
+	 * Terminate with error if so.
+	 *
+	 * @param $gruppe_id
+	 * @return void
+	 */
+	private function _checkGruppeNurHier($gruppe_id)
+	{
+		$result = $this->LvevaluierungFragebogenGruppeModel->isInAnderenFrageboegen($gruppe_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if ($data[0]->inAnderenFrageboegen)
+		{
+			$this->terminateWithError('Bestehende Gruppe – Bezeichnung und Typ nicht änderbar');
 		}
 	}
 }

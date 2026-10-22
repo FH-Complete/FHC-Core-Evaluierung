@@ -77,6 +77,27 @@ export default {
 			params: {lvevaluierung_fragebogen_zuordnung_id}
 		};
 	},
+	getGruppen(fragebogen_id) {
+		return {
+			method: 'get',
+			url: URL + 'getGruppen',
+			params: {fragebogen_id}
+		};
+	},
+	getFragen(lvevaluierung_fragebogen_gruppe_id) {
+		return {
+			method: 'get',
+			url: URL + 'getFragen',
+			params: {lvevaluierung_fragebogen_gruppe_id}
+		};
+	},
+	uebernehmenGruppe(fragebogen_id, lvevaluierung_fragebogen_gruppe_id) {
+		return {
+			method: 'post',
+			url: URL + 'uebernehmenGruppe',
+			params: {fragebogen_id, lvevaluierung_fragebogen_gruppe_id}
+		};
+	},
 	insertGruppe(gruppe) {
 		return {
 			method: 'post',

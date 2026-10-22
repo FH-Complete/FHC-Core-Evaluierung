@@ -271,4 +271,42 @@ class FragebogenLib
 		$this->_ci->db->trans_commit();
 		return success($fragebogen_id);
 	}
+
+	/**
+	 * Gruppe eines anderen Fragebogens übernehmen: neue Gruppe am Ende, Fragen samt Antworten mit gleicher ID zuordnen.
+	 *
+	 * @param $fragebogen_id
+	 * @param $vorlage    Gruppe des anderen Fragebogens
+	 * @return mixed Gruppe ID
+	 */
+	public function uebernehmenGruppe($fragebogen_id, $vorlage)
+	{
+		$this->_ci->db->trans_begin();
+
+		// Bezeichnung als Array: 0 = DE, 1 = EN
+		$result = $this->insertGruppe($fragebogen_id, [
+			'typ' => $vorlage->typ,
+			'bezeichnung_de' => $vorlage->bezeichnung[0],
+			'bezeichnung_en' => $vorlage->bezeichnung[1]
+		]);
+
+		if (!isError($result))
+		{
+			$gruppe_id = getData($result);
+			$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->copyFragen(
+				$vorlage->lvevaluierung_fragebogen_gruppe_id,
+				$gruppe_id
+			);
+		}
+
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Gruppe konnte nicht übernommen werden');
+		}
+
+		$this->_ci->db->trans_commit();
+
+		return success($gruppe_id);
+	}
 }
