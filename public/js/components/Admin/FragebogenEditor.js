@@ -1,56 +1,74 @@
 import {CoreFilterCmpt} from "../../../../../js/components/filter/Filter.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
-import FragebogenHelper from "../../helpers/FragebogenHelper.js";
-import FragebogenBasis from "./FragebogenBasis.js";
-import FragebogenZuordnung from "./FragebogenZuordnung.js";
+import FragebogenModal from "./FragebogenModal.js";
 import FragebogenAufbau from "./FragebogenAufbau.js";
+import FragebogenZuordnung from "./FragebogenZuordnung.js";
 
 export default {
 	name: "FragebogenEditor",
 	components: {
 		CoreFilterCmpt,
-		FragebogenBasis,
-		FragebogenZuordnung,
+		FragebogenModal,
 		FragebogenAufbau,
+		FragebogenZuordnung
 	},
 	data() {
 		return {
-			titles: {neu: 'Neuer Fragebogen', edit: 'Fragebogen bearbeiten', copy: 'Fragebogen kopieren'},
 			tabs: [
-				{key: 'basis', label: 'Basisdaten'},
-				{key: 'zuordnung', label: 'Zuordnung'},
-				{key: 'aufbau', label: 'Aufbau'}
+				{key: 'aufbau', label: 'Aufbau'},
+				{key: 'zuordnung', label: 'Zuordnung'}
 			],
-			tab: 'basis',
-			mode: null,			// edit | copy | neu, null = geschlossen
-			fragebogen: null	// Geladener Fragebogen inkl. Zuordnungen und Aufbau
+			tab: 'aufbau',
+			frageboegen: [],	// Geladene Fragebögen der Tabelle
+			selFbId: null		// Fragebogen, der unten verwaltet wird
 		}
 	},
 	computed: {
-		// Bereits beantwortet: Struktur nur lesbar
+		selFb() {
+			return this.frageboegen.find(fb => fb.fragebogen_id === this.selFbId);
+		},
+		// Bereits beantwortet: Aufbau nur lesbar
 		isLocked() {
-			return !!this.fragebogen?.hasAntworten;
+			return !!this.selFb && this.selFb.hasAntworten;
+		},
+		// In Evaluierung verwendet: Zuordnungen nur lesbar
+		isVerwendet() {
+			return !!this.selFb && this.selFb.isVerwendet;
+		},
+		tabulatorEvents() {
+			return [{event: 'rowClick', handler: this.onRowClick}];
 		},
 		tabulatorOptions() {
 			return {
 				ajaxURL: 'dummy',
 				ajaxRequestFunc: () => this.$api.call(ApiAdminFragebogen.getFrageboegen()),
-				ajaxResponse: (url, params, response) => response.data,
-				layout: 'fitDataTable',
-				maxHeight: '50vh',	// So hoch wie die Zeilen, max. halber Bildschirm
+				ajaxResponse: (url, params, response) => {
+					this.frageboegen = response.data;
+					// Gewählter Fragebogen nicht mehr vorhanden: Auswahl aufheben
+					if (!this.selFb) this.selFbId = null;
+					return response.data;
+				},
+				// Gewählten Fragebogen markieren
+				rowFormatter: row => row.getElement().classList.toggle(
+					'tabulator-selected',
+					row.getData().fragebogen_id === this.selFbId
+				),
+				layout: 'fitColumns',
+				maxHeight: '50vh',
 				autoResize: true,
 				resizableColumnFit: true,
 				selectable: false,
 				index: 'fragebogen_id',
 				columnDefaults: {
-					headerTooltip: true
+					headerTooltip: true,
+					headerWordWrap: true
 				},
 				columns: [
 					{
 						title: 'ID',
 						field: 'fragebogen_id',
 						headerFilter: 'input',
-						width: 90
+						width: 60
 					},
 					{
 						title: 'Bezeichnung DE',
@@ -68,19 +86,19 @@ export default {
 						title: 'Gültig von',
 						field: 'gueltig_von',
 						formatter: cell => this.formatDate(cell.getValue()),
-						minWidth: 110
+						minWidth: 100
 					},
 					{
 						title: 'Gültig bis',
 						field: 'gueltig_bis',
 						formatter: cell => this.formatDate(cell.getValue()),
-						minWidth: 110
+						minWidth: 100
 					},
 					{
 						title: 'Zuordnungen',
 						field: 'anzahlZuordnungen',
 						hozAlign: 'right',
-						minWidth: 110
+						minWidth: 60
 					},
 					{
 						title: 'Verwendet',
@@ -94,7 +112,7 @@ export default {
 						headerFilterParams: {tristate: true},
 						tooltip: (e, cell) => cell.getValue() ? 'In einer LV-Evaluierung verwendet' : 'Noch nicht verwendet',
 						hozAlign: 'center',
-						minWidth: 100
+						minWidth: 60
 					},
 					{
 						title: 'Beantwortet',
@@ -108,7 +126,7 @@ export default {
 						headerFilterParams: {tristate: true},
 						tooltip: (e, cell) => cell.getValue() ? 'Bereits beantwortet' : 'Noch nicht beantwortet',
 						hozAlign: 'center',
-						minWidth: 100
+						minWidth: 60
 					},
 					{
 						title: 'Aktionen',
@@ -116,54 +134,31 @@ export default {
 						cellClick: (e, cell) => this.onActionClick(e, cell.getData()),
 						headerSort: false,
 						hozAlign: 'center',
-						width: 150
+						width: 100
 					}
 				]
 			};
 		}
 	},
+	watch: {
+		// Markierung in der Tabelle aktualisieren
+		selFbId() {
+			this.$refs.fbTable.tabulator.getRows().forEach(row => row.reformat());
+		}
+	},
 	methods: {
-		// Bearbeiten oder Kopieren: Fragebogen laden, dann Ansicht zeigen
-		openFragebogen(fragebogen_id, mode) {
-			this.$api
-				.call(ApiAdminFragebogen.getFragebogen(fragebogen_id))
-				.then(result => {
-					this.fragebogen = FragebogenHelper.prepareLoaded(result.data, false);
-					this.mode = mode;
-					this.tab = 'basis';
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
-		},
-		openNeu() {
-			this.fragebogen = null;
-			this.mode = 'neu';
-			this.tab = 'basis';
-		},
-		// Zuordnung und Aufbau erst nach dem Anlegen
-		isTabDisabled(key) {
-			return key !== 'basis' && this.mode !== 'edit';
-		},
 		formatDate(value) {
 			return value ? this.DateHelper.formatDate(value) : '';
 		},
-		// Aktionen: Bearbeiten, Kopieren, Löschen. Gesperrt mit Erklärung im Tooltip.
+		// Bearbeiten und Löschen, gesperrt mit Erklärung im Tooltip
 		getActionButtons(fb) {
-			const titleEdit = fb.hasAntworten
-					? 'Bereits beantwortet – nur Gültig bis änderbar'
-					: fb.isVerwendet
-						? 'In Evaluierung verwendet – Zuordnungen nicht mehr änderbar'
-						: 'Bearbeiten';
-			const titleDelete = fb.isVerwendet
-				? 'Wird bereits in einer Evaluierung verwendet und kann nicht gelöscht werden'
-				: 'Löschen';
+			const titleEdit = fb.hasAntworten ? 'Bereits beantwortet – nur Gültig bis änderbar' : 'Bearbeiten';
+			const titleDelete = fb.isVerwendet ? 'In einer Evaluierung verwendet – nicht löschbar' : 'Löschen';
 
 			return `
-				<div class="d-flex justify-content-center gap-2">
+				<div class="d-flex justify-content-center gap-1">
 					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" title="${titleEdit}" aria-label="Bearbeiten">
-						<i class="fa-solid fa-pen-to-square"></i>
-					</button>
-					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="copy" title="Kopieren" aria-label="Kopieren">
-						<i class="fa-solid fa-copy"></i>
+						<i class="fa-solid fa-pen"></i>
 					</button>
 					<span title="${titleDelete}">
 						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Löschen" ${fb.isVerwendet ? 'disabled' : ''}>
@@ -176,41 +171,40 @@ export default {
 			const button = e.target.closest('button');
 			if (!button || button.disabled) return;
 
-			if (button.dataset.action === 'edit') this.openFragebogen(fb.fragebogen_id, 'edit');
-			if (button.dataset.action === 'copy') this.openFragebogen(fb.fragebogen_id, 'copy');
+			if (button.dataset.action === 'edit') this.$refs.fbModal.open(fb);
 			if (button.dataset.action === 'delete') this.deleteFragebogen(fb);
 		},
-		// Nach dem Speichern: Tabelle neu laden, gespeicherten Fragebogen bearbeiten
+		// Zeilenklick wählt den Fragebogen, nicht bei Klick auf Buttons
+		onRowClick(e, row) {
+			if (e.target.closest('button')) return;
+
+			this.selFbId = row.getData().fragebogen_id;
+		},
+		// Gespeicherten Fragebogen wählen und Tabelle neu laden
 		onSaved(fragebogen_id) {
+			this.selFbId = fragebogen_id;
 			this.$refs.fbTable.reloadTable();
-			this.openFragebogen(fragebogen_id, 'edit');
 		},
 		async deleteFragebogen(fb) {
 			if (!await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: 'Fragebogen „' + fb.bezeichnung_de + '“ inkl. Zuordnungen und Aufbau löschen?'
+				message: 'Fragebogen „' + fb.bezeichnung_de + '“ löschen?'
 			})) return;
 
 			this.$api
-					.call(ApiAdminFragebogen.deleteFragebogen(fb.fragebogen_id))
+				.call(ApiAdminFragebogen.deleteFragebogen(fb.fragebogen_id))
 				.then(() => {
 					this.$fhcAlert.alertSuccess('Fragebogen gelöscht');
 					this.$refs.fbTable.reloadTable();
-
-					// Geöffneter Fragebogen (oder Kopiervorlage) gelöscht: Bearbeitung schließen
-					if (this.fragebogen?.fragebogen_id === fb.fragebogen_id) {
-						this.mode = null;
-						this.fragebogen = null;
-					}
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
-		},
+		}
 	},
 	template: `
 	<div class="fragebogen-editor container-fluid">
-		<h1 class="h2 mb-5 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
+		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
 
-		<!-- Übersicht Fragebögen -->
+		<!-- Übersicht: Zeilenklick wählt den Fragebogen -->
 		<core-filter-cmpt
 			ref="fbTable"
 			uniqueId="tabFrageboegen"
@@ -218,60 +212,36 @@ export default {
 			:side-menu="false"
 			new-btn-show
 			new-btn-label="Fragebogen"
-			@click:new="openNeu"
 			:tabulator-options="tabulatorOptions"
+			:tabulator-events="tabulatorEvents"
+			@click:new="$refs.fbModal.open(null)"
 		></core-filter-cmpt>
 
-		<!-- Bearbeiten, Neu oder Kopieren -->
-		<template v-if="mode">
-			<h2 class="h4 mt-5 mb-4">
-				{{ titles[mode] }}<small v-if="fragebogen" class="fw-normal text-secondary"> | {{ fragebogen.bezeichnung_de }}</small>
-			</h2>
+		<!-- Fragebogen verwalten -->
+		<h2 class="h4 mt-5 mb-3">
+			Fragebogen verwalten<small v-if="selFb" class="fw-normal text-secondary"> | {{ selFb.bezeichnung_de }}</small>
+		</h2>
+		<ul class="nav nav-tabs">
+			<li v-for="t in tabs" :key="t.key" class="nav-item">
+				<button type="button" class="nav-link" :class="{active: tab === t.key}" @click="tab = t.key">{{ t.label }}</button>
+			</li>
+		</ul>
+		<div class="border border-top-0 rounded-bottom p-3 mb-4">
+			<fragebogen-aufbau
+				v-if="tab === 'aufbau'"
+				:fragebogen-id="selFbId"
+				:is-locked="isLocked"
+			></fragebogen-aufbau>
+			<fragebogen-zuordnung
+				v-else-if="selFb"
+				:fragebogen-id="selFbId"
+				:is-verwendet="isVerwendet"
+				@changed="$refs.fbTable.reloadTable()"
+			></fragebogen-zuordnung>
+			<p v-else class="text-secondary mb-0">Bitte zuerst einen Fragebogen anklicken.</p>
+		</div>
 
-			<ul class="nav nav-tabs">
-				<!-- Tooltip am li, da gesperrter nav-link keine Maus-Events hat -->
-				<li
-					v-for="t in tabs"
-					:key="t.key"
-					class="nav-item"
-					:title="isTabDisabled(t.key) ? 'Erst nach dem Speichern verfügbar' : null"
-				>
-					<button
-						type="button"
-						class="nav-link"
-						:class="{active: tab === t.key}"
-						:disabled="isTabDisabled(t.key)"
-						@click="tab = t.key"
-					>
-						{{ t.label }}
-					</button>
-				</li>
-			</ul>
-			<!-- Components -->
-			<div class="border border-top-0 rounded-bottom p-3 mb-4">
-				<keep-alive>
-					<fragebogen-basis
-						v-if="tab === 'basis'"
-						:fragebogen="fragebogen"
-						:mode="mode"
-						:is-locked="isLocked"
-						@saved="onSaved"
-					></fragebogen-basis>
-					<fragebogen-zuordnung
-						v-else-if="tab === 'zuordnung'"
-						:zuordnungen="fragebogen.zuordnungen"
-						:is-verwendet="fragebogen.isVerwendet"
-						:fragebogen-id="fragebogen.fragebogen_id"
-						@changed="$refs.fbTable.reloadTable()"
-					></fragebogen-zuordnung>
-					<fragebogen-aufbau
-						v-else-if="tab === 'aufbau'"
-						:is-locked="isLocked"
-						:fragebogen-id="fragebogen.fragebogen_id"
-					></fragebogen-aufbau>
-				</keep-alive>
-			</div>
-		</template>
+		<fragebogen-modal ref="fbModal" @saved="onSaved"></fragebogen-modal>
 	</div>
 	`
 }

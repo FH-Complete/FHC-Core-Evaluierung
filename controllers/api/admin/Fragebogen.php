@@ -11,14 +11,13 @@ class Fragebogen extends FHCAPI_Controller
 	{
 		parent::__construct([
 			'getFrageboegen' => self::BERECHTIGUNG_ADMIN . ':r',
-			'getFragebogen' => self::BERECHTIGUNG_ADMIN . ':r',
 			'getOrganisationseinheiten' => self::BERECHTIGUNG_ADMIN . ':r',
 			'getStudienplaene' => self::BERECHTIGUNG_ADMIN . ':r',
 			'searchLehrveranstaltungen' => self::BERECHTIGUNG_ADMIN . ':r',
 			'insertFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'updateFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
-			'copyFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'deleteFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'getZuordnungen' => self::BERECHTIGUNG_ADMIN . ':r',
 			'insertZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'deleteZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'insertGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
@@ -57,24 +56,6 @@ class Fragebogen extends FHCAPI_Controller
 		}
 
 		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
-	}
-
-	/**
-	 * Fragebogen mit Zuordnungen und Struktur Gruppe > Frage > Antworten.
-	 */
-	public function getFragebogen()
-	{
-		$fragebogen_id = $this->input->get('fragebogen_id');
-
-		if (!$fragebogen_id)
-		{
-			$this->terminateWithError('Missing Fragebogen ID');
-		}
-
-		$result = $this->fragebogenlib->getFragebogenStruktur($fragebogen_id);
-		$data = $this->getDataOrTerminateWithError($result);
-
-		$this->terminateWithSuccess($data);
 	}
 
 	/**
@@ -212,27 +193,6 @@ class Fragebogen extends FHCAPI_Controller
 	}
 
 	/**
-	 * Copy Fragebogen: Gruppen und Fragen, ohne Zuordnungen.
-	 * Gepostete fragebogen_id ist die Vorlage.
-	 *
-	 * @return void
-	 */
-	public function copyFragebogen()
-	{
-		$data = $this->input->post();
-		$vorlage = $this->_getFragebogenOrFail($this->input->post('fragebogen_id'));
-
-		$this->_validateFragebogenData($data);
-
-		$data['gueltig_bis'] = $this->_getGueltigBis($data);
-
-		$result = $this->fragebogenlib->copyFragebogen($vorlage->fragebogen_id, $data);
-		$fragebogen_id = $this->getDataOrTerminateWithError($result);
-
-		$this->terminateWithSuccess($fragebogen_id);
-	}
-
-	/**
 	 * Delete Fragebogen, nur wenn in keiner Evaluierung verwendet.
 	 *
 	 * @return void
@@ -254,6 +214,30 @@ class Fragebogen extends FHCAPI_Controller
 		$this->getDataOrTerminateWithError($result);
 
 		$this->terminateWithSuccess($fragebogen->fragebogen_id);
+	}
+
+	/**
+	 * Zuordnungen eines Fragebogens.
+	 *
+	 * @return void
+	 */
+	public function getZuordnungen()
+	{
+		$fragebogen_id = $this->input->get('fragebogen_id');
+
+		if (!$fragebogen_id)
+		{
+			$this->terminateWithError('Missing Fragebogen ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenZuordnungModel->getByFragebogen($fragebogen_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
 	}
 
 	// Zuordnungen

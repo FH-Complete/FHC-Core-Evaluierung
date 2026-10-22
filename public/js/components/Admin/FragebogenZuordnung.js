@@ -10,7 +10,6 @@ export default {
 	},
 	props: {
 		fragebogenId: {required: true},
-		zuordnungen: {type: Array, required: true},
 		isVerwendet: Boolean	// FB ist min. einer Evaluierung zugeordnet: Zuordnungen nur lesbar
 	},
 	emits: ['changed'],
@@ -38,10 +37,13 @@ export default {
 				studiensemester: [],
 				oe: [],
 				stpl: []
-			}
+			},
+			zuordnungen: [],
 		}
 	},
 	created() {
+		this.loadZuordnungen();
+
 		this.$api
 			.call(ApiFragebogen.getOrganisationseinheiten())
 			.then(result => {
@@ -79,7 +81,10 @@ export default {
 		selStudiensemester() {
 			this.selItem = null;
 			this.loadStudienplaene();
-		}
+		},
+		fragebogenId() {
+			this.loadZuordnungen();
+		},
 	},
 	methods: {
 		loadStudienplaene() {
@@ -90,6 +95,12 @@ export default {
 					label: stpl.bezeichnung + ' - ' + stpl.semester + '. Semester',
 				})))
 				.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		loadZuordnungen() {
+			this.$api
+					.call(ApiFragebogen.getZuordnungen(this.fragebogenId))
+					.then(result => this.zuordnungen = result.data)
+					.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		search(event) {
 			// LVs serverseitig suchen, OE/Studienplan lokal filtern
@@ -162,7 +173,7 @@ export default {
 	template: `
 	<section class="d-flex flex-column gap-3">
 		<!--<div v-if="isVerwendet" class="alert alert-warning mb-0">
-			Fragebogen bereits in Verwendung – Für Änderungen <strong>Fragebogen kopieren</strong>.
+			In einer Evaluierung verwendet – Zuordnungen nicht mehr änderbar. Für weitere Zuordnungen einen neuen Fragebogen anlegen.
 		</div>-->
 		<!-- Auswahl und Eingabe gesperrt, sobald Fragebogen in einer Evaluierung verwendet -->
 		<fieldset class="d-flex flex-column gap-3" :disabled="isVerwendet">

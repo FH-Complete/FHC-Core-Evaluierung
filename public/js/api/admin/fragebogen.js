@@ -7,10 +7,10 @@ export default {
 			url: URL + 'getFrageboegen'
 		};
 	},
-	getFragebogen(fragebogen_id) {
+	getZuordnungen(fragebogen_id) {
 		return {
 			method: 'get',
-			url: URL + 'getFragebogen',
+			url: URL + 'getZuordnungen',
 			params: {fragebogen_id}
 		};
 	},
@@ -45,14 +45,6 @@ export default {
 		return {
 			method: 'post',
 			url: URL + 'updateFragebogen',
-			params: fragebogen
-		};
-	},
-	// fragebogen_id = Vorlage
-	copyFragebogen(fragebogen) {
-		return {
-			method: 'post',
-			url: URL + 'copyFragebogen',
 			params: fragebogen
 		};
 	},
