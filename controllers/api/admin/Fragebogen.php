@@ -5,6 +5,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
 class Fragebogen extends FHCAPI_Controller
 {
 	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
+	const GRUPPE_TYP_LABEL = 'label';
 
 	public function __construct()
 	{
@@ -20,12 +21,17 @@ class Fragebogen extends FHCAPI_Controller
 			'deleteFragebogen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'insertZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'deleteZuordnung' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'insertGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'updateGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'deleteGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'sortGruppen' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
 
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogen_model', 'LvevaluierungFragebogenModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenZuordnung_model', 'LvevaluierungFragebogenZuordnungModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 
 		// Load language phrases
 		$this->loadPhrases([
@@ -302,6 +308,103 @@ class Fragebogen extends FHCAPI_Controller
 		$this->terminateWithSuccess($zuordnung->lvevaluierung_fragebogen_zuordnung_id);
 	}
 
+	// Gruppen
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Insert Gruppe am Ende des Fragebogens.
+	 *
+	 * @return void
+	 */
+	public function insertGruppe()
+	{
+		$data = $this->input->post();
+		$fragebogen = $this->_checkFragebogenNotLocked($this->input->post('fragebogen_id'));
+
+		$this->_validateGruppeData($data);
+
+		$result = $this->fragebogenlib->insertGruppe($fragebogen->fragebogen_id, $data);
+		$gruppe_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($gruppe_id);
+	}
+
+	/**
+	 * Update Gruppe (Typ und Bezeichnung). Überschrift nur ohne Fragen.
+	 *
+	 * @return void
+	 */
+	public function updateGruppe()
+	{
+		$data = $this->input->post();
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+
+		$this->_validateGruppeData($data);
+
+		// Überschrift hat keine Fragen
+		if ($data['typ'] === self::GRUPPE_TYP_LABEL)
+		{
+			$result = $this->LvevaluierungFragebogenGruppeFrageModel->loadWhere([
+				'lvevaluierung_fragebogen_gruppe_id' => $gruppe->lvevaluierung_fragebogen_gruppe_id
+			]);
+
+			if (hasData($result))
+			{
+				$this->terminateWithError('Nur Überschrift ist erst ohne Fragen möglich');
+			}
+		}
+
+		// Style und Sortierung bleiben
+		$result = $this->LvevaluierungFragebogenGruppeModel->updateGruppe(
+			$gruppe->lvevaluierung_fragebogen_gruppe_id,
+			$data['typ'],
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$gruppe->style,
+			$gruppe->sort
+		);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($gruppe->lvevaluierung_fragebogen_gruppe_id);
+	}
+
+	/**
+	 * Delete Gruppe inkl. Fragen, die sonst nirgends verwendet werden.
+	 *
+	 * @return void
+	 */
+	public function deleteGruppe()
+	{
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+
+		$result = $this->fragebogenlib->deleteGruppe($gruppe->lvevaluierung_fragebogen_gruppe_id);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($gruppe->lvevaluierung_fragebogen_gruppe_id);
+	}
+
+	/**
+	 * Sort Gruppen nach übergebener Reihenfolge.
+	 *
+	 * @return void
+	 */
+	public function sortGruppen()
+	{
+		$fragebogen = $this->_checkFragebogenNotLocked($this->input->post('fragebogen_id'));
+		$gruppeIds = $this->input->post('gruppeIds');
+
+		if (!is_array($gruppeIds) || empty($gruppeIds))
+		{
+			$this->terminateWithError('Missing Gruppen');
+		}
+
+		$result = $this->fragebogenlib->sortGruppen($fragebogen->fragebogen_id, $gruppeIds);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($fragebogen->fragebogen_id);
+	}
+
 	// Checks and Validations
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -415,5 +518,69 @@ class Fragebogen extends FHCAPI_Controller
 		}
 
 		return $fragebogen;
+	}
+
+	/**
+	 * Fragebogen laden und abbrechen, wenn bereits beantwortet.
+	 *
+	 * @param $fragebogen_id
+	 * @return object    Fragebogen
+	 */
+	private function _checkFragebogenNotLocked($fragebogen_id)
+	{
+		$fragebogen = $this->_getFragebogenOrFail($fragebogen_id);
+
+		if ($fragebogen->hasAntworten)
+		{
+			$this->terminateWithError('Fragebogen wurde bereits beantwortet. Für Änderungen bitte kopieren.');
+		}
+
+		return $fragebogen;
+	}
+
+	/**
+	 * Gruppe laden, sonst mit Fehler abbrechen.
+	 *
+	 * @param $gruppe_id
+	 * @return object
+	 */
+	private function _getGruppeOrFail($gruppe_id)
+	{
+		if (!$gruppe_id)
+		{
+			$this->terminateWithError('Missing Gruppe ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenGruppeModel->load($gruppe_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if (empty($data))
+		{
+			$this->terminateWithError('Gruppe nicht gefunden');
+		}
+
+		return $data[0];
+	}
+
+	/**
+	 * Validates posted Gruppe.
+	 *
+	 * @param $data
+	 * @return void
+	 */
+	private function _validateGruppeData($data)
+	{
+		$this->load->library('form_validation');
+
+		$this->form_validation->set_data($data);
+		$this->form_validation->set_rules('bezeichnung_de', 'Bezeichnung (DE)', 'required');
+		$this->form_validation->set_rules('bezeichnung_en', 'Bezeichnung (EN)', 'required');
+		$this->form_validation->set_rules('typ', 'Typ', 'required|in_list[group,card,label]');
+
+		// On error
+		if ($this->form_validation->run() == false)
+		{
+			$this->terminateWithValidationErrors($this->form_validation->error_array());
+		}
 	}
 }

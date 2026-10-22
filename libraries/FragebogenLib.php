@@ -177,4 +177,98 @@ class FragebogenLib
 
 		return success($fragebogen_id);
 	}
+
+	/**
+	 * Insert Gruppe am Ende des Fragebogens.
+	 *
+	 * @param $fragebogen_id
+	 * @param $data
+	 * @return mixed    ID der neuen Gruppe
+	 */
+	public function insertGruppe($fragebogen_id, $data)
+	{
+		// Neue Gruppe ans Ende: höchste Sortierung + 1
+		$result = $this->_ci->LvevaluierungFragebogenGruppeModel->loadWhere(['fragebogen_id' => $fragebogen_id]);
+		if (isError($result)) return $result;
+		$sorts = hasData($result) ? array_column(getData($result), 'sort') : [];
+		$sort = empty($sorts) ? 1 : max($sorts) + 1;
+
+		$result = $this->_ci->LvevaluierungFragebogenGruppeModel->insertGruppe(
+			$fragebogen_id,
+			$data['typ'],
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			null,
+			$sort
+		);
+		if (isError($result)) return $result;
+
+		return success(getData($result)[0]->lvevaluierung_fragebogen_gruppe_id);
+	}
+
+	/**
+	 * Delete Gruppe. Gruppe-Frage per Cascade, Fragen ohne weitere Zuordnung und ohne Antworten werden mitgelöscht.
+	 *
+	 * @param $gruppe_id
+	 * @return mixed
+	 */
+	public function deleteGruppe($gruppe_id)
+	{
+		// Fragen merken, bevor Gruppe-Frage per Cascade gelöscht wird
+		$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->loadWhere(['lvevaluierung_fragebogen_gruppe_id' => $gruppe_id]);
+		if (isError($result)) return $result;
+		$frageIds = hasData($result) ? array_column(getData($result), 'lvevaluierung_frage_id') : [];
+
+		$this->_ci->db->trans_begin();
+
+		$result = $this->_ci->LvevaluierungFragebogenGruppeModel->delete($gruppe_id);
+
+		if (!isError($result) && !empty($frageIds))
+		{
+			$result = $this->_ci->LvevaluierungFragebogenFrageModel->deleteUnbenutzteFragen($frageIds);
+		}
+
+		// Bei Fehler alles zurücknehmen
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Gruppe konnte nicht gelöscht werden');
+		}
+
+		$this->_ci->db->trans_commit();
+		return success($gruppe_id);
+	}
+
+	/**
+	 * Sort Gruppen nach übergebener Reihenfolge. Nur Gruppen dieses Fragebogens.
+	 *
+	 * @param $fragebogen_id
+	 * @param $gruppeIds
+	 * @return mixed
+	 */
+	public function sortGruppen($fragebogen_id, $gruppeIds)
+	{
+		$result = success(true);
+
+		$this->_ci->db->trans_begin();
+
+		foreach (array_values($gruppeIds) as $index => $gruppe_id)
+		{
+			$result = $this->_ci->LvevaluierungFragebogenGruppeModel->update(
+				['lvevaluierung_fragebogen_gruppe_id' => $gruppe_id, 'fragebogen_id' => $fragebogen_id],
+				['sort' => $index + 1]
+			);
+			if (isError($result)) break;
+		}
+
+		// Bei Fehler alles zurücknehmen
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Reihenfolge konnte nicht gespeichert werden');
+		}
+
+		$this->_ci->db->trans_commit();
+		return success($fragebogen_id);
+	}
 }

@@ -77,4 +77,32 @@ export default {
 			params: {lvevaluierung_fragebogen_zuordnung_id}
 		};
 	},
+	insertGruppe(gruppe) {
+		return {
+			method: 'post',
+			url: URL + 'insertGruppe',
+			params: gruppe
+		};
+	},
+	updateGruppe(gruppe) {
+		return {
+			method: 'post',
+			url: URL + 'updateGruppe',
+			params: gruppe
+		};
+	},
+	deleteGruppe(lvevaluierung_fragebogen_gruppe_id) {
+		return {
+			method: 'post',
+			url: URL + 'deleteGruppe',
+			params: {lvevaluierung_fragebogen_gruppe_id}
+		};
+	},
+	sortGruppen(fragebogen_id, gruppeIds) {
+		return {
+			method: 'post',
+			url: URL + 'sortGruppen',
+			params: {fragebogen_id, gruppeIds}
+		};
+	},
 };

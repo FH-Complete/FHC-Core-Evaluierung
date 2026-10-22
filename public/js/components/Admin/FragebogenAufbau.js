@@ -1,14 +1,16 @@
+import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
+import FragebogenGruppeModal from "./FragebogenGruppeModal.js";
 import FragebogenFrageModal from "./FragebogenFrageModal.js";
-import FormInput from "../../../../../js/components/Form/Input.js";
 
 export default {
 	name: "FragebogenAufbau",
 	components: {
-		FormInput,
+		FragebogenGruppeModal,
 		FragebogenFrageModal
 	},
 	props: {
+		fragebogenId: {required: true},
 		gruppen: {type: Array, required: true},
 		isLocked: Boolean
 	},
@@ -28,18 +30,34 @@ export default {
 		toggleGruppe(gruppe) {
 			this.selGruppeKey = this.selGruppeKey === gruppe._key ? null : gruppe._key;
 		},
-		addGruppe() {
-			const gruppe = FragebogenHelper.newGruppe(this.gruppen.length + 1);
-			this.gruppen.push(gruppe);
-			this.selGruppeKey = gruppe._key;
+		// Nach Speichern im Modal: Gruppe aktualisieren oder neu anhängen und aufklappen
+		onSavedGruppe(saved) {
+			const gruppe = this.gruppen.find(g => g.lvevaluierung_fragebogen_gruppe_id === saved.lvevaluierung_fragebogen_gruppe_id);
+
+			if (gruppe) {
+				Object.assign(gruppe, saved);
+				return;
+			}
+
+			const neu = Object.assign(FragebogenHelper.newGruppe(this.gruppen.length + 1), saved);
+			this.gruppen.push(neu);
+			this.selGruppeKey = neu._key;
 		},
 		async deleteGruppe(index) {
+			const gruppe = this.gruppen[index];
+
 			if (!await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: 'Gruppe „' + this.gruppen[index].bezeichnung_de + '“ inkl. Fragen entfernen?'
+				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ inkl. Fragen entfernen?'
 			})) return;
 
-			this.gruppen.splice(index, 1);
+			this.$api
+				.call(ApiAdminFragebogen.deleteGruppe(gruppe.lvevaluierung_fragebogen_gruppe_id))
+				.then(() => {
+					this.gruppen.splice(this.gruppen.indexOf(gruppe), 1);
+					this.$fhcAlert.alertSuccess('Gruppe gelöscht');
+				})
+				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		addFrage(gruppe) {
 			const frage = FragebogenHelper.newFrage(gruppe.fragen.length + 1);
@@ -51,23 +69,6 @@ export default {
 		},
 		deleteFrage(gruppe, index) {
 			gruppe.fragen.splice(index, 1);
-		},
-		// Überschrift hat keine Fragen: vorhandene Fragen nach Bestätigung entfernen
-		async changeTyp(gruppe, e) {
-			const typ = e.target.value;
-
-			if (typ === this.GRUPPE_TYP.LABEL && gruppe.fragen.length) {
-				if (!await this.$fhcAlert.confirm({
-					header: 'Bitte bestätigen Sie:',
-					message: 'Eine Überschrift hat keine Fragen. ' + gruppe.fragen.length + ' Fragen entfernen?'
-				})) {
-					e.target.value = gruppe.typ;
-					return;
-				}
-				gruppe.fragen = [];
-			}
-
-			gruppe.typ = typ;
 		},
 		// Drag & Drop
 		// ---------------------------------------------------------------------------------
@@ -83,9 +84,19 @@ export default {
 			this.overGruppeIndex = index;
 		},
 		onDropGruppe(index) {
-			if (this.dragGruppeIndex === null) return;
-			FragebogenHelper.moveItem(this.gruppen, this.dragGruppeIndex, index);
+			const from = this.dragGruppeIndex;
 			this.resetDrag();
+			if (from === null || from === index) return;
+
+			FragebogenHelper.moveItem(this.gruppen, from, index);
+
+			// Reihenfolge sofort speichern, bei Fehler zurückschieben
+			this.$api
+				.call(ApiAdminFragebogen.sortGruppen(this.fragebogenId, this.gruppen.map(g => g.lvevaluierung_fragebogen_gruppe_id)))
+				.catch(error => {
+					FragebogenHelper.moveItem(this.gruppen, index, from);
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
 		// Drag & Drop Fragen innerhalb der aufgeklappten Gruppe
 		onDragStartFrage(e, index) {
@@ -118,7 +129,7 @@ export default {
 
 		<!-- Neue Gruppe: oberhalb der ersten Gruppe -->
 		<div>
-			<button type="button" class="btn btn-primary" :disabled="isLocked" @click="addGruppe">
+			<button type="button" class="btn btn-primary" :disabled="isLocked" @click="$refs.gruppeModal.open(null)">
 				<i class="fa-solid fa-plus me-2"></i>Gruppe
 			</button>
 		</div>
@@ -129,6 +140,7 @@ export default {
 			:key="gruppe._key"
 			class="card"
 			:class="{
+				'border-primary shadow-sm': gruppe._key === selGruppeKey,
 				'bg-primary-subtle': gIndex === overGruppeIndex && gIndex !== dragGruppeIndex,
 				'opacity-50': gIndex === dragGruppeIndex
 			}"
@@ -153,77 +165,53 @@ export default {
 					{{ gruppe.bezeichnung_de || '[Gruppenbezeichnung fehlt]' }}
 				</button>
 				<span v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="badge text-bg-light border">{{ gruppe.fragen.length }} Fragen</span>
+				<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Gruppe bearbeiten" @click="$refs.gruppeModal.open(gruppe)">
+					<i class="fa-solid fa-pen"></i>
+				</button>
 				<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Gruppe löschen" @click="deleteGruppe(gIndex)">
 					<i class="fa-solid fa-xmark"></i>
 				</button>
 			</div>
 
-			<!-- Aufgeklappte Gruppe: Felder und Fragen -->
-			<template v-if="gruppe._key === selGruppeKey">
-				<fieldset class="card-body bg-body-tertiary row g-2 m-0" :disabled="isLocked">
-					<div class="col-md-4">
-						<form-input label="Bezeichnung DE" name="gruppe_bezeichnung_de" v-model.trim="gruppe.bezeichnung_de" bs-feedback></form-input>
-					</div>
-					<div class="col-md-4">
-						<form-input label="Bezeichnung EN" name="gruppe_bezeichnung_en" v-model.trim="gruppe.bezeichnung_en" bs-feedback></form-input>
-					</div>
-					<div class="col-md-4">
-						<!-- Eigenes Label wegen Info-Icon -->
-						<span class="form-label d-block">
-							Typ
-							<i
-								class="fa-solid fa-circle-info text-secondary ms-1"
-								v-tooltip
-								title="Fragengruppe (einklappbar): Fragen in einer Card, einklappbar. Fragengruppe (fix): Fragen in einer Card, nicht einklappbar - immer angezeigt. Nur Überschrift: wird nur als Überschrift angezeigt, ohne Fragen."
-							></i>
-						</span>
-						<form-input type="select" class="w-auto" name="gruppe_typ" aria-label="Typ" v-model="gruppe.typ" @change="changeTyp(gruppe, $event)" bs-feedback>
-							<option :value="GRUPPE_TYP.GROUP">Fragengruppe (einklappbar)</option>
-							<option :value="GRUPPE_TYP.CARD">Fragengruppe (fix)</option>
-							<option :value="GRUPPE_TYP.LABEL">Nur Überschrift</option>
-						</form-input>
-					</div>
-				</fieldset>
-
-				<!-- Fragen -->
-				<ul v-if="gruppe.typ !== GRUPPE_TYP.LABEL" class="list-group list-group-flush">
-					<!-- Neue Frage: oberhalb der ersten Frage -->
-					<li class="list-group-item">
-						<button type="button" class="btn btn-sm btn-primary" :disabled="isLocked" @click="addFrage(gruppe)">
-							<i class="fa-solid fa-plus me-1"></i>Frage
-						</button>
-					</li>
-					<li
-						v-for="(frage, fIndex) in gruppe.fragen"
-						:key="frage._key"
-						class="list-group-item d-flex align-items-center gap-2"
-						:class="{
-							'list-group-item-primary': fIndex === overFrageIndex && fIndex !== dragFrageIndex,
-							'opacity-50': fIndex === dragFrageIndex
-						}"
-						:draggable="!isLocked"
-						@dragstart="onDragStartFrage($event, fIndex)"
-						@dragover="onDragOverFrage($event, fIndex)"
-						@drop.prevent="onDropFrage(gruppe, fIndex)"
-						@dragend="resetDrag"
-					>
-						<i v-if="!isLocked" class="fa-solid fa-grip-vertical text-secondary" title="Ziehen zum Sortieren"></i>
-						<span class="flex-grow-1">{{ frage.bezeichnung_de || '[ohne Text]' }}</span>
-						<span class="badge bg-primary-subtle text-primary-emphasis">
-							{{ frage.typ === FRAGE_TYP.TEXT ? 'Freitext' : 'Single Response' }}
-						</span>
-						<span v-if="frage.verpflichtend" class="badge bg-warning-subtle text-warning-emphasis">Pflicht</span>
-						<button type="button" class="btn btn-sm btn-outline-secondary" @click="editFrage(frage)">
-							<i class="fa-solid" :class="isLocked ? 'fa-eye' : 'fa-pen'"></i>
-						</button>
-						<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Frage entfernen" @click="deleteFrage(gruppe, fIndex)">
-							<i class="fa-solid fa-xmark"></i>
-						</button>
-					</li>
-				</ul>
-			</template>
+			<!-- Aufgeklappte Gruppe: Fragen (Überschrift hat keine) -->
+			<ul v-if="gruppe._key === selGruppeKey && gruppe.typ !== GRUPPE_TYP.LABEL" class="list-group list-group-flush">
+				<!-- Neue Frage: oberhalb der ersten Frage -->
+				<li class="list-group-item">
+					<button type="button" class="btn btn-sm btn-primary" :disabled="isLocked" @click="addFrage(gruppe)">
+						<i class="fa-solid fa-plus me-1"></i>Frage
+					</button>
+				</li>
+				<li
+					v-for="(frage, fIndex) in gruppe.fragen"
+					:key="frage._key"
+					class="list-group-item d-flex align-items-center gap-2"
+					:class="{
+						'list-group-item-primary': fIndex === overFrageIndex && fIndex !== dragFrageIndex,
+						'opacity-50': fIndex === dragFrageIndex
+					}"
+					:draggable="!isLocked"
+					@dragstart="onDragStartFrage($event, fIndex)"
+					@dragover="onDragOverFrage($event, fIndex)"
+					@drop.prevent="onDropFrage(gruppe, fIndex)"
+					@dragend="resetDrag"
+				>
+					<i v-if="!isLocked" class="fa-solid fa-grip-vertical text-secondary" title="Ziehen zum Sortieren"></i>
+					<span class="flex-grow-1">{{ frage.bezeichnung_de || '[ohne Text]' }}</span>
+					<span class="badge bg-primary-subtle text-primary-emphasis">
+						{{ frage.typ === FRAGE_TYP.TEXT ? 'Freitext' : 'Single Response' }}
+					</span>
+					<span v-if="frage.verpflichtend" class="badge bg-warning-subtle text-warning-emphasis">Pflicht</span>
+					<button type="button" class="btn btn-sm btn-outline-secondary" @click="editFrage(frage)">
+						<i class="fa-solid" :class="isLocked ? 'fa-eye' : 'fa-pen'"></i>
+					</button>
+					<button type="button" class="btn btn-sm btn-outline-secondary" :disabled="isLocked" title="Frage entfernen" @click="deleteFrage(gruppe, fIndex)">
+						<i class="fa-solid fa-xmark"></i>
+					</button>
+				</li>
+			</ul>
 		</div>
 
+		<fragebogen-gruppe-modal ref="gruppeModal" :fragebogen-id="fragebogenId" @saved="onSavedGruppe"></fragebogen-gruppe-modal>
 		<fragebogen-frage-modal ref="frageModal" :is-locked="isLocked"></fragebogen-frage-modal>
 	</section>
 	`
