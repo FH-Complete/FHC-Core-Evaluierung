@@ -47,7 +47,7 @@ ALTER TABLE extension.tbl_lvevaluierung_fragebogen_gruppe_frage
 EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
-GRANT SELECT, INSERT ON TABLE extension.tbl_lvevaluierung_fragebogen_gruppe_frage TO vilesci;
+GRANT SELECT, INSERT, DELETE ON TABLE extension.tbl_lvevaluierung_fragebogen_gruppe_frage TO vilesci;
 GRANT SELECT, INSERT ON TABLE extension.tbl_lvevaluierung_fragebogen_gruppe_frage TO web;
 
 -- Nach Einführung neuer Zwischentabelle tbl_lvevaluierung_fragebogen_gruppe_frage:

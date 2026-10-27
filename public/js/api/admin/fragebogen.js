@@ -76,13 +76,6 @@ export default {
 			params: {fragebogen_id}
 		};
 	},
-	getFragen(lvevaluierung_fragebogen_gruppe_id) {
-		return {
-			method: 'get',
-			url: URL + 'getFragen',
-			params: {lvevaluierung_fragebogen_gruppe_id}
-		};
-	},
 	uebernehmenGruppe(fragebogen_id, lvevaluierung_fragebogen_gruppe_id) {
 		return {
 			method: 'post',
@@ -116,6 +109,62 @@ export default {
 			method: 'post',
 			url: URL + 'sortGruppen',
 			params: {fragebogen_id, gruppeIds}
+		};
+	},
+	getFragen(lvevaluierung_fragebogen_gruppe_id, fragebogen_id) {
+		return {
+			method: 'get',
+			url: URL + 'getFragen',
+			params: {lvevaluierung_fragebogen_gruppe_id, fragebogen_id}
+		};
+	},
+	getFrage(lvevaluierung_frage_id) {
+		return {
+			method: 'get',
+			url: URL + 'getFrage',
+			params: {lvevaluierung_frage_id}
+		};
+	},
+	insertGruppeFrage(lvevaluierung_fragebogen_gruppe_id, lvevaluierung_frage_id) {
+		return {
+			method: 'post',
+			url: URL + 'insertGruppeFrage',
+			params: {lvevaluierung_fragebogen_gruppe_id, lvevaluierung_frage_id}
+		};
+	},
+	deleteGruppeFrage(lvevaluierung_fragebogen_gruppe_id, lvevaluierung_frage_id) {
+		return {
+			method: 'post',
+			url: URL + 'deleteGruppeFrage',
+			params: {lvevaluierung_fragebogen_gruppe_id, lvevaluierung_frage_id}
+		};
+	},
+	insertFrage(frage) {
+		return {
+			method: 'post',
+			url: URL + 'insertFrage',
+			params: frage
+		};
+	},
+	updateFrage(frage) {
+		return {
+			method: 'post',
+			url: URL + 'updateFrage',
+			params: frage
+		};
+	},
+	deleteFrage(lvevaluierung_frage_id, fragebogen_id) {
+		return {
+			method: 'post',
+			url: URL + 'deleteFrage',
+			params: {lvevaluierung_frage_id, fragebogen_id}
+		};
+	},
+	sortFragen(lvevaluierung_fragebogen_gruppe_id, frageIds) {
+		return {
+			method: 'post',
+			url: URL + 'sortFragen',
+			params: {lvevaluierung_fragebogen_gruppe_id, frageIds}
 		};
 	},
 };

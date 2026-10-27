@@ -396,7 +396,7 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 					gr.bezeichnung[(2)] AS bezeichnung_en,
 					CASE WHEN gr.fragebogen_id = ? THEN gr.sort END AS sort,
 					gr.fragebogen_id = ? AS aktiv,
-					COUNT(*) FILTER (WHERE gr.fragebogen_id <> ?) OVER (PARTITION BY gr.bezeichnung[(1)], gr.typ) > 0 AS "inAnderenFrageboegen",
+					COUNT(*) FILTER (WHERE gr.fragebogen_id != ?) OVER (PARTITION BY gr.bezeichnung[(1)], gr.typ) > 0 AS "inAnderenFrageboegen",
 					(
 						SELECT COUNT(*)
 						FROM extension.tbl_lvevaluierung_fragebogen_gruppe_frage grfr
@@ -433,7 +433,7 @@ class LvevaluierungFragebogenGruppe_model extends DB_Model
 				JOIN extension.tbl_lvevaluierung_fragebogen_gruppe andere
 					ON andere.bezeichnung[(1)] = gr.bezeichnung[(1)]
 					AND andere.typ = gr.typ
-					AND andere.fragebogen_id <> gr.fragebogen_id
+					AND andere.fragebogen_id != gr.fragebogen_id
 				WHERE gr.lvevaluierung_fragebogen_gruppe_id = ?
 			) AS "inAnderenFrageboegen"
 		';

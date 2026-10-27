@@ -7,6 +7,7 @@ if (!defined('BASEPATH')) exit('No direct script access allowed');
  */
 class FragebogenLib
 {
+	const FRAGE_TYP_SINGLERESPONSE = 'singleresponse';
 	private $_ci;
 
 	public function __construct()
@@ -168,8 +169,8 @@ class FragebogenLib
 		// Bezeichnung als Array: 0 = DE, 1 = EN
 		$result = $this->insertGruppe($fragebogen_id, [
 			'typ' => $vorlage->typ,
-			'bezeichnung_de' => $vorlage->bezeichnung[0],
-			'bezeichnung_en' => $vorlage->bezeichnung[1]
+			'bezeichnung_de' => isset($vorlage->bezeichnung[0]) ? $vorlage->bezeichnung[0] : null,
+			'bezeichnung_en' => isset($vorlage->bezeichnung[1]) ? $vorlage->bezeichnung[1] : null
 		]);
 
 		if (!isError($result))
@@ -190,5 +191,186 @@ class FragebogenLib
 		$this->_ci->db->trans_commit();
 
 		return success($gruppe_id);
+	}
+
+	/**
+	 * Frage samt Antwortoptionen für das Modal.
+	 *
+	 * @param $frage_id
+	 * @return mixed
+	 */
+	public function getFrage($frage_id)
+	{
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->getFrage($frage_id);
+		if (isError($result)) return $result;
+		if (!hasData($result)) return error('Frage nicht gefunden');
+		$frage = getData($result)[0];
+
+		$result = $this->_ci->LvevaluierungFragebogenFrageAntwortModel->getAntwortenByFragen([$frage_id]);
+		if (isError($result)) return $result;
+		$frage->antworten = hasData($result) ? getData($result) : [];
+
+		return success($frage);
+	}
+
+	/**
+	 * Neue Frage samt Antwortoptionen anlegen und der Gruppe zuordnen.
+	 *
+	 * @param $gruppe_id
+	 * @param $data
+	 * @return mixed    ID der neuen Frage
+	 */
+	public function insertFrage($gruppe_id, $data)
+	{
+		// Neue Frage ans Ende der Gruppe: höchste Sortierung + 1
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->getFragenByFragebogengruppe($gruppe_id);
+		if (isError($result)) return $result;
+		$sorts = hasData($result) ? array_column(getData($result), 'sort') : [];
+		$sort = empty($sorts) ? 1 : max($sorts) + 1;
+
+		$this->_ci->db->trans_begin();
+
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->insertFrage(
+			$data['typ'],
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$data['placeholder_de'],
+			$data['placeholder_en'],
+			$data['verpflichtend'],
+			$sort
+		);
+
+		if (!isError($result))
+		{
+			$frage_id = getData($result)[0]->lvevaluierung_frage_id;
+			$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->insert([
+				'lvevaluierung_fragebogen_gruppe_id' => $gruppe_id,
+				'lvevaluierung_frage_id' => $frage_id
+			]);
+		}
+
+		if (!isError($result))
+		{
+			$result = $this->_insertAntworten($frage_id, $data);
+		}
+
+		// Bei Fehler alles zurücknehmen
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Frage konnte nicht gespeichert werden');
+		}
+
+		$this->_ci->db->trans_commit();
+
+		return success($frage_id);
+	}
+
+	/**
+	 * Sort Fragen nach übergebener Reihenfolge (frage.sort). Nur Fragen dieser Gruppe.
+	 *
+	 * @param $gruppe_id
+	 * @param $frageIds
+	 * @return mixed
+	 */
+	public function sortFragen($gruppe_id, $frageIds)
+	{
+		// Nur Fragen dieser Gruppe
+		$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->loadWhere(['lvevaluierung_fragebogen_gruppe_id' => $gruppe_id]);
+		if (isError($result)) return $result;
+		$gruppeFrageIds = hasData($result) ? array_column(getData($result), 'lvevaluierung_frage_id') : [];
+
+		if (!empty(array_diff($frageIds, $gruppeFrageIds))) return error('Frage gehört nicht zu dieser Gruppe');
+
+		$result = success(true);
+
+		$this->_ci->db->trans_begin();
+
+		foreach (array_values($frageIds) as $index => $frage_id)
+		{
+			$result = $this->_ci->LvevaluierungFragebogenFrageModel->update($frage_id, ['sort' => $index + 1]);
+			if (isError($result)) break;
+		}
+
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Reihenfolge konnte nicht gespeichert werden');
+		}
+
+		$this->_ci->db->trans_commit();
+		return success($gruppe_id);
+	}
+
+	/**
+	 * Frage ändern. Sortierung bleibt, Antwortoptionen werden neu angelegt.
+	 *
+	 * @param $frage    Gespeicherte Frage
+	 * @param $data
+	 * @return mixed    Frage ID
+	 */
+	public function updateFrage($frage, $data)
+	{
+		$frage_id = $frage->lvevaluierung_frage_id;
+
+		$this->_ci->db->trans_begin();
+
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->updateFrage(
+			$frage_id,
+			$data['typ'],
+			$data['bezeichnung_de'],
+			$data['bezeichnung_en'],
+			$data['placeholder_de'],
+			$data['placeholder_en'],
+			$data['verpflichtend'],
+			$frage->sort
+		);
+
+		if (!isError($result))
+		{
+			$result = $this->_ci->LvevaluierungFragebogenFrageAntwortModel->delete(['lvevaluierung_frage_id' => $frage_id]);
+		}
+
+		if (!isError($result))
+		{
+			$result = $this->_insertAntworten($frage_id, $data);
+		}
+
+		// Bei Fehler alles zurücknehmen
+		if (isError($result) || $this->_ci->db->trans_status() === false)
+		{
+			$this->_ci->db->trans_rollback();
+			return isError($result) ? $result : error('Frage konnte nicht gespeichert werden');
+		}
+
+		$this->_ci->db->trans_commit();
+
+		return success($frage_id);
+	}
+
+	/**
+	 * Antwortoptionen anlegen, nur bei singleresponse. Sortierung nach Reihenfolge.
+	 *
+	 * @param $frage_id
+	 * @param $data
+	 * @return mixed
+	 */
+	private function _insertAntworten($frage_id, $data)
+	{
+		if ($data['typ'] !== self::FRAGE_TYP_SINGLERESPONSE) return success();
+
+		foreach (array_values($data['antworten']) as $index => $antwort)
+		{
+			$result = $this->_ci->LvevaluierungFragebogenFrageAntwortModel->insertAntwort(
+				$frage_id,
+				$antwort['bezeichnung_de'],
+				$antwort['bezeichnung_en'],
+				$index + 1,
+				$antwort['wert']
+			);
+			if (isError($result)) return $result;
+		}
+
+		return success();
 	}
 }

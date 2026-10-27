@@ -6,6 +6,7 @@ class Fragebogen extends FHCAPI_Controller
 {
 	const BERECHTIGUNG_ADMIN = 'extension/lvevaluierung_admin';
 	const GRUPPE_TYP_LABEL = 'label';
+	const FRAGE_TYP_SINGLERESPONSE = 'singleresponse';
 
 	public function __construct()
 	{
@@ -27,7 +28,13 @@ class Fragebogen extends FHCAPI_Controller
 			'getGruppen' => self::BERECHTIGUNG_ADMIN . ':r',
 			'uebernehmenGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'getFragen' => self::BERECHTIGUNG_ADMIN . ':r',
-			'uebernehmenGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'getFrage' => self::BERECHTIGUNG_ADMIN . ':r',
+			'insertGruppeFrage' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'deleteGruppeFrage' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'insertFrage' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'updateFrage' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'deleteFrage' => self::BERECHTIGUNG_ADMIN . ':rw',
+			'sortFragen' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
 
 		$this->load->library('extensions/FHC-Core-Evaluierung/FragebogenLib');
@@ -36,6 +43,7 @@ class Fragebogen extends FHCAPI_Controller
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenZuordnung_model', 'LvevaluierungFragebogenZuordnungModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppe_model', 'LvevaluierungFragebogenGruppeModel');
 		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenFrage_model', 'LvevaluierungFragebogenFrageModel');
+		$this->load->model('extensions/FHC-Core-Evaluierung/LvevaluierungFragebogenGruppeFrage_model', 'LvevaluierungFragebogenGruppeFrageModel');
 
 		// Load language phrases
 		$this->loadPhrases([
@@ -324,29 +332,6 @@ class Fragebogen extends FHCAPI_Controller
 	}
 
 	/**
-	 * Alle Fragen für den Aufbau, aktiv = in der Gruppe.
-	 *
-	 * @return void
-	 */
-	public function getFragen()
-	{
-		$gruppe_id = $this->input->get('lvevaluierung_fragebogen_gruppe_id');
-
-		if (!$gruppe_id)
-		{
-			$this->terminateWithError('Missing Gruppe ID');
-		}
-
-		$result = $this->LvevaluierungFragebogenFrageModel->getAlleFragen($gruppe_id);
-
-		if (isError($result))
-		{
-			$this->terminateWithError(getError($result));
-		}
-
-		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
-	}
-	/**
 	 * Gruppe eines anderen Fragebogens übernehmen (Aktiv einschalten).
 	 *
 	 * @return void
@@ -464,6 +449,188 @@ class Fragebogen extends FHCAPI_Controller
 		$this->terminateWithSuccess($fragebogen->fragebogen_id);
 	}
 
+	// Fragen
+	// -----------------------------------------------------------------------------------------------------------------
+	/**
+	 * Alle Fragen für den Aufbau, aktiv = in der Gruppe.
+	 *
+	 * @return void
+	 */
+	public function getFragen()
+	{
+		$gruppe_id = $this->input->get('lvevaluierung_fragebogen_gruppe_id');
+		$fragebogen_id = $this->input->get('fragebogen_id');
+
+		if (!$gruppe_id || !$fragebogen_id)
+		{
+			$this->terminateWithError('Missing Gruppe ID or Fragebogen ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenFrageModel->getAlleFragen($gruppe_id, $fragebogen_id);
+
+		if (isError($result))
+		{
+			$this->terminateWithError(getError($result));
+		}
+
+		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
+	}
+
+	/**
+	 * Frage samt Antwortoptionen für das Modal.
+	 *
+	 * @return void
+	 */
+	public function getFrage()
+	{
+		$frage = $this->_getFrageOrFail($this->input->get('lvevaluierung_frage_id'));
+
+		$result = $this->fragebogenlib->getFrage($frage->lvevaluierung_frage_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($data);
+	}
+
+	/**
+	 * Bestehende Frage der Gruppe zuordnen (Schalter In Gruppe).
+	 *
+	 * @return void
+	 */
+	public function insertGruppeFrage()
+	{
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$frage = $this->_getFrageOrFail($this->input->post('lvevaluierung_frage_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+
+		if ($gruppe->typ === self::GRUPPE_TYP_LABEL)
+		{
+			$this->terminateWithError('Typ label hat keine Fragen');
+		}
+
+		// Eine Frage nur einmal je Fragebogen (eine Antwort je Frage und Code)
+		$result = $this->LvevaluierungFragebogenFrageModel->isImFragebogen($frage->lvevaluierung_frage_id, $gruppe->fragebogen_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if ($data[0]->imFragebogen)
+		{
+			$this->terminateWithError('Frage ist bereits in diesem Fragebogen');
+		}
+
+		$result = $this->LvevaluierungFragebogenGruppeFrageModel->insert([
+			'lvevaluierung_fragebogen_gruppe_id' => $gruppe->lvevaluierung_fragebogen_gruppe_id,
+			'lvevaluierung_frage_id' => $frage->lvevaluierung_frage_id
+		]);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($frage->lvevaluierung_frage_id);
+	}
+
+	/**
+	 * Frage aus der Gruppe entfernen (Schalter In Gruppe). Die Frage selbst bleibt.
+	 *
+	 * @return void
+	 */
+	public function deleteGruppeFrage()
+	{
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$frage = $this->_getFrageOrFail($this->input->post('lvevaluierung_frage_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+
+		$result = $this->LvevaluierungFragebogenGruppeFrageModel->delete([
+			'lvevaluierung_fragebogen_gruppe_id' => $gruppe->lvevaluierung_fragebogen_gruppe_id,
+			'lvevaluierung_frage_id' => $frage->lvevaluierung_frage_id
+		]);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($frage->lvevaluierung_frage_id);
+	}
+
+	/**
+	 * Insert Frage samt Antwortoptionen und der Gruppe zuordnen.
+	 *
+	 * @return void
+	 */
+	public function insertFrage()
+	{
+		$data = $this->input->post();
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+
+		if ($gruppe->typ === self::GRUPPE_TYP_LABEL)
+		{
+			$this->terminateWithError('Typ label hat keine Fragen');
+		}
+
+		$this->_validateFrageData($data);
+
+		$result = $this->fragebogenlib->insertFrage($gruppe->lvevaluierung_fragebogen_gruppe_id, $data);
+		$frage_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($frage_id);
+	}
+
+	/**
+	 * Update Frage, nur wenn in keinem anderen Fragebogen verwendet.
+	 *
+	 * @return void
+	 */
+	public function updateFrage()
+	{
+		$data = $this->input->post();
+		$fragebogen_id = $this->input->post('fragebogen_id');
+		$frage = $this->_getFrageOrFail($this->input->post('lvevaluierung_frage_id'));
+		$this->_checkFragebogenNotLocked($fragebogen_id);
+		$this->_checkFrageNurHier($frage->lvevaluierung_frage_id, $fragebogen_id);
+
+		$this->_validateFrageData($data);
+
+		$result = $this->fragebogenlib->updateFrage($frage, $data);
+		$frage_id = $this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($frage_id);
+	}
+
+	/**
+	 * Delete Frage, nur wenn in keinem anderen Fragebogen verwendet.
+	 * Gruppe-Frage und Antwortoptionen per Cascade.
+	 *
+	 * @return void
+	 */
+	public function deleteFrage()
+	{
+		$fragebogen_id = $this->input->post('fragebogen_id');
+		$frage = $this->_getFrageOrFail($this->input->post('lvevaluierung_frage_id'));
+		$this->_checkFragebogenNotLocked($fragebogen_id);
+		$this->_checkFrageNurHier($frage->lvevaluierung_frage_id, $fragebogen_id);
+
+		$result = $this->LvevaluierungFragebogenFrageModel->delete($frage->lvevaluierung_frage_id);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($frage->lvevaluierung_frage_id);
+	}
+
+	/**
+	 * Sort Fragen einer Gruppe nach übergebener Reihenfolge.
+	 *
+	 * @return void
+	 */
+	public function sortFragen()
+	{
+		$gruppe = $this->_getGruppeOrFail($this->input->post('lvevaluierung_fragebogen_gruppe_id'));
+		$this->_checkFragebogenNotLocked($gruppe->fragebogen_id);
+		$frageIds = $this->input->post('frageIds');
+
+		if (!is_array($frageIds) || empty($frageIds))
+		{
+			$this->terminateWithError('Missing Fragen');
+		}
+
+		$result = $this->fragebogenlib->sortFragen($gruppe->lvevaluierung_fragebogen_gruppe_id, $frageIds);
+		$this->getDataOrTerminateWithError($result);
+
+		$this->terminateWithSuccess($gruppe->lvevaluierung_fragebogen_gruppe_id);
+	}
+
 	// Checks and Validations
 	// -----------------------------------------------------------------------------------------------------------------
 
@@ -573,7 +740,7 @@ class Fragebogen extends FHCAPI_Controller
 
 		if ($fragebogen->isVerwendet)
 		{
-			$this->terminateWithError('Fragebogen wird bereits in einer Evaluierung verwendet. Für neue Zuordnungen bitte kopieren.');
+			$this->terminateWithError('Fragebogen wird bereits in einer Evaluierung verwendet. Für weitere Zuordnungen einen neuen Fragebogen anlegen.');
 		}
 
 		return $fragebogen;
@@ -591,7 +758,7 @@ class Fragebogen extends FHCAPI_Controller
 
 		if ($fragebogen->hasAntworten)
 		{
-			$this->terminateWithError('Fragebogen wurde bereits beantwortet. Für Änderungen bitte kopieren.');
+			$this->terminateWithError('Fragebogen wurde bereits beantwortet. Für Änderungen einen neuen Fragebogen anlegen.');
 		}
 
 		return $fragebogen;
@@ -660,4 +827,87 @@ class Fragebogen extends FHCAPI_Controller
 			$this->terminateWithError('Bestehende Gruppe – Bezeichnung und Typ nicht änderbar');
 		}
 	}
+
+		/**
+	 * Frage laden, sonst mit Fehler abbrechen.
+	 *
+	 * @param $frage_id
+	 * @return object
+	 */
+	private function _getFrageOrFail($frage_id)
+	{
+		if (!$frage_id)
+		{
+			$this->terminateWithError('Missing Frage ID');
+		}
+
+		$result = $this->LvevaluierungFragebogenFrageModel->load($frage_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if (empty($data))
+		{
+			$this->terminateWithError('Frage nicht gefunden');
+		}
+
+		return $data[0];
+	}
+
+	/**
+	 * Bestehende Fragen (auch in anderen Fragebögen) sind nicht änderbar.
+	 * Terminate with error if so.
+	 *
+	 * @param $frage_id
+	 * @param $fragebogen_id
+	 * @return void
+	 */
+	private function _checkFrageNurHier($frage_id, $fragebogen_id)
+	{
+		$result = $this->LvevaluierungFragebogenFrageModel->isInAnderenFrageboegen($frage_id, $fragebogen_id);
+		$data = $this->getDataOrTerminateWithError($result);
+
+		if ($data[0]->inAnderenFrageboegen)
+		{
+			$this->terminateWithError('Bestehende Frage (auch in anderen Fragebögen) – nicht änderbar');
+		}
+	}
+
+	/**
+	 * Validates posted Frage. singleresponse braucht Antwortoptionen mit DE, EN und Wert.
+	 *
+	 * @param $data
+	 * @return void
+	 */
+	private function _validateFrageData($data)
+	{
+		$this->load->library('form_validation');
+
+		$this->form_validation->set_data($data);
+		$this->form_validation->set_rules('typ', 'Fragetyp', 'required|in_list[singleresponse,text]');
+		$this->form_validation->set_rules('bezeichnung_de', 'Fragetext (DE)', 'required');
+		$this->form_validation->set_rules('bezeichnung_en', 'Fragetext (EN)', 'required');
+
+		// On error
+		if ($this->form_validation->run() == false)
+		{
+			$this->terminateWithValidationErrors($this->form_validation->error_array());
+		}
+
+		if ($data['typ'] !== self::FRAGE_TYP_SINGLERESPONSE) return;
+
+		$antworten = isset($data['antworten']) && is_array($data['antworten']) ? $data['antworten'] : [];
+
+		if (count($antworten) !== 5)
+		{
+			$this->terminateWithError('Genau 5 Antwortoptionen möglich');
+		}
+
+		foreach ($antworten as $antwort)
+		{
+			if (empty($antwort['bezeichnung_de']) || empty($antwort['bezeichnung_en']) || !in_array((int)$antwort['wert'], [1, 2, 3, 4, 5]))
+			{
+				$this->terminateWithError('Alle Antwortoptionen brauchen DE, EN und Wert 1-5');
+			}
+		}
+	}
+
 }

@@ -2,12 +2,14 @@ import {CoreFilterCmpt} from "../../../../../js/components/filter/Filter.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenHelper from "../../helpers/FragebogenHelper.js";
 import FragebogenGruppeModal from "./FragebogenGruppeModal.js";
+import FragebogenFrageModal from "./FragebogenFrageModal.js";
 
 export default {
 	name: "FragebogenAufbau",
 	components: {
 		CoreFilterCmpt,
-		FragebogenGruppeModal
+		FragebogenGruppeModal,
+		FragebogenFrageModal,
 	},
 	props: {
 		fragebogenId: {default: null},	// null: noch kein Fragebogen gewählt
@@ -16,7 +18,8 @@ export default {
 	data() {
 		return {
 			gruppen: [],		// Alle Gruppen, aktive zuerst nach Sort
-			selGruppeId: null	// Gruppe, deren Fragen angezeigt werden
+			selGruppeId: null,	// Gruppe, deren Fragen angezeigt werden
+			fragen: [],			// Alle Fragen, aktive der Gruppe zuerst nach Sort
 		}
 	},
 	computed: {
@@ -25,8 +28,17 @@ export default {
 				.filter(gruppe => gruppe.aktiv)
 				.map(gruppe => gruppe.lvevaluierung_fragebogen_gruppe_id);
 		},
+		aktivFrageIds() {
+			return this.fragen
+					.filter(frage => frage.aktiv)
+					.map(frage => frage.lvevaluierung_frage_id);
+		},
 		selGruppe() {
 			return this.gruppen.find(gruppe => gruppe.lvevaluierung_fragebogen_gruppe_id === this.selGruppeId);
+		},
+		// Fragen änderbar, solange die Gruppe im Fragebogen ist und nicht beantwortet
+		kannFragenAendern() {
+			return !!this.selGruppe && this.selGruppe.aktiv && !this.isLocked;
 		},
 		gruppenEvents() {
 			return [{event: 'rowClick', handler: this.onGruppeRowClick}];
@@ -57,7 +69,11 @@ export default {
 				index: 'lvevaluierung_fragebogen_gruppe_id',
 				columnDefaults: {
 					headerTooltip: true,
-					headerWordWrap: true
+					headerWordWrap: true,
+					tooltip: e => {
+						const el = e.target.closest('[data-tooltip]');
+						return el ? el.dataset.tooltip : '';
+					}
 				},
 				columns: [
 					{
@@ -122,9 +138,12 @@ export default {
 				ajaxRequestFunc: () => {
 					if (!this.selGruppeId) return Promise.resolve({data: []});
 
-					return this.$api.call(ApiAdminFragebogen.getFragen(this.selGruppeId));
+					return this.$api.call(ApiAdminFragebogen.getFragen(this.selGruppeId, this.fragebogenId));
 				},
-				ajaxResponse: (url, params, response) => response.data,
+				ajaxResponse: (url, params, response) => {
+					this.fragen = response.data;
+					return response.data;
+				},
 				placeholder: 'Bitte zuerst eine Gruppe anklicken.',
 				layout: 'fitColumns',
 				maxHeight: '50vh',
@@ -132,17 +151,26 @@ export default {
 				index: 'lvevaluierung_frage_id',
 				columnDefaults: {
 					headerTooltip: true,
-					headerWordWrap: true
+					headerWordWrap: true,
+					tooltip: e => {
+						const el = e.target.closest('[data-tooltip]');
+						return el ? el.dataset.tooltip : '';
+					}
 				},
 				columns: [
 					{
+						title: 'Sort',
+						field: 'sort',
+						formatter: cell => this.getFrageSortHtml(cell.getData()),
+						cellClick: (e, cell) => this.onFrageAction(e, cell.getData()),
+						sorterParams: {alignEmptyValues: 'bottom'},
+						width: 90
+					},
+					{
 						title: 'In Gruppe',
 						field: 'aktiv',
-						formatter: 'tickCross',
-						formatterParams: {
-							tickElement: '<i class="fa-solid fa-check"></i>',
-							crossElement: false
-						},
+						formatter: cell => this.getFrageAktivHtml(cell.getData()),
+						cellClick: (e, cell) => this.onFrageAktivClick(e, cell.getData()),
 						headerFilter: 'tickCross',
 						headerFilterParams: {tristate: true},
 						hozAlign: 'center',
@@ -160,13 +188,35 @@ export default {
 						field: 'bezeichnung_en',
 						headerFilter: 'input',
 						tooltip: true,
-						minWidth: 100
+						minWidth: 100,
+						visible: false,
 					},
 					{
 						title: 'Typ',
 						field: 'typ',
 						headerFilter: 'input',
 						width: 130
+					},
+					{
+						title: 'Pflichtfrage',
+						field: 'verpflichtend',
+						formatter: 'tickCross',
+						formatterParams: {
+							tickElement: '<i class="fa fa-check text-success"></i>',
+							crossElement: '<i class="fa fa-xmark text-danger"></i>'
+						},
+						headerFilter: 'tickCross',
+						headerFilterParams: {tristate: true},
+						hozAlign: 'center',
+						width: 90
+					},
+					{
+						title: 'Aktionen',
+						formatter: cell => this.getFrageAktionenHtml(cell.getData()),
+						cellClick: (e, cell) => this.onFrageAction(e, cell.getData()),
+						headerSort: false,
+						hozAlign: 'center',
+						width: 80
 					}
 				]
 			};
@@ -185,7 +235,6 @@ export default {
 		}
 	},
 	methods: {
-		// Sort-Nummer mit Pfeilen, tauscht mit der benachbarten aktiven Gruppe
 		getSortHtml(gruppe) {
 			const index = this.aktivIds.indexOf(gruppe.lvevaluierung_fragebogen_gruppe_id);
 			if (index < 0) return '';
@@ -193,15 +242,14 @@ export default {
 			return `
 				<div class="d-flex align-items-center gap-1">
 					<span class="me-1">${index + 1}</span>
-					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" title="Nach oben" aria-label="Nach oben" ${this.isLocked || index === 0 ? 'disabled' : ''}>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" data-tooltip="Nach oben" aria-label="Nach oben" ${this.isLocked || index === 0 ? 'disabled' : ''}>
 						<i class="fa-solid fa-arrow-up"></i>
 					</button>
-					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" title="Nach unten" aria-label="Nach unten" ${this.isLocked || index === this.aktivIds.length - 1 ? 'disabled' : ''}>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" data-tooltip="Nach unten" aria-label="Nach unten" ${this.isLocked || index === this.aktivIds.length - 1 ? 'disabled' : ''}>
 						<i class="fa-solid fa-arrow-down"></i>
 					</button>
 				</div>`;
 		},
-		// Neue Gruppen (nur hier) werden gelöscht statt entfernt
 		getAktivHtml(gruppe) {
 			const isNeu = gruppe.aktiv && !gruppe.inAnderenFrageboegen;
 			let title = gruppe.aktiv ? 'Aus diesem Fragebogen entfernen' : 'In diesem Fragebogen verwenden';
@@ -209,23 +257,23 @@ export default {
 			if (this.isLocked) title = 'Bereits beantwortet – nicht änderbar';
 
 			return `
-				<div class="form-check form-switch d-flex justify-content-center m-0" title="${title}">
+				<div class="form-check form-switch d-flex justify-content-center m-0" data-tooltip="${title}">
 					<input class="form-check-input" type="checkbox" role="switch" aria-label="${title}" ${gruppe.aktiv ? 'checked' : ''} ${this.isLocked || isNeu ? 'disabled' : ''}>
 				</div>`;
 		},
 		getAktionenHtml(gruppe) {
 			const canDelete = !this.isLocked && gruppe.aktiv && !gruppe.inAnderenFrageboegen;
 			let titleDelete = 'Gruppe löschen';
-			if (!gruppe.aktiv) titleDelete = 'Bestehende Gruppe – nicht löschbar';
-			else if (gruppe.inAnderenFrageboegen) titleDelete = 'Bestehende Gruppe – über „Im Fragebogen“ entfernen';
-			if (this.isLocked) titleDelete = 'Bereits beantwortet – nicht löschbar';
+			if (!gruppe.aktiv) titleDelete = 'Nicht löschbar: Gruppe in anderem Fragebogen verwendet.';
+			else if (gruppe.inAnderenFrageboegen) titleDelete = 'Nicht löschbar: Gruppe in anderem Fragebogen verwendet. Über „Im Fragebogen“ aus diesem Fragebogen entfernen.';
+			if (this.isLocked) titleDelete = 'Nicht löschbar: Fragebogen wurde bereits beantwortet.';
 
 			return `
 				<div class="d-flex justify-content-center gap-1">
-					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" title="Gruppe bearbeiten" aria-label="Gruppe bearbeiten">
+					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" data-tooltip="Gruppe bearbeiten" aria-label="Gruppe bearbeiten">
 						<i class="fa-solid fa-pen"></i>
 					</button>
-					<span title="${titleDelete}">
+					<span data-tooltip="${titleDelete}">
 						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Gruppe löschen" ${canDelete ? '' : 'disabled'}>
 							<i class="fa-solid fa-xmark"></i>
 						</button>
@@ -305,22 +353,135 @@ export default {
 		async deleteGruppe(gruppe) {
 			if (!await this.$fhcAlert.confirm({
 				header: 'Bitte bestätigen Sie:',
-				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ löschen? Fragen, die sonst nirgends verwendet werden, werden mitgelöscht.'
+				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ löschen? Fragen dieser Gruppe, die keiner anderen Gruppe zugeordnet sind und noch nie beantwortet wurden, werden mitgelöscht.'
 			})) return;
 
 			this.$api
-				.call(ApiAdminFragebogen.deleteGruppe(gruppe.lvevaluierung_fragebogen_gruppe_id))
-				.then(() => {
-					this.$fhcAlert.alertSuccess('Gruppe gelöscht');
-					this.$refs.gruppenTable.reloadTable();
-				})
-				.catch(error => this.$fhcAlert.handleSystemError(error));
+					.call(ApiAdminFragebogen.deleteGruppe(gruppe.lvevaluierung_fragebogen_gruppe_id))
+					.then(() => {
+						this.$fhcAlert.alertSuccess('Gruppe gelöscht');
+						this.$refs.gruppenTable.reloadTable();
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		getFrageSortHtml(frage) {
+			const index = this.aktivFrageIds.indexOf(frage.lvevaluierung_frage_id);
+			if (index < 0) return '';
+
+			return `
+				<div class="d-flex align-items-center gap-1">
+					<span class="me-1">${index + 1}</span>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" data-tooltip="Nach oben" aria-label="Nach oben" ${!this.kannFragenAendern || index === 0 ? 'disabled' : ''}>
+						<i class="fa-solid fa-arrow-up"></i>
+					</button>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" data-tooltip="Nach unten" aria-label="Nach unten" ${!this.kannFragenAendern || index === this.aktivFrageIds.length - 1 ? 'disabled' : ''}>
+						<i class="fa-solid fa-arrow-down"></i>
+					</button>
+				</div>`;
+		},
+		// Eine Frage nur einmal je Fragebogen: schon in anderer Gruppe = gesperrt
+		getFrageAktivHtml(frage) {
+			let title = frage.aktiv ? 'Aus dieser Gruppe entfernen' : 'In dieser Gruppe verwenden';
+			if (frage.andereGruppe) title = 'Bereits in Gruppe „' + frage.andereGruppe + '“ dieses Fragebogens';
+			if (this.selGruppe && !this.selGruppe.aktiv) title = 'Gruppe nicht in diesem Fragebogen';
+			if (this.isLocked) title = 'Bereits beantwortet – nicht änderbar';
+			const disabled = !this.kannFragenAendern || !!frage.andereGruppe;
+
+			return `
+				<div class="form-check form-switch d-flex justify-content-center m-0" title="${title}">
+					<input class="form-check-input" type="checkbox" role="switch" aria-label="${title}" ${frage.aktiv ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+				</div>`;
+		},
+		getFrageAktionenHtml(frage) {
+			const canDelete = !this.isLocked && !frage.inAnderenFrageboegen;
+			let titleDelete = 'Frage löschen';
+			if (frage.inAnderenFrageboegen) titleDelete = frage.aktiv
+					? 'Nicht löschbar: Frage ist auch in anderen Fragebögen verwendet. Über „In Gruppe“ aus dieser Gruppe entfernen.'
+					: 'Nicht löschbar: Frage ist auch in anderen Fragebögen verwendet.';
+			if (this.isLocked) titleDelete = 'Nicht löschbar: Fragebogen wurde bereits beantwortet.';
+
+			return `
+				<div class="d-flex justify-content-center gap-1">
+					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" data-tooltip="Frage bearbeiten" aria-label="Frage bearbeiten">
+						<i class="fa-solid fa-pen"></i>
+					</button>
+					<span data-tooltip="${titleDelete}">
+						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Frage löschen" ${canDelete ? '' : 'disabled'}>
+							<i class="fa-solid fa-xmark"></i>
+						</button>
+					</span>
+				</div>`;
+		},
+		onFrageAktivClick(e, frage) {
+			const input = e.target.closest('input');
+			if (!input || input.disabled) return;
+
+			this.toggleFrage(frage);
+		},
+		onFrageAction(e, frage) {
+			const button = e.target.closest('button');
+			if (!button || button.disabled) return;
+
+			const action = button.dataset.action;
+			if (action === 'up') this.sortFrage(frage, -1);
+			if (action === 'down') this.sortFrage(frage, 1);
+			if (action === 'edit') this.$refs.frageModal.open(frage.lvevaluierung_frage_id, this.getFrageNurLesenGrund(frage));
+			if (action === 'delete') this.deleteFrage(frage);
+		},
+		// Nur ansehen: beantwortet oder bestehende Frage
+		getFrageNurLesenGrund(frage) {
+			if (this.isLocked) return 'Bereits beantwortet – nur Ansicht.';
+			if (frage.inAnderenFrageboegen) return 'Bestehende Frage in anderen Fragebögen verwendet – nicht änderbar. Für Änderungen eine neue Frage anlegen.';
+			return null;
+		},
+		// Schalter: Frage der Gruppe zuordnen bzw. entfernen
+		toggleFrage(frage) {
+			const apiCall = frage.aktiv
+					? ApiAdminFragebogen.deleteGruppeFrage(this.selGruppeId, frage.lvevaluierung_frage_id)
+					: ApiAdminFragebogen.insertGruppeFrage(this.selGruppeId, frage.lvevaluierung_frage_id);
+
+			this.$api
+					.call(apiCall)
+					.catch(error => this.$fhcAlert.handleSystemError(error))
+					.finally(() => this.reloadFragen());	// bei Fehler Schalter zurücksetzen
+		},
+		sortFrage(frage, schritt) {
+			const frage_id = frage.lvevaluierung_frage_id;
+			const ids = this.aktivFrageIds.filter(id => id !== frage_id);
+			ids.splice(this.aktivFrageIds.indexOf(frage_id) + schritt, 0, frage_id);
+
+			this.$api
+					.call(ApiAdminFragebogen.sortFragen(this.selGruppeId, ids))
+					.then(() => {
+						this.$fhcAlert.alertSuccess('Gespeichert');
+						this.$refs.fragenTable.reloadTable();
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		async deleteFrage(frage) {
+			if (!await this.$fhcAlert.confirm({
+				header: 'Bitte bestätigen Sie:',
+				message: 'Frage „' + frage.bezeichnung_de + '“ samt Antwortoptionen löschen?'
+			})) return;
+
+			this.$api
+					.call(ApiAdminFragebogen.deleteFrage(frage.lvevaluierung_frage_id, this.fragebogenId))
+					.then(() => {
+						this.$fhcAlert.alertSuccess('Frage gelöscht');
+						this.reloadFragen();
+					})
+					.catch(error => this.$fhcAlert.handleSystemError(error));
+		},
+		// Fragen und Anzahl Fragen in der Gruppen-Tabelle aktualisieren
+		reloadFragen() {
+			this.$refs.fragenTable.reloadTable();
+			this.$refs.gruppenTable.reloadTable();
 		}
 	},
 	template: `
 	<div class="d-flex flex-column gap-3">
 		<div v-if="isLocked" class="alert alert-warning mb-0">
-			Bereits beantwortet – Aufbau nur lesbar. Für Änderungen einen neuen Fragebogen anlegen und die Gruppen übernehmen.
+			Bereits beantwortet – nur Ansicht. Für Änderungen einen neuen Fragebogen anlegen und die Gruppen übernehmen.
 		</div>
 
 		<!-- ab lg nebeneinander, darunter untereinander -->
@@ -342,12 +503,19 @@ export default {
 			</div>
 			<div class="col-lg-6">
 				<h3 class="h5">Fragen<small v-if="selGruppe" class="fw-normal text-secondary"> | {{ selGruppe.bezeichnung_de }}</small></h3>
+				<div v-if="selGruppe && !selGruppe.aktiv && !isLocked" class="alert alert-warning">
+					Gruppe ist nicht in diesem Fragebogen – Fragen nur zur Ansicht.
+				</div>
 				<core-filter-cmpt
 					ref="fragenTable"
 					uniqueId="tabFragebogenFragen"
 					table-only
 					:side-menu="false"
+					new-btn-show
+					new-btn-label="Frage"
+					:new-btn-disabled="!kannFragenAendern"
 					:tabulator-options="fragenOptions"
+					@click:new="$refs.frageModal.open(null, null)"
 				></core-filter-cmpt>
 			</div>
 		</div>
@@ -357,6 +525,12 @@ export default {
 			:fragebogen-id="fragebogenId"
 			@saved="$refs.gruppenTable.reloadTable()"
 		></fragebogen-gruppe-modal>
+		<fragebogen-frage-modal
+			ref="frageModal"
+			:fragebogen-id="fragebogenId"
+			:gruppe-id="selGruppeId"
+			@saved="reloadFragen"
+		></fragebogen-frage-modal>
 	</div>
 	`
 }

@@ -61,7 +61,11 @@ export default {
 				index: 'fragebogen_id',
 				columnDefaults: {
 					headerTooltip: true,
-					headerWordWrap: true
+					headerWordWrap: true,
+					tooltip: e => {
+						const el = e.target.closest('[data-tooltip]');
+						return el ? el.dataset.tooltip : '';
+					}
 				},
 				columns: [
 					{
@@ -150,17 +154,16 @@ export default {
 		formatDate(value) {
 			return value ? this.DateHelper.formatDate(value) : '';
 		},
-		// Bearbeiten und Löschen, gesperrt mit Erklärung im Tooltip
 		getActionButtons(fb) {
 			const titleEdit = fb.hasAntworten ? 'Bereits beantwortet – nur Gültig bis änderbar' : 'Bearbeiten';
 			const titleDelete = fb.isVerwendet ? 'In einer Evaluierung verwendet – nicht löschbar' : 'Löschen';
 
 			return `
 				<div class="d-flex justify-content-center gap-1">
-					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" title="${titleEdit}" aria-label="Bearbeiten">
+					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" data-tooltip="${titleEdit}" aria-label="Bearbeiten">
 						<i class="fa-solid fa-pen"></i>
 					</button>
-					<span title="${titleDelete}">
+					<span data-tooltip="${titleDelete}">
 						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Löschen" ${fb.isVerwendet ? 'disabled' : ''}>
 							<i class="fa-solid fa-xmark"></i>
 						</button>
@@ -218,7 +221,7 @@ export default {
 		></core-filter-cmpt>
 
 		<!-- Fragebogen verwalten -->
-		<h2 class="h4 mt-5 mb-3">
+		<h2 class="h4 mt-5 mb-4">
 			Fragebogen verwalten<small v-if="selFb" class="fw-normal text-secondary"> | {{ selFb.bezeichnung_de }}</small>
 		</h2>
 		<ul class="nav nav-tabs">
@@ -226,7 +229,7 @@ export default {
 				<button type="button" class="nav-link" :class="{active: tab === t.key}" @click="tab = t.key">{{ t.label }}</button>
 			</li>
 		</ul>
-		<div class="border border-top-0 rounded-bottom p-3 mb-4">
+		<div class="p-3 mb-4">
 			<fragebogen-aufbau
 				v-if="tab === 'aufbau'"
 				:fragebogen-id="selFbId"
