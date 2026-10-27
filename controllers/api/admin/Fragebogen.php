@@ -25,6 +25,7 @@ class Fragebogen extends FHCAPI_Controller
 			'deleteGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'sortGruppen' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'getGruppen' => self::BERECHTIGUNG_ADMIN . ':r',
+			'uebernehmenGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 			'getFragen' => self::BERECHTIGUNG_ADMIN . ':r',
 			'uebernehmenGruppe' => self::BERECHTIGUNG_ADMIN . ':rw',
 		]);
@@ -345,7 +346,6 @@ class Fragebogen extends FHCAPI_Controller
 
 		$this->terminateWithSuccess(hasData($result) ? getData($result) : []);
 	}
-
 	/**
 	 * Gruppe eines anderen Fragebogens übernehmen (Aktiv einschalten).
 	 *

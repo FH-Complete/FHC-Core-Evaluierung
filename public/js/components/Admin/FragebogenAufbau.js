@@ -90,7 +90,8 @@ export default {
 						field: 'bezeichnung_en',
 						headerFilter: 'input',
 						tooltip: true,
-						minWidth: 100
+						minWidth: 100,
+						visible: false,
 					},
 					{
 						title: 'Typ',
@@ -98,19 +99,19 @@ export default {
 						headerFilter: 'input',
 						width: 80
 					},
-					{
-						title: 'Fragen',
-						field: 'anzahlFragen',
-						hozAlign: 'right',
-						width: 80
-					},
+					// {
+					// 	title: 'Fragen',
+					// 	field: 'anzahlFragen',
+					// 	hozAlign: 'right',
+					// 	width: 80
+					// },
 					{
 						title: 'Aktionen',
 						formatter: cell => this.getAktionenHtml(cell.getData()),
 						cellClick: (e, cell) => this.onGruppeAction(e, cell.getData()),
 						headerSort: false,
 						hozAlign: 'center',
-						width: 100
+						width: 80
 					}
 				]
 			};
@@ -192,11 +193,11 @@ export default {
 			return `
 				<div class="d-flex align-items-center gap-1">
 					<span class="me-1">${index + 1}</span>
-					<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-action="up" title="Nach oben" aria-label="Nach oben" ${this.isLocked || index === 0 ? 'disabled' : ''}>
-						<i class="fa-solid fa-chevron-up"></i>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" title="Nach oben" aria-label="Nach oben" ${this.isLocked || index === 0 ? 'disabled' : ''}>
+						<i class="fa-solid fa-arrow-up"></i>
 					</button>
-					<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" data-action="down" title="Nach unten" aria-label="Nach unten" ${this.isLocked || index === this.aktivIds.length - 1 ? 'disabled' : ''}>
-						<i class="fa-solid fa-chevron-down"></i>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" title="Nach unten" aria-label="Nach unten" ${this.isLocked || index === this.aktivIds.length - 1 ? 'disabled' : ''}>
+						<i class="fa-solid fa-arrow-down"></i>
 					</button>
 				</div>`;
 		},
@@ -236,8 +237,8 @@ export default {
 			if (!button || button.disabled) return;
 
 			const action = button.dataset.action;
-			if (action === 'up') this.moveGruppe(gruppe, -1);
-			if (action === 'down') this.moveGruppe(gruppe, 1);
+			if (action === 'up') this.sortGruppe(gruppe, -1);
+			if (action === 'down') this.sortGruppe(gruppe, 1);
 			if (action === 'edit') this.$refs.gruppeModal.open(gruppe, this.getNurLesenGrund(gruppe));
 			if (action === 'delete') this.deleteGruppe(gruppe);
 		},
@@ -260,9 +261,10 @@ export default {
 			if (!gruppe.aktiv || gruppe.inAnderenFrageboegen) return 'Bestehende Gruppe (auch in anderen Fragebögen) – Bezeichnung und Typ nicht änderbar.';
 			return null;
 		},
-		// Schalter: Gruppe samt Fragen übernehmen bzw. aus diesem Fragebogen entfernen
 		toggleGruppe(gruppe) {
 			const gruppe_id = gruppe.lvevaluierung_fragebogen_gruppe_id;
+			const tabulator = this.$refs.gruppenTable.tabulator;
+
 			const apiCall = gruppe.aktiv
 				? ApiAdminFragebogen.deleteGruppe(gruppe_id)
 				: ApiAdminFragebogen.uebernehmenGruppe(this.fragebogenId, gruppe_id);
@@ -271,23 +273,33 @@ export default {
 				.call(apiCall)
 				.then(result => {
 					// Angezeigte Gruppe: zur übernommenen wechseln
-					if (gruppe_id === this.selGruppeId) this.selGruppeId = gruppe.aktiv ? null : result.data;
-					this.$refs.gruppenTable.reloadTable();
+					if (gruppe_id === this.selGruppeId)
+					{
+						this.selGruppeId = gruppe.aktiv ? null : result.data;
+					}
 				})
-				.catch(error => {
-					this.$refs.gruppenTable.reloadTable();	// Schalter zurücksetzen
-					this.$fhcAlert.handleSystemError(error);
-				});
+				.then(() => this.$api.call(ApiAdminFragebogen.getGruppen(this.fragebogenId)))
+				.then(result => {
+					this.gruppen = result.data;
+					return tabulator.updateRow(
+						gruppe_id,
+						result.data.find(g => g.typ === gruppe.typ && g.bezeichnung_de === gruppe.bezeichnung_de)
+					);
+				})
+				.then(() => tabulator.getRows().forEach(row => row.reformat()))    // Schalter und Sort-Nummern
+				.catch(error => {this.$fhcAlert.handleSystemError(error);});
 		},
-		// Mit benachbarter aktiver Gruppe tauschen, im Hintergrund speichern
-		moveGruppe(gruppe, schritt) {
+		sortGruppe(gruppe, schritt) {
 			const gruppe_id = gruppe.lvevaluierung_fragebogen_gruppe_id;
 			const ids = this.aktivIds.filter(id => id !== gruppe_id);
 			ids.splice(this.aktivIds.indexOf(gruppe_id) + schritt, 0, gruppe_id);
 
 			this.$api
 				.call(ApiAdminFragebogen.sortGruppen(this.fragebogenId, ids))
-				.then(() => this.$refs.gruppenTable.reloadTable())
+				.then(() => {
+					this.$fhcAlert.alertSuccess('Gespeichert');
+					this.$refs.gruppenTable.reloadTable()
+				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		async deleteGruppe(gruppe) {
