@@ -36,9 +36,9 @@ export default {
 		selGruppe() {
 			return this.gruppen.find(gruppe => gruppe.lvevaluierung_fragebogen_gruppe_id === this.selGruppeId);
 		},
-		// Fragen änderbar, solange die Gruppe im Fragebogen ist und nicht beantwortet
+		// Fragen änderbar, solange die Gruppe im Fragebogen ist, nicht beantwortet und kein label
 		kannFragenAendern() {
-			return !!this.selGruppe && this.selGruppe.aktiv && !this.isLocked;
+			return !!this.selGruppe && this.selGruppe.aktiv && !this.isLocked && this.selGruppe.typ !== FragebogenHelper.GRUPPE_TYP.LABEL;
 		},
 		gruppenEvents() {
 			return [{event: 'rowClick', handler: this.onGruppeRowClick}];
@@ -136,7 +136,8 @@ export default {
 			return {
 				ajaxURL: 'dummy',
 				ajaxRequestFunc: () => {
-					if (!this.selGruppeId) return Promise.resolve({data: []});
+					// Keine Gruppe gewählt oder label: Tabelle leeren
+					if (!this.selGruppe || this.selGruppe.typ === FragebogenHelper.GRUPPE_TYP.LABEL) return Promise.resolve({data: []});
 
 					return this.$api.call(ApiAdminFragebogen.getFragen(this.selGruppeId, this.fragebogenId));
 				},
@@ -144,7 +145,7 @@ export default {
 					this.fragen = response.data;
 					return response.data;
 				},
-				placeholder: 'Bitte zuerst eine Gruppe anklicken.',
+				placeholder: () => this.selGruppe ? 'Gruppentyp label hat keine Fragen.' : 'Bitte zuerst eine Gruppe anklicken.',
 				layout: 'fitColumns',
 				maxHeight: '50vh',
 				selectable: false,
@@ -296,12 +297,10 @@ export default {
 
 			this.toggleGruppe(gruppe);
 		},
-		// Zeilenklick zeigt die Fragen der Gruppe, nicht bei Buttons und Schaltern; label hat keine Fragen
 		onGruppeRowClick(e, row) {
-			const gruppe = row.getData();
-			if (e.target.closest('button, input') || gruppe.typ === FragebogenHelper.GRUPPE_TYP.LABEL) return;
+			if (e.target.closest('button, input')) return;
 
-			this.selGruppeId = gruppe.lvevaluierung_fragebogen_gruppe_id;
+			this.selGruppeId = row.getData().lvevaluierung_fragebogen_gruppe_id;
 		},
 		// Nur ansehen: beantwortet oder bestehende Gruppe
 		getNurLesenGrund(gruppe) {

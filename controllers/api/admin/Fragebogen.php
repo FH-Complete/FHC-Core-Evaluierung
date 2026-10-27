@@ -504,7 +504,7 @@ class Fragebogen extends FHCAPI_Controller
 
 		if ($gruppe->typ === self::GRUPPE_TYP_LABEL)
 		{
-			$this->terminateWithError('Typ label hat keine Fragen');
+			$this->terminateWithError('Gruppentyp label hat keine Fragen');
 		}
 
 		// Eine Frage nur einmal je Fragebogen (eine Antwort je Frage und Code)
@@ -558,7 +558,7 @@ class Fragebogen extends FHCAPI_Controller
 
 		if ($gruppe->typ === self::GRUPPE_TYP_LABEL)
 		{
-			$this->terminateWithError('Typ label hat keine Fragen');
+			$this->terminateWithError('Gruppentyp label hat keine Fragen');
 		}
 
 		$this->_validateFrageData($data);
