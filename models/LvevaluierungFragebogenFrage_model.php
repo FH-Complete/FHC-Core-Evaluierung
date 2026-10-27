@@ -79,6 +79,7 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 	 * Alle Fragen für den Aufbau, aktiv = in der Gruppe. Aktive zuerst.
 	 * andereGruppe: Gruppe dieses Fragebogens, in der die Frage schon ist (eine Frage nur einmal je Fragebogen).
 	 * inAnderenFrageboegen: Frage wird auch in anderen Fragebögen verwendet.
+	 * inVerwendetemFragebogen: Frage ist in einem anderen Fragebogen, der bereits in einer Evaluierung verwendet wird.
 	 *
 	 * @param $gruppe_id
 	 * @param $fragebogen_id
@@ -110,7 +111,15 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 					JOIN extension.tbl_lvevaluierung_fragebogen_gruppe gr3 USING (lvevaluierung_fragebogen_gruppe_id)
 					WHERE grfr3.lvevaluierung_frage_id = fr.lvevaluierung_frage_id
 					AND gr3.fragebogen_id != ?
-				) AS "inAnderenFrageboegen"
+				) AS "inAnderenFrageboegen",
+				EXISTS (
+					SELECT 1
+					FROM extension.tbl_lvevaluierung_fragebogen_gruppe_frage grfr4
+					JOIN extension.tbl_lvevaluierung_fragebogen_gruppe gr4 USING (lvevaluierung_fragebogen_gruppe_id)
+					JOIN extension.tbl_lvevaluierung lve ON lve.fragebogen_id = gr4.fragebogen_id
+					WHERE grfr4.lvevaluierung_frage_id = fr.lvevaluierung_frage_id
+					AND gr4.fragebogen_id != ?
+				) AS "inVerwendetemFragebogen"
 			FROM 
 			    extension.tbl_lvevaluierung_fragebogen_frage fr
 			LEFT JOIN extension.tbl_lvevaluierung_fragebogen_gruppe_frage grfr
@@ -122,7 +131,7 @@ class LvevaluierungFragebogenFrage_model extends DB_Model
 				fr.bezeichnung[(1)]
 		';
 
-		return $this->execQuery($qry, [$fragebogen_id, $gruppe_id, $fragebogen_id, $gruppe_id]);
+		return $this->execQuery($qry, [$fragebogen_id, $gruppe_id, $fragebogen_id, $fragebogen_id, $gruppe_id]);
 	}
 
 	/**

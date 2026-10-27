@@ -366,14 +366,20 @@ export default {
 		getFrageSortHtml(frage) {
 			const index = this.aktivFrageIds.indexOf(frage.lvevaluierung_frage_id);
 			if (index < 0) return '';
+			const aktiv = this.fragen.filter(f => f.aktiv);
+			const fest = f => !f || f.inVerwendetemFragebogen;	// kein Nachbar oder bestehende Frage
+
+			let title = '';
+			if (aktiv.some(f => f.inVerwendetemFragebogen)) title = 'Neue Fragen nur untereinander verschiebbar.';
+			if (frage.inVerwendetemFragebogen) title = 'Reihenfolge fest: Frage wird in einem bereits verwendeten Fragebogen genutzt.';
 
 			return `
-				<div class="d-flex align-items-center gap-1">
+				<div class="d-flex align-items-center gap-1" data-tooltip="${title}">
 					<span class="me-1">${index + 1}</span>
-					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" data-tooltip="Nach oben" aria-label="Nach oben" ${!this.kannFragenAendern || index === 0 ? 'disabled' : ''}>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="up" data-tooltip="Nach oben" aria-label="Nach oben" ${!this.kannFragenAendern || fest(frage) || fest(aktiv[index - 1]) ? 'disabled' : ''}>
 						<i class="fa-solid fa-arrow-up"></i>
 					</button>
-					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" data-tooltip="Nach unten" aria-label="Nach unten" ${!this.kannFragenAendern || index === this.aktivFrageIds.length - 1 ? 'disabled' : ''}>
+					<button type="button" class="btn btn-sm btn-link py-0 px-1" data-action="down" data-tooltip="Nach unten" aria-label="Nach unten" ${!this.kannFragenAendern || fest(frage) || fest(aktiv[index + 1]) ? 'disabled' : ''}>
 						<i class="fa-solid fa-arrow-down"></i>
 					</button>
 				</div>`;
@@ -486,14 +492,14 @@ export default {
 		<!-- ab lg nebeneinander, darunter untereinander -->
 		<div class="row g-4">
 			<div class="col-lg-6">
-				<h3 class="h5">Gruppen</h3>
+				<h3 class="h5">Fragegruppen</h3>
 				<core-filter-cmpt
 					ref="gruppenTable"
 					uniqueId="tabFragebogenGruppen"
 					table-only
 					:side-menu="false"
 					new-btn-show
-					new-btn-label="Gruppe"
+					new-btn-label="Fragegruppe"
 					:new-btn-disabled="isLocked || !fragebogenId"
 					:tabulator-options="gruppenOptions"
 					:tabulator-events="gruppenEvents"

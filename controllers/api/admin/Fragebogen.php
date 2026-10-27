@@ -611,6 +611,7 @@ class Fragebogen extends FHCAPI_Controller
 
 	/**
 	 * Sort Fragen einer Gruppe nach übergebener Reihenfolge.
+	 * Bestehende Fragen (in einem anderen, bereits verwendeten Fragebogen) behalten ihren Platz, da frage.sort überall gilt.
 	 *
 	 * @return void
 	 */
@@ -623,6 +624,23 @@ class Fragebogen extends FHCAPI_Controller
 		if (!is_array($frageIds) || empty($frageIds))
 		{
 			$this->terminateWithError('Missing Fragen');
+		}
+
+		$result = $this->LvevaluierungFragebogenFrageModel->getAlleFragen($gruppe->lvevaluierung_fragebogen_gruppe_id, $gruppe->fragebogen_id);
+		$fragen = $this->getDataOrTerminateWithError($result);
+		$index = 0;
+
+		// Aktive Fragen in gespeicherter Reihenfolge: bestehende müssen am selben Platz bleiben
+		foreach ($fragen as $frage)
+		{
+			if (!$frage->aktiv) continue;
+
+			if ($frage->inVerwendetemFragebogen && (!isset($frageIds[$index]) || $frageIds[$index] != $frage->lvevaluierung_frage_id))
+			{
+				$this->terminateWithError('Bestehende Fragen behalten ihren Platz: sie werden in einem bereits verwendeten Fragebogen genutzt');
+			}
+
+			$index++;
 		}
 
 		$result = $this->fragebogenlib->sortFragen($gruppe->lvevaluierung_fragebogen_gruppe_id, $frageIds);

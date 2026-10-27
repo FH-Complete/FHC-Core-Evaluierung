@@ -267,7 +267,8 @@ class FragebogenLib
 	}
 
 	/**
-	 * Sort Fragen nach übergebener Reihenfolge (frage.sort). Nur Fragen dieser Gruppe.
+	 * Sort Fragen nach übergebener Reihenfolge. Nur Fragen dieser Gruppe.
+	 * Vorhandene Sort-Werte werden neu verteilt: Fragen, die ihren Platz behalten, behalten ihren Wert (frage.sort gilt in allen Fragebögen).
 	 *
 	 * @param $gruppe_id
 	 * @param $frageIds
@@ -275,12 +276,18 @@ class FragebogenLib
 	 */
 	public function sortFragen($gruppe_id, $frageIds)
 	{
-		// Nur Fragen dieser Gruppe
-		$result = $this->_ci->LvevaluierungFragebogenGruppeFrageModel->loadWhere(['lvevaluierung_fragebogen_gruppe_id' => $gruppe_id]);
+		// Fragen dieser Gruppe, aufsteigend nach Sort
+		$result = $this->_ci->LvevaluierungFragebogenFrageModel->getFragenByFragebogengruppe($gruppe_id);
 		if (isError($result)) return $result;
-		$gruppeFrageIds = hasData($result) ? array_column(getData($result), 'lvevaluierung_frage_id') : [];
+		$fragen = hasData($result) ? getData($result) : [];
+		$gruppeFrageIds = array_column($fragen, 'lvevaluierung_frage_id');
+		$sorts = array_column($fragen, 'sort');
 
-		if (!empty(array_diff($frageIds, $gruppeFrageIds))) return error('Frage gehört nicht zu dieser Gruppe');
+		// Genau die Fragen dieser Gruppe, jede einmal
+		if (count($frageIds) !== count($gruppeFrageIds) || !empty(array_diff($gruppeFrageIds, $frageIds)))
+		{
+			return error('Fragen passen nicht zu dieser Gruppe');
+		}
 
 		$result = success(true);
 
@@ -288,7 +295,7 @@ class FragebogenLib
 
 		foreach (array_values($frageIds) as $index => $frage_id)
 		{
-			$result = $this->_ci->LvevaluierungFragebogenFrageModel->update($frage_id, ['sort' => $index + 1]);
+			$result = $this->_ci->LvevaluierungFragebogenFrageModel->update($frage_id, ['sort' => $sorts[$index]]);
 			if (isError($result)) break;
 		}
 
