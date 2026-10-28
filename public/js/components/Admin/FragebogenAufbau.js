@@ -485,10 +485,6 @@ export default {
 	},
 	template: `
 	<div class="d-flex flex-column gap-3">
-		<div v-if="isLocked" class="alert alert-warning mb-0">
-			Bereits beantwortet – nur Ansicht. Für Änderungen einen neuen Fragebogen anlegen und die Gruppen übernehmen.
-		</div>
-
 		<!-- ab lg nebeneinander, darunter untereinander -->
 		<div class="row g-4">
 			<div class="col-lg-6">

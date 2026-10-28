@@ -227,9 +227,14 @@ export default {
 		></core-filter-cmpt>
 
 		<!-- Fragebogen verwalten -->
-		<h2 class="h4 mt-5 mb-4">
-			Fragebogen verwalten<small v-if="selFb" class="fw-normal text-secondary"> | {{ selFb.bezeichnung_de }}</small>
-		</h2>
+		<h2 class="h4 mt-5 mb-3">Fragebogen verwalten</h2>
+		<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 fs-5 fw-medium mb-3">
+			<span>{{ selFb ? selFb.bezeichnung_de : '' }}</span>
+		</div>
+		<!-- Gilt für alle Reiter -->
+		<div v-if="isLocked" class="alert alert-warning">
+			<strong>Nur Ansicht</strong> – Fragebogen bereits beantwortet. Nur „Gültig bis“ ist änderbar. Für Änderungen einen neuen Fragebogen anlegen.
+		</div>
 		<!-- Ohne Auswahl nur Reiter Fragebogen -->
 		<ul class="nav nav-tabs">
 			<li v-for="t in tabs" :key="t.key" class="nav-item">
