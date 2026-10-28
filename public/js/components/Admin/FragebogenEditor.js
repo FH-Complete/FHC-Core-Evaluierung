@@ -1,4 +1,5 @@
 import {CoreFilterCmpt} from "../../../../../js/components/filter/Filter.js";
+import VerticalSplit from "../../../../../js/components/verticalsplit/verticalsplit.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
 import FragebogenBasis from "./FragebogenBasis.js";
 import FragebogenAufbau from "./FragebogenAufbau.js";
@@ -8,6 +9,7 @@ export default {
 	name: "FragebogenEditor",
 	components: {
 		CoreFilterCmpt,
+		VerticalSplit,
 		FragebogenBasis,
 		FragebogenAufbau,
 		FragebogenZuordnung
@@ -210,53 +212,57 @@ export default {
 	<div class="fragebogen-editor container-fluid">
 		<h1 class="h2 mb-5 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
 
-		<!-- Übersicht: Zeilenklick wählt den Fragebogen -->
-		<core-filter-cmpt
-			ref="fbTable"
-			uniqueId="tabFrageboegen"
-			table-only
-			:side-menu="false"
-			new-btn-show
-			new-btn-label="Fragebogen"
-			:tabulator-options="tabulatorOptions"
-			:tabulator-events="tabulatorEvents"
-			@click:new="onNew"
-		></core-filter-cmpt>
-
-		<!-- Fragebogen verwalten -->
-		<h2 class="h4 mt-5 mb-3">Fragebogen verwalten</h2>
-		<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 fs-5 fw-medium mb-4">
-			<span>{{ selFb ? selFb.bezeichnung_de : '' }}</span>
-		</div>
-		<!-- Gilt für alle Reiter -->
-		<div v-if="isLocked" class="alert alert-warning">
-			<strong>Nur Ansicht</strong> – Fragebogen bereits beantwortet. Nur „Gültig bis“ ist änderbar. Für Änderungen einen neuen Fragebogen anlegen.
-		</div>
-		<!-- Ohne Auswahl nur Reiter Fragebogen -->
-		<ul class="nav nav-tabs">
-			<li v-for="t in tabs" :key="t.key" class="nav-item">
-				<button type="button" class="nav-link" :class="{active: tab === t.key}" :disabled="t.key !== 'fragebogen' && !selFb" @click="tab = t.key">{{ t.label }}</button>
-			</li>
-		</ul>
-		<div class="p-3 mb-4">
-			<p v-if="!selFb && !isNeu" class="text-body-secondary text-center my-3">Bitte Fragebogen wählen</p>
-			<fragebogen-basis
-				v-else-if="tab === 'fragebogen'"
-				:sel-fragebogen="selFb"
-				@saved="onSaved"
-			></fragebogen-basis>
-			<fragebogen-aufbau
-				v-else-if="tab === 'aufbau'"
-				:fragebogen-id="selFbId"
-				:is-locked="isLocked"
-			></fragebogen-aufbau>
-			<fragebogen-zuordnung
-				v-else
-				:fragebogen-id="selFbId"
-				:is-verwendet="isVerwendet"
-				@changed="$refs.fbTable.reloadTable()"
-			></fragebogen-zuordnung>
-		</div>
+		<vertical-split :default-ratio="[30, 70]">
+			<!-- Fragebogen Übersichtstabelle -->
+			<template #top>
+				<core-filter-cmpt
+				ref="fbTable"
+				uniqueId="tabFrageboegen"
+				table-only
+				:side-menu="false"
+				new-btn-show
+				new-btn-label="Fragebogen"
+				:tabulator-options="tabulatorOptions"
+				:tabulator-events="tabulatorEvents"
+				@click:new="onNew"
+			></core-filter-cmpt>
+			</template>
+			<!-- Fragebogen verwalten -->
+			<template #bottom>
+				<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 fs-5 fw-medium mb-4">
+					<span>{{ selFb ? selFb.bezeichnung_de : '' }}</span>
+				</div>
+				<!-- Alert über alle Reiter -->
+				<div v-if="isLocked" class="alert alert-warning">
+					<strong>Nur Ansicht</strong> – Fragebogen bereits beantwortet. Nur „Gültig bis“ ist änderbar. Für Änderungen einen neuen Fragebogen anlegen.
+				</div>
+				<!-- Ohne Auswahl nur Reiter Fragebogen -->
+				<ul class="nav nav-tabs">
+					<li v-for="t in tabs" :key="t.key" class="nav-item">
+						<button type="button" class="nav-link" :class="{active: tab === t.key}" :disabled="t.key !== 'fragebogen' && !selFb" @click="tab = t.key">{{ t.label }}</button>
+					</li>
+				</ul>
+				<div class="p-3 mb-4">
+				<p v-if="!selFb && !isNeu" class="text-body-secondary text-center my-3">Bitte Fragebogen wählen</p>
+				<fragebogen-basis
+					v-else-if="tab === 'fragebogen'"
+					:sel-fragebogen="selFb"
+					@saved="onSaved"
+				></fragebogen-basis>
+				<fragebogen-aufbau
+					v-else-if="tab === 'aufbau'"
+					:fragebogen-id="selFbId"
+					:is-locked="isLocked"
+				></fragebogen-aufbau>
+				<fragebogen-zuordnung
+					v-else
+					:fragebogen-id="selFbId"
+					:is-verwendet="isVerwendet"
+					@changed="$refs.fbTable.reloadTable()"
+				></fragebogen-zuordnung>
+			</div>
+			</template>
+		</vertical-split>
 	</div>
 	`
 }
