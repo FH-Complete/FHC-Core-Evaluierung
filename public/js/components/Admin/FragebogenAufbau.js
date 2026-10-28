@@ -77,6 +77,13 @@ export default {
 				},
 				columns: [
 					{
+						title: 'ID',
+						field: 'lvevaluierung_fragebogen_gruppe_id',
+						width: 50,
+						hozAlign: 'right',
+						visible: false,
+					},
+					{
 						title: 'Sort',
 						field: 'sort',
 						formatter: cell => this.getSortHtml(cell.getData()),
@@ -159,6 +166,13 @@ export default {
 					}
 				},
 				columns: [
+					{
+						title: 'ID',
+						field: 'lvevaluierung_frage_id',
+						width: 50,
+						hozAlign: 'right',
+						visible: false,
+					},
 					{
 						title: 'Sort',
 						field: 'sort',
