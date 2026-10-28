@@ -147,7 +147,9 @@ export default {
 				})
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
-		removeZuordnung(zuordnung) {
+		async deleteZuordnung(zuordnung) {
+			if (!await this.$fhcAlert.confirmDelete()) return;
+
 			this.$api
 				.call(ApiFragebogen.deleteZuordnung(zuordnung.lvevaluierung_fragebogen_zuordnung_id))
 				.then(() => {
@@ -172,9 +174,9 @@ export default {
 	},
 	template: `
 	<section class="d-flex flex-column gap-3">
-		<!--<div v-if="isVerwendet" class="alert alert-warning mb-0">
-			In einer Evaluierung verwendet – Zuordnungen nicht mehr änderbar. Für weitere Zuordnungen einen neuen Fragebogen anlegen.
-		</div>-->
+		<div class="row-cols">
+			<span class="text-muted">Fragebogenzuordnung speichern. Passen für eine LV mehrere Fragebögen, gilt der genauer zugeordnete: LV vor Studienplan vor OE.</span>
+		</div>
 		<!-- Auswahl und Eingabe gesperrt, sobald Fragebogen in einer Evaluierung verwendet -->
 		<fieldset class="d-flex flex-column gap-3" :disabled="isVerwendet">
 			<!-- Auswahl OE, Studienplan, LV -->
@@ -227,18 +229,18 @@ export default {
 		</div>
 		</fieldset>
 		<!-- Anzeige der Auswahl (badges) -->
-		<div class="d-flex flex-wrap gap-2">
-			<span
-				v-for="z in sortedZuordnungen"
-				:key="z.lvevaluierung_fragebogen_zuordnung_id"
-				class="badge text-bg-primary d-inline-flex align-items-center gap-2 fs-6 fw-normal"
-			>
-				{{ z.label }}
-			<button v-if="!isVerwendet" type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="removeZuordnung(z)"></button>		<!-- Info zu Auswahl (alert) -->
-<!--		<div class="alert alert-info mb-0">
-			Der Fragebogen gilt für <strong>alle</strong> gewählten Zuordnungen.<br>
-			Hat eine LV mehrere passende Fragebögen, wird der genauere herangezogen: <strong>LV vor Studienplan vor OE</strong>.
-		</div>-->
+		<div v-if="zuordnungen.length">
+			<div class="form-label">Zuordnungen</div>
+			<div class="d-flex flex-wrap gap-2">
+				<span
+					v-for="zuordnung in sortedZuordnungen"
+					:key="zuordnung.lvevaluierung_fragebogen_zuordnung_id"
+					class="badge text-bg-primary d-inline-flex align-items-center gap-2 fs-6 fw-normal"
+				>
+					{{ zuordnung.label }}
+				<button v-if="!isVerwendet" type="button" class="btn-close btn-close-white" aria-label="Zuordnung entfernen" @click="deleteZuordnung(zuordnung)"></button>
+			</div>
+		</div>
 	</section>
 	`
 }

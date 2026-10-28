@@ -195,10 +195,7 @@ export default {
 			this.$refs.fbTable.reloadTable();
 		},
 		async deleteFragebogen(fb) {
-			if (!await this.$fhcAlert.confirm({
-				header: 'Bitte bestätigen Sie:',
-				message: 'Fragebogen „' + fb.bezeichnung_de + '“ löschen?'
-			})) return;
+			if (!await this.$fhcAlert.confirmDelete()) return;
 
 			this.$api
 				.call(ApiAdminFragebogen.deleteFragebogen(fb.fragebogen_id))
@@ -211,7 +208,7 @@ export default {
 	},
 		template: `
 	<div class="fragebogen-editor container-fluid">
-		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
+		<h1 class="h2 mb-5 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
 
 		<!-- Übersicht: Zeilenklick wählt den Fragebogen -->
 		<core-filter-cmpt
@@ -228,7 +225,7 @@ export default {
 
 		<!-- Fragebogen verwalten -->
 		<h2 class="h4 mt-5 mb-3">Fragebogen verwalten</h2>
-		<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 fs-5 fw-medium mb-3">
+		<div class="d-flex flex-wrap justify-content-between align-items-baseline gap-2 fs-5 fw-medium mb-4">
 			<span>{{ selFb ? selFb.bezeichnung_de : '' }}</span>
 		</div>
 		<!-- Gilt für alle Reiter -->

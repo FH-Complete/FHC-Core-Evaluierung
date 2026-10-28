@@ -57,7 +57,6 @@ export default {
 					if (!this.selGruppe) this.selGruppeId = null;
 					return response.data;
 				},
-				placeholder: 'Bitte Fragebogen wählen.',
 				// Gruppe, deren Fragen angezeigt werden, markieren
 				rowFormatter: row => row.getElement().classList.toggle(
 					'tabulator-selected',
@@ -92,7 +91,7 @@ export default {
 						width: 90
 					},
 					{
-						title: 'Im Fragebogen',
+						title: 'Aktiv',
 						field: 'aktiv',
 						formatter: cell => this.getAktivHtml(cell.getData()),
 						cellClick: (e, cell) => this.onAktivClick(e, cell.getData()),
@@ -182,7 +181,7 @@ export default {
 						width: 90
 					},
 					{
-						title: 'In Gruppe',
+						title: 'Aktiv',
 						field: 'aktiv',
 						formatter: cell => this.getFrageAktivHtml(cell.getData()),
 						cellClick: (e, cell) => this.onFrageAktivClick(e, cell.getData()),
@@ -364,10 +363,7 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		async deleteGruppe(gruppe) {
-			if (!await this.$fhcAlert.confirm({
-				header: 'Bitte bestätigen Sie:',
-				message: 'Gruppe „' + gruppe.bezeichnung_de + '“ löschen? Fragen dieser Gruppe, die keiner anderen Gruppe zugeordnet sind und noch nie beantwortet wurden, werden mitgelöscht.'
-			})) return;
+			if (!await this.$fhcAlert.confirmDelete()) return;
 
 			this.$api
 					.call(ApiAdminFragebogen.deleteGruppe(gruppe.lvevaluierung_fragebogen_gruppe_id))
@@ -478,10 +474,7 @@ export default {
 					.catch(error => this.$fhcAlert.handleSystemError(error));
 		},
 		async deleteFrage(frage) {
-			if (!await this.$fhcAlert.confirm({
-				header: 'Bitte bestätigen Sie:',
-				message: 'Frage „' + frage.bezeichnung_de + '“ samt Antwortoptionen löschen?'
-			})) return;
+			if (!await this.$fhcAlert.confirmDelete()) return;
 
 			this.$api
 					.call(ApiAdminFragebogen.deleteFrage(frage.lvevaluierung_frage_id, this.fragebogenId))
@@ -499,6 +492,9 @@ export default {
 	},
 	template: `
 	<div class="d-flex flex-column gap-3">
+		<div class="row-cols">
+			<span class="text-muted">Fragegruppe wählen, zugehörige Fragen werden in Fragentabelle aktualisiert.</span>
+		</div>
 		<!-- ab lg nebeneinander, darunter untereinander -->
 		<div class="row g-4">
 			<div class="col-lg-6">
@@ -509,7 +505,7 @@ export default {
 					table-only
 					:side-menu="false"
 					new-btn-show
-					new-btn-label="Fragegruppe"
+					new-btn-label="Gruppe"
 					:new-btn-disabled="isLocked || !fragebogenId"
 					:tabulator-options="gruppenOptions"
 					:tabulator-events="gruppenEvents"
@@ -517,9 +513,9 @@ export default {
 				></core-filter-cmpt>
 			</div>
 			<div class="col-lg-6">
-				<h3 class="h5">Fragen<small v-if="selGruppe" class="fw-normal text-secondary"> | {{ selGruppe.bezeichnung_de }}</small></h3>
+				<h3 class="h5">Fragen<small v-if="selGruppe" class="fw-normal text-secondary"> - Fragegruppe: {{ selGruppe.bezeichnung_de }}</small></h3>
 				<div v-if="selGruppe && !selGruppe.aktiv && !isLocked" class="alert alert-warning">
-					Gruppe ist nicht in diesem Fragebogen – Fragen nur zur Ansicht.
+					Nur Ansicht - Zur Bearbeitung Fragengruppe in linker Tabelle aktivieren.
 				</div>
 				<core-filter-cmpt
 					ref="fragenTable"
