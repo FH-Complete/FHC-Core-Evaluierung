@@ -1,6 +1,6 @@
 import {CoreFilterCmpt} from "../../../../../js/components/filter/Filter.js";
 import ApiAdminFragebogen from "../../api/admin/fragebogen.js";
-import FragebogenModal from "./FragebogenModal.js";
+import FragebogenBasis from "./FragebogenBasis.js";
 import FragebogenAufbau from "./FragebogenAufbau.js";
 import FragebogenZuordnung from "./FragebogenZuordnung.js";
 
@@ -8,19 +8,21 @@ export default {
 	name: "FragebogenEditor",
 	components: {
 		CoreFilterCmpt,
-		FragebogenModal,
+		FragebogenBasis,
 		FragebogenAufbau,
 		FragebogenZuordnung
 	},
 	data() {
 		return {
 			tabs: [
-				{key: 'aufbau', label: 'Aufbau'},
+				{key: 'fragebogen', label: 'Fragebogen'},
+				{key: 'aufbau', label: 'Fragebogenaufbau'},
 				{key: 'zuordnung', label: 'Zuordnung'}
 			],
-			tab: 'aufbau',
+			tab: 'fragebogen',
 			frageboegen: [],	// Geladene Fragebögen der Tabelle
-			selFbId: null		// Fragebogen, der unten verwaltet wird
+			selFbId: null,		// Fragebogen, der unten verwaltet wird
+			isNeu: false		// Neuer Fragebogen: leeres Formular im Reiter Fragebogen
 		}
 	},
 	computed: {
@@ -44,8 +46,12 @@ export default {
 				ajaxRequestFunc: () => this.$api.call(ApiAdminFragebogen.getFrageboegen()),
 				ajaxResponse: (url, params, response) => {
 					this.frageboegen = response.data;
-					// Gewählter Fragebogen nicht mehr vorhanden: Auswahl aufheben
-					if (!this.selFb) this.selFbId = null;
+
+					if (this.selFb) {
+						this.isNeu = false;
+					} else {
+						this.selFbId = null;
+					}
 					return response.data;
 				},
 				// Gewählten Fragebogen markieren
@@ -145,9 +151,10 @@ export default {
 		}
 	},
 	watch: {
-		// Markierung in der Tabelle aktualisieren
+		// Markierung in der Tabelle aktualisieren; ohne Auswahl nur Reiter Fragebogen
 		selFbId() {
 			this.$refs.fbTable.tabulator.getRows().forEach(row => row.reformat());
+			if (!this.selFbId) this.tab = 'fragebogen';
 		}
 	},
 	methods: {
@@ -155,33 +162,32 @@ export default {
 			return value ? this.DateHelper.formatDate(value) : '';
 		},
 		getActionButtons(fb) {
-			const titleEdit = fb.hasAntworten ? 'Bereits beantwortet – nur Gültig bis änderbar' : 'Bearbeiten';
 			const titleDelete = fb.isVerwendet ? 'In einer Evaluierung verwendet – nicht löschbar' : 'Löschen';
 
 			return `
-				<div class="d-flex justify-content-center gap-1">
-					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="edit" data-tooltip="${titleEdit}" aria-label="Bearbeiten">
-						<i class="fa-solid fa-pen"></i>
+				<span data-tooltip="${titleDelete}">
+					<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Löschen" ${fb.isVerwendet ? 'disabled' : ''}>
+						<i class="fa-solid fa-xmark"></i>
 					</button>
-					<span data-tooltip="${titleDelete}">
-						<button type="button" class="btn btn-sm btn-outline-secondary" data-action="delete" aria-label="Löschen" ${fb.isVerwendet ? 'disabled' : ''}>
-							<i class="fa-solid fa-xmark"></i>
-						</button>
-					</span>
-				</div>`;
+				</span>`;
 		},
 		onActionClick(e, fb) {
 			const button = e.target.closest('button');
 			if (!button || button.disabled) return;
 
-			if (button.dataset.action === 'edit') this.$refs.fbModal.open(fb);
-			if (button.dataset.action === 'delete') this.deleteFragebogen(fb);
+			this.deleteFragebogen(fb);
 		},
 		// Zeilenklick wählt den Fragebogen, nicht bei Klick auf Buttons
 		onRowClick(e, row) {
 			if (e.target.closest('button')) return;
 
+			this.isNeu = false;
 			this.selFbId = row.getData().fragebogen_id;
+		},
+		// Neuer Fragebogen: leeres Formular im Reiter Fragebogen
+		onNew() {
+			this.selFbId = null;
+			this.isNeu = true;
 		},
 		// Gespeicherten Fragebogen wählen und Tabelle neu laden
 		onSaved(fragebogen_id) {
@@ -203,7 +209,7 @@ export default {
 				.catch(error => this.$fhcAlert.handleSystemError(error));
 		}
 	},
-	template: `
+		template: `
 	<div class="fragebogen-editor container-fluid">
 		<h1 class="h2 mb-3 fhc-page-header">LV-Evaluierung<small class="fw-normal"> | Fragebögen verwalten</small></h1>
 
@@ -217,34 +223,38 @@ export default {
 			new-btn-label="Fragebogen"
 			:tabulator-options="tabulatorOptions"
 			:tabulator-events="tabulatorEvents"
-			@click:new="$refs.fbModal.open(null)"
+			@click:new="onNew"
 		></core-filter-cmpt>
 
 		<!-- Fragebogen verwalten -->
 		<h2 class="h4 mt-5 mb-4">
 			Fragebogen verwalten<small v-if="selFb" class="fw-normal text-secondary"> | {{ selFb.bezeichnung_de }}</small>
 		</h2>
+		<!-- Ohne Auswahl nur Reiter Fragebogen -->
 		<ul class="nav nav-tabs">
 			<li v-for="t in tabs" :key="t.key" class="nav-item">
-				<button type="button" class="nav-link" :class="{active: tab === t.key}" @click="tab = t.key">{{ t.label }}</button>
+				<button type="button" class="nav-link" :class="{active: tab === t.key}" :disabled="t.key !== 'fragebogen' && !selFb" @click="tab = t.key">{{ t.label }}</button>
 			</li>
 		</ul>
 		<div class="p-3 mb-4">
+			<p v-if="!selFb && !isNeu" class="text-body-secondary text-center my-3">Bitte Fragebogen wählen</p>
+			<fragebogen-basis
+				v-else-if="tab === 'fragebogen'"
+				:sel-fragebogen="selFb"
+				@saved="onSaved"
+			></fragebogen-basis>
 			<fragebogen-aufbau
-				v-if="tab === 'aufbau'"
+				v-else-if="tab === 'aufbau'"
 				:fragebogen-id="selFbId"
 				:is-locked="isLocked"
 			></fragebogen-aufbau>
 			<fragebogen-zuordnung
-				v-else-if="selFb"
+				v-else
 				:fragebogen-id="selFbId"
 				:is-verwendet="isVerwendet"
 				@changed="$refs.fbTable.reloadTable()"
 			></fragebogen-zuordnung>
-			<p v-else class="text-secondary mb-0">Bitte zuerst einen Fragebogen anklicken.</p>
 		</div>
-
-		<fragebogen-modal ref="fbModal" @saved="onSaved"></fragebogen-modal>
 	</div>
 	`
 }

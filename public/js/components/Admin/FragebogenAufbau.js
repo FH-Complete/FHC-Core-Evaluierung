@@ -57,7 +57,7 @@ export default {
 					if (!this.selGruppe) this.selGruppeId = null;
 					return response.data;
 				},
-				placeholder: 'Bitte zuerst einen Fragebogen anklicken.',
+				placeholder: 'Bitte Fragebogen wählen.',
 				// Gruppe, deren Fragen angezeigt werden, markieren
 				rowFormatter: row => row.getElement().classList.toggle(
 					'tabulator-selected',
@@ -145,7 +145,7 @@ export default {
 					this.fragen = response.data;
 					return response.data;
 				},
-				placeholder: () => this.selGruppe ? 'Gruppentyp label hat keine Fragen.' : 'Bitte zuerst eine Gruppe anklicken.',
+				placeholder: () => this.selGruppe ? 'Gruppentyp label hat keine Fragen.' : 'Bitte  Fragengruppe wählen.',
 				layout: 'fitColumns',
 				maxHeight: '50vh',
 				selectable: false,
